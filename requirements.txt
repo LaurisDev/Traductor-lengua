@@ -1,0 +1,7 @@
+# Traductor Lenguaje de Senas - Dependencias
+# Python 3.8+
+# MediaPipe: se usa la API Tasks (mp.tasks.vision). Primera ejecucion del modulo de traduccion descarga el modelo.
+
+opencv-python>=4.8.0
+mediapipe>=0.10.0
+Pillow>=10.0.0

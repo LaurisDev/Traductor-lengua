@@ -15,9 +15,14 @@ __pycache__/
 *.tmp
 *.swp
 
+database/*.db
 database/*.db-journal
 database/*.db-shm
 database/*.db-wal
+
+# Modelo y muestras locales (opcional: quita la linea del .joblib si quieres subir el modelo entrenado)
+# data/sign_language/sign_samples.csv
+# data/sign_language/sign_classifier.joblib
 
 *.DS_Store
 Thumbs.db

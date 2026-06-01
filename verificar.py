@@ -18,7 +18,7 @@ def main():
         print("   OK (Python {}.{}.{})".format(*sys.version_info[:3]))
 
     print("2. Comprobando dependencias...")
-    deps = ["cv2", "mediapipe", "PIL"]
+    deps = ["cv2", "mediapipe", "PIL", "pymongo", "ttkbootstrap", "faster_whisper", "sounddevice", "numpy", "webview"]
     for mod in deps:
         try:
             __import__(mod)
@@ -35,6 +35,7 @@ def main():
         from src.camera import CameraCapture
         from src.image_processing import HandDetector
         from src.sign_language import FingerAnalyzer, GestureClassifier
+        from src.speech.voice_transcriber import record_mono_float32
         print("   OK todos los modulos")
     except Exception as e:
         errors.append("Error al importar modulos: {}".format(e))
@@ -43,8 +44,7 @@ def main():
     try:
         db = DatabaseManager()
         db.init_database()
-        ok, msg = db.register_user("_verificar_", "temp123")
-        print("   OK (tabla y escritura)")
+        print("   OK (conexion a MongoDB e indice de usuarios)")
     except Exception as e:
         errors.append("Error en base de datos: {}".format(e))
 

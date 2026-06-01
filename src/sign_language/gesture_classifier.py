@@ -1,112 +1,353 @@
 # gesture_classifier.py
-# Alfabeto manual A-Z: cada gesto -> una letra (100% entendibles).
-# E,M,N,S por posicion del pulgar; V,U,H,R por disposicion de indice y medio.
+# Clasifica A-Z comparando la mano con las 26 reglas y eligiendo la mejor coincidencia.
 
-from typing import Optional
+import math
+from collections import deque
+from typing import Callable, Dict, List, Optional, Tuple
 
 from .finger_analyzer import FingerState
 
+ScoreFn = Callable[[FingerState, bool, bool], float]
+
 
 class GestureClassifier:
-    """
-    Una letra por gesto. Sin ciclos salvo D/Z (Z con movimiento) e I/J (J con movimiento).
-    """
+    """Evalua las 26 letras y devuelve la de mayor puntuacion."""
 
-    _RULES = [
-        ((True, True, True, True, True), "touch_index", None, "F"),
-        ((True, True, True, True, True), "", None, "C"),
-        ((True, True, True, True, False), "", None, "P"),
-        ((False, True, True, True, True), "", None, "B"),
-        ((False, True, True, True, False), "", None, "W"),
-        ((True, True, True, False, False), "", None, "K"),
-        ((True, True, False, False, False), "touch_index", None, "Q"),
-        ((True, True, False, False, False), "extended_up", None, "L"),
-        ((True, True, False, False, False), "extended_side", None, "G"),
-        ((True, True, False, False, False), "", None, "L"),
-        ((True, False, False, False, True), "", None, "Y"),
-        ((False, True, False, False, False), "", True, "X"),
-        ((True, False, False, False, False), "between", None, "T"),
-        ((True, False, False, False, False), "", None, "O"),
-        ((False, False, False, False, False), "side", None, "A"),
-        ((False, False, False, False, False), "unknown", None, "A"),
-    ]
-
-    _FIST_LETTER = {"inside_top": "E", "inside_front": "S", "inside_over2": "N", "inside_over3": "M"}
-    _TWO_FINGER_LETTER = {"together_up": "U", "apart_up": "V", "horizontal": "H", "crossed": "R"}
-    _CYCLE_D_Z = ["D", "Z"]
-    _CYCLE_I_J = ["I", "J"]
-    _CYCLE_FRAMES = 50
+    MIN_SCORE = 38.0
+    MIN_MARGIN = 5.0
 
     def __init__(self) -> None:
         self._last_letter: Optional[str] = None
         self._stability_count = 0
-        self._STABILITY_THRESHOLD = 2
-        self._frames_same = 0
-        self._last_pattern: Optional[tuple] = None
+        try:
+            from src.config import SIGN_STABILITY_FRAMES
+            self._STABILITY_THRESHOLD = max(4, int(SIGN_STABILITY_FRAMES) - 2)
+        except Exception:
+            self._STABILITY_THRESHOLD = 6
 
-    def _match_thumb(self, rule: str, actual: str) -> bool:
-        return not rule or rule == "" or rule == actual
+        self._motion_key: Optional[tuple] = None
+        self._index_trail: deque = deque(maxlen=10)
+        self._pinky_trail: deque = deque(maxlen=10)
+        self._scorers: Dict[str, ScoreFn] = self._build_scorers()
 
-    def _match_bent(self, rule: Optional[bool], actual: bool) -> bool:
-        return rule is None or rule == actual
+    def _reset_motion(self) -> None:
+        self._motion_key = None
+        self._index_trail.clear()
+        self._pinky_trail.clear()
+
+    def _update_motion(self, f: FingerState) -> Tuple[bool, bool]:
+        key = (f.index, f.middle, f.ring, f.pinky)
+        if key != self._motion_key:
+            self._motion_key = key
+            self._index_trail.clear()
+            self._pinky_trail.clear()
+        self._index_trail.append(f.index_tip)
+        self._pinky_trail.append(f.pinky_tip)
+        return self._motion_j(f), self._motion_z(f)
+
+    def _path_stats(self, trail, pw: float) -> Tuple[float, float, float, int]:
+        if len(trail) < 2:
+            return 0.0, 0.0, 0.0, 0
+        xs = [p[0] for p in trail]
+        ys = [p[1] for p in trail]
+        total = 0.0
+        for i in range(1, len(trail)):
+            dx = trail[i][0] - trail[i - 1][0]
+            dy = trail[i][1] - trail[i - 1][1]
+            total += math.hypot(dx, dy) if (dx * dx + dy * dy) > 0 else 0
+        signs: List[int] = []
+        for i in range(1, len(trail)):
+            dx = trail[i][0] - trail[i - 1][0]
+            if abs(dx) >= pw * 0.02:
+                signs.append(1 if dx > 0 else -1)
+        changes = sum(1 for i in range(1, len(signs)) if signs[i] != signs[i - 1])
+        return max(xs) - min(xs), max(ys) - min(ys), total, changes
+
+    def _motion_j(self, f: FingerState) -> bool:
+        pw = f.palm_width
+        if not f.pinky or f.index or f.middle:
+            return False
+        xr, yr, total, _ = self._path_stats(self._pinky_trail, pw)
+        if len(self._pinky_trail) < 3 or total < pw * 0.14:
+            return False
+        return xr > pw * 0.06 or yr > pw * 0.06 or total > pw * 0.22
+
+    def _motion_z(self, f: FingerState) -> bool:
+        pw = f.palm_width
+        if not f.index or not f.index_up:
+            return False
+        xr, yr, total, changes = self._path_stats(self._index_trail, pw)
+        if len(self._index_trail) < 3 or total < pw * 0.16:
+            return False
+        return xr > pw * 0.10 and changes >= 1
+
+    def _add(self, score: float, cond: bool, pts: float) -> float:
+        return score + (pts if cond else 0.0)
+
+    def _pen(self, score: float, cond: bool, pts: float) -> float:
+        return score - (pts if cond else 0.0)
+
+    def _build_scorers(self) -> Dict[str, ScoreFn]:
+        def score_A(f, j, z):
+            s = 0.0
+            s = self._add(s, f.fist_closed, 35)
+            s = self._add(s, not f.index and not f.middle, 30)
+            s = self._add(s, f.thumb_side or f.thumb_position == "side", 35)
+            s = self._add(s, f.finger_compact, 15)
+            s = self._pen(s, f.circle_closed and f.thumb_index_touch, 50)
+            s = self._pen(s, f.has_inner_gap and f.thumb_index_touch, 45)
+            s = self._pen(s, f.thumb_over or f.thumb_cover_count >= 2, 45)
+            s = self._pen(s, f.thumb_between, 40)
+            s = self._pen(s, f.four_fingers_up, 55)
+            s = self._pen(s, f.index or f.middle, 25)
+            return s
+
+        def score_B(f, j, z):
+            s = 0.0
+            s = self._add(s, f.four_fingers_up, 55)
+            s = self._add(s, f.palm_frontal, 20)
+            s = self._add(s, not f.thumb_between, 20)
+            s = self._pen(s, f.thumb_between and f.index and f.middle, 50)
+            s = self._pen(s, f.thumb_index_touch, 35)
+            s = self._pen(s, f.index and f.middle and not f.ring, 40)
+            return s
+
+        def score_C(f, j, z):
+            s = 0.0
+            s = self._add(s, f.open_curve, 40)
+            s = self._add(s, f.extended_count >= 3 and not f.thumb_index_touch, 25)
+            s = self._pen(s, f.thumb_index_touch, 55)
+            s = self._pen(s, f.circle_closed and f.has_inner_gap, 30)
+            s = self._pen(s, f.four_fingers_up, 45)
+            s = self._pen(s, f.palm_down, 20)
+            return s
+
+        def score_D(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.index_up, 45)
+            s = self._add(s, f.thumb_middle_touch or f.circle_small, 40)
+            s = self._add(s, not f.index_bent, 15)
+            s = self._add(s, not f.thumb_index_touch or not (f.middle and f.ring and f.pinky), 10)
+            s = self._pen(s, f.thumb_index_touch and f.middle and f.ring and f.pinky, 55)
+            s = self._pen(s, not f.index, 50)
+            return s
+
+        def score_E(f, j, z):
+            s = 0.0
+            s = self._add(s, f.fist_closed, 30)
+            s = self._add(s, f.thumb_position == "inside_top", 35)
+            s = self._pen(s, f.thumb_side, 30)
+            s = self._pen(s, f.index, 20)
+            return s
+
+        def score_F(f, j, z):
+            s = 0.0
+            s = self._add(s, f.thumb_index_touch, 50)
+            s = self._add(s, f.index, 25)
+            s = self._add(s, (f.middle and f.ring) or (f.middle and f.pinky) or (f.ring and f.pinky), 35)
+            s = self._pen(s, not f.thumb_index_touch, 55)
+            s = self._pen(s, f.four_fingers_up, 50)
+            s = self._pen(s, f.open_curve and not f.thumb_index_touch, 35)
+            return s
+
+        def score_G(f, j, z):
+            s = 0.0
+            s = self._add(s, f.thumb and f.index and not f.middle and not f.ring and not f.pinky, 45)
+            s = self._add(s, f.index_horizontal or f.gesture_direction == "horizontal", 35)
+            s = self._pen(s, f.middle or f.ring or f.pinky, 55)
+            s = self._pen(s, f.open_curve or f.has_inner_gap, 45)
+            s = self._pen(s, f.four_fingers_up, 50)
+            s = self._pen(s, f.circle_closed, 40)
+            s = self._pen(s, f.fist_closed and not f.index_horizontal, 35)
+            return s
+
+        def score_H(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.middle, 30)
+            s = self._add(s, f.two_finger_pose == "horizontal", 35)
+            s = self._add(s, not f.ring and not f.pinky, 20)
+            return s
+
+        def score_I(f, j, z):
+            s = 0.0
+            s = self._add(s, f.pinky and not f.index and not f.middle, 40)
+            s = self._add(s, not f.ring, 20)
+            s = self._pen(s, j, 55)
+            s = self._pen(s, f.thumb and not f.pinky, 15)
+            return s
+
+        def score_J(f, j, z):
+            s = 0.0
+            s = self._add(s, f.pinky and not f.index and not f.middle, 25)
+            s = self._add(s, j, 55)
+            s = self._pen(s, not j, 60)
+            return s
+
+        def score_K(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.middle and not f.ring and not f.pinky, 35)
+            s = self._add(s, f.thumb_between or (f.thumb and f.two_finger_pose in ("apart_up", "together_up")), 35)
+            s = self._add(s, f.index_up or f.two_finger_pose == "apart_up", 20)
+            s = self._pen(s, f.ring or f.pinky, 65)
+            s = self._pen(s, f.four_fingers_up, 60)
+            s = self._pen(s, f.palm_down and f.index_down, 35)
+            return s
+
+        def score_L(f, j, z):
+            s = 0.0
+            s = self._add(s, f.thumb and f.index, 30)
+            s = self._add(s, f.index_up, 25)
+            s = self._add(s, not f.middle and not f.ring and not f.pinky, 25)
+            s = self._pen(s, f.index_horizontal, 30)
+            s = self._pen(s, z, 40)
+            return s
+
+        def score_M(f, j, z):
+            s = 0.0
+            s = self._add(s, f.fist_closed, 25)
+            s = self._add(s, f.thumb_cover_count >= 3 or f.thumb_position == "inside_over3", 45)
+            s = self._pen(s, f.pinky, 35)
+            s = self._pen(s, f.thumb_side, 40)
+            s = self._pen(s, f.circle_closed, 35)
+            return s
+
+        def score_N(f, j, z):
+            s = 0.0
+            s = self._add(s, f.fist_closed, 25)
+            s = self._add(s, f.thumb_cover_count == 2 or f.thumb_position == "inside_over2", 45)
+            s = self._pen(s, f.thumb_cover_count >= 3, 40)
+            s = self._pen(s, f.thumb_side, 35)
+            s = self._pen(s, f.pinky, 25)
+            return s
+
+        def score_O(f, j, z):
+            s = 0.0
+            s = self._add(s, f.circle_closed or (f.thumb_index_touch and f.has_inner_gap and f.fist_closed), 50)
+            s = self._add(s, f.has_inner_gap and not f.four_fingers_up, 25)
+            s = self._pen(s, f.thumb_over, 40)
+            s = self._pen(s, f.four_fingers_up, 50)
+            s = self._pen(s, f.index and f.middle and f.ring and f.index_up, 40)
+            return s
+
+        def score_P(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.middle, 20)
+            s = self._add(s, f.thumb_between, 25)
+            s = self._add(s, f.palm_down or f.index_down or f.gesture_direction == "down", 40)
+            s = self._pen(s, f.index_up and f.palm_frontal, 35)
+            s = self._pen(s, f.two_finger_pose == "horizontal", 30)
+            return s
+
+        def score_Q(f, j, z):
+            s = 0.0
+            s = self._add(s, f.thumb and f.index, 25)
+            s = self._add(s, f.palm_down or f.index_down, 40)
+            s = self._pen(s, f.index_horizontal, 25)
+            return s
+
+        def score_R(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.middle, 30)
+            s = self._add(s, f.two_finger_pose == "crossed", 45)
+            return s
+
+        def score_S(f, j, z):
+            s = 0.0
+            s = self._add(s, f.fist_closed, 30)
+            s = self._add(s, f.thumb_over or f.thumb_position == "inside_front", 45)
+            s = self._pen(s, f.thumb_side, 45)
+            s = self._pen(s, f.thumb_between, 40)
+            s = self._pen(s, f.thumb_cover_count >= 3, 25)
+            return s
+
+        def score_T(f, j, z):
+            s = 0.0
+            s = self._add(s, f.fist_closed, 25)
+            s = self._add(s, f.thumb_between, 45)
+            s = self._pen(s, f.thumb_over, 35)
+            s = self._pen(s, f.thumb_side, 35)
+            return s
+
+        def score_U(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.middle and not f.ring and not f.pinky, 35)
+            s = self._add(s, f.two_finger_pose == "together_up", 30)
+            s = self._add(s, not f.thumb, 15)
+            s = self._pen(s, f.ring or f.pinky, 50)
+            s = self._pen(s, f.two_finger_pose == "apart_up", 25)
+            return s
+
+        def score_V(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.middle and not f.ring and not f.pinky, 35)
+            s = self._add(s, f.two_finger_pose == "apart_up", 35)
+            s = self._pen(s, f.ring or f.pinky, 50)
+            s = self._pen(s, f.thumb, 15)
+            return s
+
+        def score_W(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.middle and f.ring, 40)
+            s = self._add(s, not f.pinky, 20)
+            s = self._pen(s, f.thumb, 15)
+            return s
+
+        def score_X(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.index_bent, 45)
+            s = self._add(s, not f.middle and not f.ring and not f.pinky, 25)
+            s = self._pen(s, f.index and not f.index_bent, 30)
+            return s
+
+        def score_Y(f, j, z):
+            s = 0.0
+            s = self._add(s, f.thumb and f.pinky, 45)
+            s = self._add(s, not f.index and not f.middle, 25)
+            return s
+
+        def score_Z(f, j, z):
+            s = 0.0
+            s = self._add(s, f.index and f.index_up, 25)
+            s = self._add(s, z, 55)
+            s = self._pen(s, not z, 60)
+            s = self._pen(s, f.middle or f.ring or f.pinky, 30)
+            return s
+
+        return {
+            "A": score_A, "B": score_B, "C": score_C, "D": score_D, "E": score_E,
+            "F": score_F, "G": score_G, "H": score_H, "I": score_I, "J": score_J,
+            "K": score_K, "L": score_L, "M": score_M, "N": score_N, "O": score_O,
+            "P": score_P, "Q": score_Q, "R": score_R, "S": score_S, "T": score_T,
+            "U": score_U, "V": score_V, "W": score_W, "X": score_X, "Y": score_Y,
+            "Z": score_Z,
+        }
 
     def classify(self, finger_state: Optional[FingerState]) -> Optional[str]:
         if finger_state is None:
+            self._reset_motion()
             return None
-        t = finger_state.as_tuple()
-        tp = finger_state.thumb_position
-        ib = finger_state.index_bent
-        two = finger_state.two_finger_pose
 
-        if t == (True, True, True, False, False):
-            if two == "horizontal":
-                return "H"
-            return "K"
+        j_motion, z_motion = self._update_motion(finger_state)
 
-        for pattern, r_thumb, r_bent, letter in self._RULES:
-            if t != pattern:
-                continue
-            if not self._match_thumb(r_thumb, tp) or not self._match_bent(r_bent, ib):
-                continue
-            if t != self._last_pattern:
-                self._last_pattern = t
-                self._frames_same = 0
-            return letter
+        scores: List[Tuple[str, float]] = []
+        for letter, scorer in self._scorers.items():
+            val = scorer(finger_state, j_motion, z_motion)
+            if val > 0:
+                scores.append((letter, val))
 
-        fist = (False, False, False, False, False)
-        if t == fist:
-            letter = self._FIST_LETTER.get(tp)
-            if letter:
-                return letter
-            return "A"
+        if not scores:
+            return None
 
-        if t == (False, True, False, False, False) and not ib:
-            if t != self._last_pattern:
-                self._last_pattern = t
-                self._frames_same = 0
-            self._frames_same += 1
-            i = (self._frames_same // self._CYCLE_FRAMES) % len(self._CYCLE_D_Z)
-            return self._CYCLE_D_Z[i]
+        scores.sort(key=lambda x: x[1], reverse=True)
+        best_letter, best_score = scores[0]
+        second_score = scores[1][1] if len(scores) > 1 else 0.0
 
-        if t == (False, True, False, False, False) and ib:
-            return "X"
+        if best_score < self.MIN_SCORE:
+            return None
+        if best_score - second_score < self.MIN_MARGIN and second_score > 0:
+            return None
 
-        if t == (False, False, False, False, True):
-            if t != self._last_pattern:
-                self._last_pattern = t
-                self._frames_same = 0
-            self._frames_same += 1
-            i = (self._frames_same // self._CYCLE_FRAMES) % len(self._CYCLE_I_J)
-            return self._CYCLE_I_J[i]
-
-        if t == (False, True, True, False, False):
-            letter = self._TWO_FINGER_LETTER.get(two)
-            if letter:
-                return letter
-            return "V"
-
-        self._last_pattern = t
-        return None
+        return best_letter
 
     def classify_with_stability(self, finger_state: Optional[FingerState]) -> Optional[str]:
         letter = self.classify(finger_state)
@@ -126,5 +367,4 @@ class GestureClassifier:
     def reset_stability(self) -> None:
         self._last_letter = None
         self._stability_count = 0
-        self._last_pattern = None
-        self._frames_same = 0
+        self._reset_motion()

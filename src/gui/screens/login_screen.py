@@ -3,8 +3,9 @@
 # Responsabilidad unica: capturar credenciales y notificar resultado.
 
 import tkinter as tk
-from tkinter import ttk, messagebox
 from typing import Callable, Optional
+
+import ttkbootstrap as ttk
 
 
 class LoginScreen(ttk.Frame):
@@ -26,28 +27,37 @@ class LoginScreen(ttk.Frame):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        container = ttk.Frame(self, padding=20)
-        container.pack(expand=True, fill=tk.BOTH)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
 
-        ttk.Label(container, text="Inicio de sesion", font=("", 16)).pack(pady=(0, 20))
+        container = ttk.Frame(self, padding=40)
+        container.grid(row=0, column=0, sticky="nsew")
+        container.columnconfigure(0, weight=1)
 
-        ttk.Label(container, text="Usuario:").pack(anchor=tk.W)
+        card = ttk.Frame(container, padding=30, bootstyle="light")
+        card.grid(row=0, column=0, sticky="n", padx=10, pady=10)
+        card.columnconfigure(0, weight=1)
+
+        ttk.Label(card, text="Traductor de Lenguaje de Señas", font=("", 18, "bold")).grid(row=0, column=0, sticky="w")
+        ttk.Label(card, text="Inicia sesión para continuar", font=("", 11)).grid(row=1, column=0, sticky="w", pady=(4, 18))
+
+        ttk.Label(card, text="Usuario").grid(row=2, column=0, sticky="w")
         self._username_var = tk.StringVar()
-        self._entry_user = ttk.Entry(container, textvariable=self._username_var, width=30)
-        self._entry_user.pack(fill=tk.X, pady=(0, 15))
+        self._entry_user = ttk.Entry(card, textvariable=self._username_var, width=34)
+        self._entry_user.grid(row=3, column=0, sticky="ew", pady=(4, 14))
 
-        ttk.Label(container, text="Contrasena:").pack(anchor=tk.W)
+        ttk.Label(card, text="Contraseña").grid(row=4, column=0, sticky="w")
         self._password_var = tk.StringVar()
-        self._entry_pass = ttk.Entry(container, textvariable=self._password_var, show="*", width=30)
-        self._entry_pass.pack(fill=tk.X, pady=(0, 20))
+        self._entry_pass = ttk.Entry(card, textvariable=self._password_var, show="*", width=34)
+        self._entry_pass.grid(row=5, column=0, sticky="ew", pady=(4, 18))
 
-        btn_frame = ttk.Frame(container)
-        btn_frame.pack(fill=tk.X, pady=10)
-        ttk.Button(btn_frame, text="Entrar", command=self._do_login).pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Button(btn_frame, text="Registrarse", command=self._on_go_register).pack(side=tk.LEFT)
+        btn_frame = ttk.Frame(card)
+        btn_frame.grid(row=6, column=0, sticky="ew")
+        ttk.Button(btn_frame, text="Entrar", command=self._do_login, bootstyle="primary").pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Button(btn_frame, text="Crear cuenta", command=self._on_go_register, bootstyle="secondary").pack(side=tk.LEFT)
 
-        self._lbl_error = ttk.Label(container, text="", foreground="red")
-        self._lbl_error.pack(pady=10)
+        self._lbl_error = ttk.Label(card, text="", bootstyle="danger")
+        self._lbl_error.grid(row=7, column=0, sticky="w", pady=(14, 0))
 
     def _do_login(self) -> None:
         user = self._username_var.get().strip()

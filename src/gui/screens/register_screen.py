@@ -3,8 +3,9 @@
 # Responsabilidad unica: capturar datos y notificar al controlador.
 
 import tkinter as tk
-from tkinter import ttk
 from typing import Callable
+
+import ttkbootstrap as ttk
 
 
 class RegisterScreen(ttk.Frame):
@@ -25,30 +26,39 @@ class RegisterScreen(ttk.Frame):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        container = ttk.Frame(self, padding=20)
-        container.pack(expand=True, fill=tk.BOTH)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
 
-        ttk.Label(container, text="Registro de usuario", font=("", 16)).pack(pady=(0, 20))
+        container = ttk.Frame(self, padding=40)
+        container.grid(row=0, column=0, sticky="nsew")
+        container.columnconfigure(0, weight=1)
 
-        ttk.Label(container, text="Usuario:").pack(anchor=tk.W)
+        card = ttk.Frame(container, padding=30, bootstyle="light")
+        card.grid(row=0, column=0, sticky="n", padx=10, pady=10)
+        card.columnconfigure(0, weight=1)
+
+        ttk.Label(card, text="Crear cuenta", font=("", 18, "bold")).grid(row=0, column=0, sticky="w")
+        ttk.Label(card, text="Regístrate para usar el traductor", font=("", 11)).grid(row=1, column=0, sticky="w", pady=(4, 18))
+
+        ttk.Label(card, text="Usuario").grid(row=2, column=0, sticky="w")
         self._username_var = tk.StringVar()
-        ttk.Entry(container, textvariable=self._username_var, width=30).pack(fill=tk.X, pady=(0, 15))
+        ttk.Entry(card, textvariable=self._username_var, width=34).grid(row=3, column=0, sticky="ew", pady=(4, 14))
 
-        ttk.Label(container, text="Contrasena:").pack(anchor=tk.W)
+        ttk.Label(card, text="Contraseña").grid(row=4, column=0, sticky="w")
         self._password_var = tk.StringVar()
-        ttk.Entry(container, textvariable=self._password_var, show="*", width=30).pack(fill=tk.X, pady=(0, 15))
+        ttk.Entry(card, textvariable=self._password_var, show="*", width=34).grid(row=5, column=0, sticky="ew", pady=(4, 14))
 
-        ttk.Label(container, text="Confirmar contrasena:").pack(anchor=tk.W)
+        ttk.Label(card, text="Confirmar contraseña").grid(row=6, column=0, sticky="w")
         self._confirm_var = tk.StringVar()
-        ttk.Entry(container, textvariable=self._confirm_var, show="*", width=30).pack(fill=tk.X, pady=(0, 20))
+        ttk.Entry(card, textvariable=self._confirm_var, show="*", width=34).grid(row=7, column=0, sticky="ew", pady=(4, 18))
 
-        btn_frame = ttk.Frame(container)
-        btn_frame.pack(fill=tk.X, pady=10)
-        ttk.Button(btn_frame, text="Registrarse", command=self._do_register).pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Button(btn_frame, text="Volver al login", command=self._on_go_login).pack(side=tk.LEFT)
+        btn_frame = ttk.Frame(card)
+        btn_frame.grid(row=8, column=0, sticky="ew")
+        ttk.Button(btn_frame, text="Registrarse", command=self._do_register, bootstyle="success").pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Button(btn_frame, text="Volver al login", command=self._on_go_login, bootstyle="secondary").pack(side=tk.LEFT)
 
-        self._lbl_error = ttk.Label(container, text="", foreground="red")
-        self._lbl_error.pack(pady=10)
+        self._lbl_error = ttk.Label(card, text="", bootstyle="danger")
+        self._lbl_error.grid(row=9, column=0, sticky="w", pady=(14, 0))
 
     def _do_register(self) -> None:
         user = self._username_var.get().strip()

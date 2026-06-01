@@ -1,18 +1,17 @@
 # db_manager.py
-# Gestion de base de datos SQLite.
+# Gestion de base de datos MongoDB (local).
 # Responsabilidad unica: operaciones CRUD y conexion.
 # Paradigma: encapsulamiento, bajo acoplamiento.
 
-import os
-import sqlite3
 import hashlib
+import os
 from typing import Optional, Tuple
 
-from .models import User
+from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError, PyMongoError
 
-# Ruta por defecto: carpeta database junto al directorio del proyecto (raiz de src)
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_DB_PATH = os.path.join(_PROJECT_ROOT, "database", "senas.db")
+from src.config import MONGO_DB_NAME, MONGO_URI, MONGO_USERS_COLLECTION
+from .models import User
 
 
 class DatabaseManager:
@@ -21,39 +20,36 @@ class DatabaseManager:
     Implementa patron de responsabilidad unica para acceso a datos.
     """
 
-    def __init__(self, db_path: Optional[str] = None) -> None:
-        if db_path is None:
-            db_path = DEFAULT_DB_PATH
-        self._db_path = db_path
-        self._ensure_directory()
+    def __init__(self, mongo_uri: Optional[str] = None) -> None:
+        # Permite override por variable de entorno, util para demos o laboratorios.
+        env_uri = os.getenv("MONGO_URI")
+        self._mongo_uri = (mongo_uri or env_uri or MONGO_URI).strip()
+        self._client: Optional[MongoClient] = None
 
-    def _ensure_directory(self) -> None:
-        """Crea el directorio de la base de datos si no existe."""
-        directory = os.path.dirname(self._db_path)
-        if directory:
-            os.makedirs(directory, exist_ok=True)
+    def _get_client(self) -> MongoClient:
+        if self._client is None:
+            self._client = MongoClient(self._mongo_uri)
+        return self._client
 
-    def _get_connection(self) -> sqlite3.Connection:
-        """Obtiene una conexion a la base de datos."""
-        conn = sqlite3.connect(self._db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+    def _users_collection(self):
+        client = self._get_client()
+        db = client[MONGO_DB_NAME]
+        return db[MONGO_USERS_COLLECTION]
 
     def init_database(self) -> None:
-        """Crea las tablas necesarias si no existen."""
-        conn = self._get_connection()
+        """
+        Inicializa la coleccion e indices necesarios.
+        En MongoDB la base se crea automaticamente al insertar el primer documento.
+        """
         try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            conn.commit()
-        finally:
-            conn.close()
+            users = self._users_collection()
+            # Username unico para evitar duplicados.
+            users.create_index("username", unique=True)
+        except Exception as e:
+            raise RuntimeError(
+                "No se pudo conectar a MongoDB. Verifique que el servicio de MongoDB este ejecutandose "
+                "y que pueda conectarse a 'mongodb://localhost:27017' (o configure MONGO_URI)."
+            ) from e
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -68,21 +64,20 @@ class DatabaseManager:
         if not username or not password:
             return False, "Usuario y contrasena son obligatorios"
         username_clean = username.strip()
-        conn = self._get_connection()
         try:
             password_hash = self.hash_password(password)
-            conn.execute(
-                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                (username_clean, password_hash)
+            users = self._users_collection()
+            users.insert_one(
+                {
+                    "username": username_clean,
+                    "password_hash": password_hash,
+                }
             )
-            conn.commit()
             return True, "Registro exitoso"
-        except sqlite3.IntegrityError:
+        except DuplicateKeyError:
             return False, "El nombre de usuario ya existe"
-        except Exception as e:
+        except PyMongoError as e:
             return False, f"Error al registrar: {str(e)}"
-        finally:
-            conn.close()
 
     def authenticate(self, username: str, password: str) -> Optional[User]:
         """
@@ -91,26 +86,16 @@ class DatabaseManager:
         if not username or not password:
             return None
         password_hash = self.hash_password(password)
-        conn = self._get_connection()
-        try:
-            row = conn.execute(
-                "SELECT id, username, password_hash FROM users WHERE username = ? AND password_hash = ?",
-                (username.strip(), password_hash)
-            ).fetchone()
-            if row is None:
-                return None
-            return User(id=row["id"], username=row["username"], password_hash=row["password_hash"])
-        finally:
-            conn.close()
+        users = self._users_collection()
+        doc = users.find_one(
+            {"username": username.strip(), "password_hash": password_hash},
+            {"username": 1, "password_hash": 1},
+        )
+        if not doc:
+            return None
+        return User(id=str(doc.get("_id")), username=doc["username"], password_hash=doc["password_hash"])
 
     def user_exists(self, username: str) -> bool:
         """Comprueba si existe un usuario con el nombre dado."""
-        conn = self._get_connection()
-        try:
-            row = conn.execute(
-                "SELECT 1 FROM users WHERE username = ?",
-                (username.strip(),)
-            ).fetchone()
-            return row is not None
-        finally:
-            conn.close()
+        users = self._users_collection()
+        return users.count_documents({"username": username.strip()}, limit=1) > 0

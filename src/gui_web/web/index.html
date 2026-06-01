@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Interacción</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg"></div>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="logo">TS</div>
+          <div>
+            <div class="title">Traductor de Lenguaje de Señas</div>
+            <div class="subtitle">Interacción (Voz + Señas)</div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="btn ghost hidden" id="btnLogout">Cerrar sesión</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <!-- LOGIN -->
+        <section class="card auth" id="viewLogin">
+          <h2>Iniciar sesión</h2>
+          <p class="muted">Accede para comenzar la interacción.</p>
+          <div class="field">
+            <label>Nombre</label>
+            <input id="loginUser" placeholder="Tu nombre" />
+          </div>
+          <div class="field">
+            <label>Contraseña</label>
+            <input id="loginPass" type="password" placeholder="Tu contraseña" />
+          </div>
+          <div class="row">
+            <button class="btn primary" id="btnLogin">Entrar</button>
+            <button class="btn" id="btnGoRegister">Crear cuenta</button>
+          </div>
+          <div class="error" id="loginError"></div>
+        </section>
+
+        <!-- REGISTER -->
+        <section class="card auth hidden" id="viewRegister">
+          <h2>Crear cuenta</h2>
+          <p class="muted">Regístrate para usar la aplicación.</p>
+          <div class="field">
+            <label>Nombre</label>
+            <input id="regUser" placeholder="Nombre" />
+          </div>
+          <div class="field">
+            <label>Contraseña</label>
+            <input id="regPass" type="password" placeholder="Contraseña" />
+          </div>
+          <div class="field">
+            <label>Confirmar contraseña</label>
+            <input id="regPass2" type="password" placeholder="Confirmar" />
+          </div>
+          <div class="row">
+            <button class="btn primary" id="btnRegister">Registrarse</button>
+            <button class="btn" id="btnGoLogin">Volver</button>
+          </div>
+          <div class="error" id="regError"></div>
+        </section>
+
+        <!-- INTERACTION -->
+        <section class="grid hidden" id="viewInteraction">
+          <div class="panel card">
+            <div class="panel-head">
+              <h3>Señas → Texto</h3>
+              <div class="letter-confirm">
+                <div class="pill" id="letterPill">Letra: -</div>
+                <button class="btn accent" id="btnAccept">✓ Aceptar</button>
+              </div>
+            </div>
+            <div class="video-wrap">
+              <img id="video" alt="video" />
+              <div class="video-fallback" id="videoFallback">Iniciando cámara…</div>
+            </div>
+            <div class="field">
+              <label>Texto (señas)</label>
+              <input id="signText" readonly />
+            </div>
+            <div class="row">
+              <button class="btn" id="btnSpace">Espacio</button>
+              <button class="btn" id="btnBackspace">Borrar</button>
+              <button class="btn danger" id="btnClear">Limpiar</button>
+              <div class="spacer"></div>
+              <button class="btn success" id="btnSendSigns">Enviar señas</button>
+            </div>
+          </div>
+
+          <div class="panel card">
+            <div class="panel-head">
+              <h3>Voz → Texto</h3>
+              <div class="row tight">
+                <button class="btn primary" id="btnRec">Grabar</button>
+              </div>
+            </div>
+            <div class="chat" id="chat"></div>
+            <div class="error" id="voiceError"></div>
+            <div class="hint muted">Tip: habla cerca del micrófono y con buena iluminación para cámara.</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
+

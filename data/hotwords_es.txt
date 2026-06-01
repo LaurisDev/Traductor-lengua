@@ -1,0 +1,441 @@
+# Hotwords para Whisper (español)
+# Las primeras lineas (hasta la siguiente seccion #) tienen prioridad para el modelo.
+
+# --- PRIORIDAD WHISPER ---
+Medellín
+Bogotá
+Colombia
+México
+Xiomara
+Barranquilla
+Daniel
+Universidad de Medellín
+ingeniería
+sistemas
+estudio
+
+# --- TÉRMINOS FRECUENTES EN CONVERSACIÓN ---
+por favor
+gracias
+de nada
+disculpe
+perdón
+buenos días
+buenas tardes
+buenas noches
+¿cómo estás?
+¿cómo estan?
+muy bien
+más o menos
+¿qué tal?
+¿cómo te llamas?
+me llamo
+mucho gusto
+encantado
+encantada
+¿puedes repetir?
+no entendí
+más despacio
+¿dónde está?
+a la derecha
+a la izquierda
+recto
+cerca
+lejos
+¿cuánto cuesta?
+¿qué hora es?
+¿cómo llego a?
+necesito ayuda
+llama a la policía
+llama a un médico
+emergencia
+
+# --- NOMBRES PROPIOS ---
+Juan
+José
+Carlos
+Luis
+Jorge
+Miguel
+Andrés
+David
+Daniel
+Sebastián
+Nicolás
+Santiago
+Mateo
+Diego
+Felipe
+Alejandro
+Ricardo
+Francisco
+Manuel
+Rodrigo
+Julián
+Lucas
+Benjamín
+Leonardo
+Emiliano
+Adrián
+Bruno
+Agustín
+Thiago
+Gael
+Víctor
+Iker
+Hugo
+Facundo
+Iván
+Emanuel
+Lorenzo
+Aaron
+Elias
+Ignacio
+Maximiliano
+Jerónimo
+Simón
+Augusto
+Esteban
+Dante
+Saúl
+Santino
+Marlon
+Jesús
+Tomás
+Joaquín
+Bautista
+Matías
+Cristóbal
+Marcos
+Samuel
+María
+Isabella
+Valentina
+Camila
+Lucía
+Mariana
+Victoria
+Gabriela
+Martina
+Elena
+Antonella
+Julieta
+Sara
+Paula
+Emma
+Renata
+Mia
+Olivia
+Daniela
+Luisa
+Natalia
+Alma
+Abril
+Emilia
+Valeria
+Constanza
+Andrea
+Montserrat
+Fernanda
+Lola
+Clara
+Juana
+Bianca
+Rafaela
+Aitana
+Malena
+Paz
+Guadalupe
+Maite
+Zoe
+Delfina
+Amparo
+Josefina
+Luna
+Celeste
+Micaela
+Inés
+Paloma
+Jimena
+Ximena
+Xiomara
+Catalina
+Carolina
+Sofía
+Ana
+Laura
+Patricia
+Claudia
+Isabel
+Gloria
+Rosa
+
+# --- PAÍSES ---
+Colombia
+México
+España
+Argentina
+Chile
+Perú
+Venezuela
+Ecuador
+Bolivia
+Paraguay
+Uruguay
+Cuba
+República Dominicana
+Guatemala
+Honduras
+El Salvador
+Nicaragua
+Costa Rica
+Panamá
+Puerto Rico
+Guinea Ecuatorial
+Estados Unidos
+Brasil
+Reino Unido
+Francia
+Alemania
+Italia
+Portugal
+Países Bajos
+Bélgica
+Suiza
+Austria
+Suecia
+Noruega
+Dinamarca
+Finlandia
+Irlanda
+Rusia
+China
+Japón
+Corea del Sur
+India
+Indonesia
+Australia
+Canadá
+Sudáfrica
+Egipto
+Nigeria
+Kenia
+Marruecos
+Israel
+Turquía
+Arabia Saudita
+Emiratos Árabes Unidos
+Catar
+Kuwait
+Tailandia
+Vietnam
+Filipinas
+Malasia
+Taiwán
+Singapur
+Nueva Zelanda
+Hungría
+Polonia
+República Checa
+Rumania
+Grecia
+Luxemburgo
+
+# --- CIUDADES LATINOAMÉRICA ---
+Medellín
+Bogotá
+Cali
+Barranquilla
+Cartagena
+Bucaramanga
+Pereira
+Manizales
+Santa Marta
+Cúcuta
+Pasto
+Ibagué
+Villavicencio
+Montería
+Valledupar
+Sincelejo
+Popayán
+Tunja
+Neiva
+Armenia
+Quibdó
+Riohacha
+San Andrés
+Leticia
+Mocoa
+Buenos Aires
+Córdoba
+Rosario
+Mendoza
+Tucumán
+Salta
+Mar del Plata
+Santa Fe
+Santiago de Chile
+Valparaíso
+Concepción
+Montevideo
+Asunción
+La Paz
+Santa Cruz de la Sierra
+Cochabamba
+São Paulo
+Río de Janeiro
+Brasilia
+Salvador
+Fortaleza
+Belo Horizonte
+Curitiba
+Manaus
+Belém
+Porto Alegre
+La Habana
+Santo Domingo
+San Juan
+Ciudad de Panamá
+Lima
+Quito
+Guayaquil
+Caracas
+Maracaibo
+Ciudad de México
+Monterrey
+Guadalajara
+Puebla
+Tijuana
+León
+Juárez
+Mérida
+San Luis Potosí
+Cancún
+Tegucigalpa
+San Salvador
+Managua
+San José
+
+# --- CIUDADES EUROPA ---
+Madrid
+Barcelona
+Sevilla
+Valencia
+Bilbao
+Lisboa
+Oporto
+París
+Lyon
+Marsella
+Londres
+Manchester
+Edimburgo
+Berlín
+Múnich
+Hamburgo
+Fráncfort
+Colonia
+Roma
+Milán
+Nápoles
+Turín
+Florencia
+Venecia
+Ámsterdam
+Róterdam
+La Haya
+Bruselas
+Amberes
+Zúrich
+Ginebra
+Basilea
+Berna
+Viena
+Salzburgo
+Estocolmo
+Gotemburgo
+Copenhague
+Oslo
+Helsinki
+Dublín
+Budapest
+Varsovia
+Cracovia
+Praga
+Bratislava
+Bucarest
+Atenas
+Zagreb
+Belgrado
+
+# --- CIUDADES RESTO DEL MUNDO ---
+Tokio
+Osaka
+Kioto
+Nagoya
+Fukuoka
+Seúl
+Busan
+Pekín
+Shanghái
+Shenzhen
+Guangzhou
+Chengdú
+Hangzhou
+Hong Kong
+Taipéi
+Bangkok
+Kuala Lumpur
+Yakarta
+Manila
+Delhi
+Bombay
+Bengaluru
+Karachi
+Dhaka
+Colombo
+Dubái
+Abu Dabi
+Riad
+Doha
+Tel Aviv
+Jerusalén
+Estambul
+Beirut
+El Cairo
+Casablanca
+Lagos
+Nairobi
+Johannesburgo
+Ciudad del Cabo
+Accra
+Addis Abeba
+Dar es Salam
+Kinshasa
+Luanda
+Túnez
+Nueva York
+Los Ángeles
+Chicago
+Houston
+Miami
+Dallas
+Atlanta
+Washington D.C
+Boston
+San Francisco
+Seattle
+Denver
+Filadelfia
+Austin
+Toronto
+Vancouver
+Montreal
+Calgary
+Ciudad de Kuwait
+Sídney
+Melbourne
+Brisbane
+Perth
+Auckland

@@ -7,6 +7,9 @@ Proyecto academico para la asignatura **Lenguajes y Paradigmas**. Aplicacion en 
 - Python 3.8 o superior
 - Camara web
 - Windows, Linux o macOS
+- MongoDB Community Server (para usuarios) y MongoDB Compass (para visualizar)
+- Microfono (para el modulo **Voz a texto**)
+- Conexion a internet la **primera vez** que use voz o traduccion con manos (descarga de modelos Whisper / MediaPipe; despues puede funcionar offline)
 
 ## Instalacion
 
@@ -47,6 +50,13 @@ python run.py
 
 Se abrira una ventana con el titulo "Traductor de Lenguaje de Senas".
 
+### Interfaz (UI)
+
+Por defecto, la app usa una **interfaz moderna en HTML/CSS** embebida como escritorio con **PyWebView**.
+
+- UI web (recomendada): en `src/config.py` deja `USE_WEB_UI = True`
+- UI Tkinter (anterior): pon `USE_WEB_UI = False`
+
 **Nota:** La primera vez que abra "Abrir modulo de traduccion", la aplicacion descargara el modelo de deteccion de manos (necesita internet). En Windows se guarda en `%LOCALAPPDATA%\TraductorSenas\models` para evitar problemas con OneDrive; en otros sistemas, en la carpeta `models/` del proyecto.
 
 ### Paso 3: Probar registro y login
@@ -57,15 +67,24 @@ Se abrira una ventana con el titulo "Traductor de Lenguaje de Senas".
 4. Escriba el mismo usuario y contrasena y pulse **Entrar**.
 5. Debe aparecer el menu principal con "Bienvenido, prueba".
 
-### Paso 4: Probar el modulo de traduccion
+**MongoDB/Compass:** Al registrarte, el usuario se guarda en MongoDB y podras verlo en Compass en la BD `traductor_senas`, coleccion `users`. El identificador `_id` es el ID unico del usuario.
 
-1. En el menu principal pulse **Abrir modulo de traduccion**.
-2. La camara deberia encenderse y verse el video en la ventana.
+### Paso 4: Probar la pantalla de interacción (Voz + Señas)
+
+1. En el menu principal pulse **Iniciar interacción (Voz + Señas)**.
+2. La cámara se encenderá y verás el video en el panel de **Señas**.
 3. Ponga **una mano** frente a la camara con buena luz.
-4. La letra detectada (A-Z) aparecera encima del video. Por ejemplo:
+4. La letra detectada (A-Z) se mostrará y se irá agregando al campo **Texto (señas)**. Por ejemplo:
    - Punio con el pulgar al lado suele dar **A**.
    - Mano abierta con todos los dedos extendidos y pulgar cerrado suele dar **B**.
-5. Pulse **Volver al menu** para salir del modulo (la camara se apagara).
+5. Usa **Espacio / Borrar / Limpiar** para formar palabras y frases por deletreo.
+6. Pulsa **Enviar señas** para mandarlo a la conversación como \"Persona (señas)\".
+7. En el panel de **Voz**, pulsa **Grabar**, habla y luego **Detener** para que el texto aparezca en la conversación como \"Yo (voz)\".
+7. Pulse **Volver** para regresar al menú (la cámara se apaga).
+
+### Mejorar nombres en voz (hotwords)
+
+Para ayudar con nombres propios (por ejemplo \"Xiomara\"), edite `data/hotwords_es.txt` y agregue nombres frecuentes (1 por línea). Whisper usará esa lista como sesgo leve al transcribir.
 
 ### Paso 5: Cerrar sesion
 
@@ -83,6 +102,7 @@ En el menu principal pulse **Cerrar sesion**. Volvera a la pantalla de inicio de
 - **"No se pudo abrir la camara"**: Siga los pasos de "Si la camara no inicia".
 - **Error al importar**: Ejecute `pip install -r requirements.txt` de nuevo.
 - **La letra no cambia**: Ilumine bien la mano y mantenga el gesto estable unos segundos; el sistema confirma la letra tras varios frames iguales.
+- **Voz a texto falla o es muy lento**: Compruebe permisos del microfono en Windows. Si aparece error de `compute_type`, pruebe en `src/config.py` con `WHISPER_COMPUTE_TYPE = "float32"`.
 
 ### Uso en celular
 
@@ -100,13 +120,13 @@ Señas/
     main.py        Controlador principal
     config.py      Constantes
     auth/          Login y registro
-    database/      SQLite y usuarios
+    database/      MongoDB (conector) y modelos
     gui/           Interfaz Tkinter
     camera/        Captura OpenCV
     image_processing/  MediaPipe manos
     sign_language/    Clasificacion A-Z
+    speech/           Voz a texto (faster-whisper)
   docs/            Documentacion
-  database/        Base SQLite (se crea al ejecutar)
 ```
 
 ## Dependencias
@@ -114,8 +134,10 @@ Señas/
 - OpenCV (camara)
 - MediaPipe (deteccion de manos)
 - Pillow (mostrar video en la interfaz)
-- Tkinter (incluido en Python)
-- SQLite (incluido en Python)
+- Tkinter/TTK (incluido en Python) + ttkbootstrap (tema moderno)
+- MongoDB (usuarios) con pymongo (cliente)
+- faster-whisper + sounddevice (reconocimiento de voz local en espanol)
+- pywebview (UI web embebida HTML/CSS)
 
 ## Documentacion
 

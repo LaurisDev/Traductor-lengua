@@ -3,10 +3,10 @@
 # Responsabilidad: ensamblar GUI y coordinar con logica (controlador inyectado).
 
 import tkinter as tk
-from tkinter import ttk
+import ttkbootstrap as ttk
 
 from src.config import APP_TITLE, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT
-from .screens import LoginScreen, RegisterScreen, MainMenuScreen, TranslationScreen
+from .screens import LoginScreen, RegisterScreen, MainMenuScreen, TranslationScreen, VoiceScreen, InteractionScreen
 
 
 class App:
@@ -17,10 +17,15 @@ class App:
 
     def __init__(self, controller: any) -> None:
         self._controller = controller
-        self._root = tk.Tk()
+        # Ventana con tema moderno (ttkbootstrap)
+        # Tema claro moderno (mejor percepción “app”)
+        self._root = ttk.Window(themename="flatly")
         self._root.title(APP_TITLE)
         self._root.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
+        self._root.geometry("1280x720")
         self._current_frame: ttk.Frame = None
+        # Cierre limpio (detener cámara/threads antes de destruir la ventana)
+        self._root.protocol("WM_DELETE_WINDOW", self._controller.on_app_close)
 
     def run(self) -> None:
         """Inicia el bucle principal de la GUI."""
@@ -64,8 +69,8 @@ class App:
         screen = MainMenuScreen(
             self._root,
             username=username,
-            on_translation=self._controller.on_open_translation,
-            on_logout=self._controller.on_logout
+            on_interaction=self._controller.on_open_interaction,
+            on_logout=self._controller.on_logout,
         )
         self._show_screen(screen)
 
@@ -76,6 +81,30 @@ class App:
         )
         self._show_screen(screen)
         self._controller.set_translation_screen(screen)
+
+    def show_voice(self) -> None:
+        screen = VoiceScreen(
+            self._root,
+            on_start_capture=self._controller.on_voice_start_capture,
+            on_stop_capture=self._controller.on_voice_stop_capture,
+            on_back=self._controller.on_voice_back,
+        )
+        self._show_screen(screen)
+        self._controller.set_voice_screen(screen)
+
+    def show_interaction(self) -> None:
+        screen = InteractionScreen(
+            self._root,
+            on_back=self._controller.on_interaction_back,
+            on_voice_start=self._controller.on_voice_start_capture,
+            on_voice_stop=self._controller.on_voice_stop_capture,
+            on_clear_sign_buffer=self._controller.on_sign_clear,
+            on_sign_space=self._controller.on_sign_space,
+            on_sign_backspace=self._controller.on_sign_backspace,
+            on_sign_send=self._controller.on_sign_send,
+        )
+        self._show_screen(screen)
+        self._controller.set_interaction_screen(screen)
 
     def get_root(self) -> tk.Tk:
         return self._root

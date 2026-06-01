@@ -3,8 +3,9 @@
 # Responsabilidad: mostrar frame y resultado, delegar captura/clasificacion al controlador.
 
 import tkinter as tk
-from tkinter import ttk
 from typing import Callable, Optional
+
+import ttkbootstrap as ttk
 
 # PIL para convertir frame OpenCV a ImageTk
 try:
@@ -32,31 +33,45 @@ class TranslationScreen(ttk.Frame):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        container = ttk.Frame(self, padding=10)
-        container.pack(expand=True, fill=tk.BOTH)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
 
-        top = ttk.Frame(container)
-        top.pack(fill=tk.X)
-        ttk.Button(top, text="Volver al menu", command=self._on_back).pack(side=tk.LEFT)
+        header = ttk.Frame(self, padding=(16, 12))
+        header.grid(row=0, column=0, sticky="ew")
+        header.columnconfigure(1, weight=1)
+
+        ttk.Button(header, text="← Volver", command=self._on_back, bootstyle="secondary").grid(row=0, column=0, sticky="w")
+        ttk.Label(header, text="Traducción en tiempo real", font=("", 14, "bold")).grid(row=0, column=1, sticky="w", padx=(12, 0))
+
+        body = ttk.Frame(self, padding=(16, 0, 16, 16))
+        body.grid(row=1, column=0, sticky="nsew")
+        body.columnconfigure(0, weight=1)
+        body.rowconfigure(0, weight=1)
 
         self._lbl_video = ttk.Label(
-            container,
-            text="Iniciando camara...",
-            relief=tk.SUNKEN,
+            body,
+            text="Iniciando cámara...",
             anchor=tk.CENTER,
-            width=60
+            bootstyle="light",
         )
-        self._lbl_video.pack(pady=10, fill=tk.BOTH, expand=True)
+        self._lbl_video.grid(row=0, column=0, sticky="nsew", pady=(12, 12))
 
-        self._lbl_letter = ttk.Label(container, text="Letra: -", font=("", 24))
-        self._lbl_letter.pack(pady=10)
+        # Letra grande y centrada debajo del video
+        self._lbl_letter = ttk.Label(
+            body,
+            text="Letra: -",
+            font=("", 28, "bold"),
+            bootstyle="inverse-primary",
+            anchor=tk.CENTER,
+        )
+        self._lbl_letter.grid(row=1, column=0, sticky="ew", pady=(0, 10))
 
         self._lbl_instruction = ttk.Label(
-            container,
-            text="Coloque la mano frente a la camara. La letra detectada aparecera arriba.",
-            font=("", 10)
+            body,
+            text="Coloca una mano frente a la cámara con buena luz. Mantén el gesto estable unos segundos.",
+            font=("", 10),
         )
-        self._lbl_instruction.pack(pady=5)
+        self._lbl_instruction.grid(row=2, column=0, sticky="w")
 
     # Tamano fijo para mostrar el video (evita problemas de dimension o refresco en Tkinter)
     _DISPLAY_WIDTH = 640

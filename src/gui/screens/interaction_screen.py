@@ -5,7 +5,7 @@ import tkinter as tk
 from typing import Callable, Optional
 
 import ttkbootstrap as ttk
-from ttkbootstrap.scrolled import ScrolledFrame
+from ttkbootstrap import ScrolledFrame
 
 
 class InteractionScreen(ttk.Frame):

@@ -65,6 +65,17 @@
           <div class="error" id="regError"></div>
         </section>
 
+        <!-- MENÚ PRINCIPAL -->
+        <section class="card menu hidden" id="viewMenu">
+          <h2>Menú principal</h2>
+          <p class="muted">Elige cómo quieres continuar.</p>
+          <div class="stack">
+            <button class="btn primary wide" id="btnOpenInteraction">Iniciar interacción</button>
+            <button class="btn secondary wide" id="btnOpenAprendizaje">Aprendizaje</button>
+            <button class="btn ghost wide" id="btnLogoutMenu">Cerrar sesión</button>
+          </div>
+        </section>
+
         <!-- INTERACTION -->
         <section class="grid hidden" id="viewInteraction">
           <div class="panel card">
@@ -76,8 +87,8 @@
               </div>
             </div>
             <div class="video-wrap">
-              <img id="video" alt="video" />
-              <div class="video-fallback" id="videoFallback">Iniciando cámara…</div>
+              <img id="videoInteraction" alt="video" />
+              <div class="video-fallback" id="videoFallbackInteraction">Iniciando cámara…</div>
             </div>
             <div class="field">
               <label>Texto (señas)</label>
@@ -102,6 +113,36 @@
             <div class="chat" id="chat"></div>
             <div class="error" id="voiceError"></div>
             <div class="hint muted">Tip: habla cerca del micrófono y con buena iluminación para cámara.</div>
+          </div>
+        </section>
+
+        <!-- APRENDIZAJE -->
+        <section class="learning hidden" id="viewAprendizaje">
+          <div class="learning-grid">
+            <div class="panel card learning-panel left-panel">
+              <div class="learning-progress" id="learningProgress">A — 1/27</div>
+              <div class="reference-box">
+                <div class="reference-figure" id="learningReferenceArt" aria-label="Referencia de la seña">
+                  <img id="learningReferenceImage" alt="Imagen de referencia de la seña" />
+                  <span class="reference-placeholder-text">Imagen de referencia</span>
+                </div>
+                <div class="letter-reference" id="learningLetter">A</div>
+              </div>
+            </div>
+
+            <div class="panel card learning-panel right-panel">
+              <div class="camera-box">
+                <div class="video-wrap learning-video-wrap">
+                  <img id="videoAprendizaje" alt="camara de aprendizaje" />
+                  <div class="video-fallback" id="videoFallbackAprendizaje">Iniciando cámara…</div>
+                </div>
+                <div class="learning-caption">Repite la seña</div>
+                <div class="learning-actions">
+                  <button class="btn" id="btnPrevAprendizaje">Anterior</button>
+                  <button class="btn primary" id="btnNextAprendizaje">Siguiente</button>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </main>

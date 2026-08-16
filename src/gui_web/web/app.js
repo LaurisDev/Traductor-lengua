@@ -2,33 +2,75 @@ const $ = (id) => document.getElementById(id);
 
 const viewLogin = $("viewLogin");
 const viewRegister = $("viewRegister");
+const viewMenu = $("viewMenu");
 const viewInteraction = $("viewInteraction");
+const viewAprendizaje = $("viewAprendizaje");
 
 const loginError = $("loginError");
 const regError = $("regError");
 const voiceError = $("voiceError");
 
 const chat = $("chat");
-const video = $("video");
-const videoFallback = $("videoFallback");
+const videoInteraction = $("videoInteraction");
+const videoFallbackInteraction = $("videoFallbackInteraction");
+const videoAprendizaje = $("videoAprendizaje");
+const videoFallbackAprendizaje = $("videoFallbackAprendizaje");
 const letterPill = $("letterPill");
 const signText = $("signText");
+const learningProgress = $("learningProgress");
+const learningLetter = $("learningLetter");
+const learningReferenceArt = $("learningReferenceArt");
+const learningReferenceImage = $("learningReferenceImage");
 const btnLogout = $("btnLogout");
 
+const LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
 let pollTimer = null;
 let recording = false;
 let lastLoggedIn = null;
+let learningIndex = 0;
 
 function setView(name){
   viewLogin.classList.toggle("hidden", name !== "login");
   viewRegister.classList.toggle("hidden", name !== "register");
+  viewMenu.classList.toggle("hidden", name !== "menu");
   viewInteraction.classList.toggle("hidden", name !== "interaction");
+  viewAprendizaje.classList.toggle("hidden", name !== "aprendizaje");
 }
 
 function currentView(){
+  if(!viewAprendizaje.classList.contains("hidden")) return "aprendizaje";
   if(!viewInteraction.classList.contains("hidden")) return "interaction";
+  if(!viewMenu.classList.contains("hidden")) return "menu";
   if(!viewRegister.classList.contains("hidden")) return "register";
   return "login";
+}
+
+function renderFrame(frameB64, videoEl, fallbackEl){
+  if(frameB64){
+    videoEl.src = "data:image/jpeg;base64," + frameB64;
+    videoEl.style.display = "block";
+    fallbackEl.style.display = "none";
+  }else{
+    videoEl.style.display = "none";
+    fallbackEl.style.display = "grid";
+  }
+}
+
+function syncLearningView(letter, progressText){
+  const letterValue = (letter && letter.trim()) ? letter.trim().toUpperCase() : "A";
+  const idx = LETTERS.indexOf(letterValue);
+  const finalIndex = idx >= 0 ? idx : 0;
+  const progressValue = progressText || `${finalIndex + 1}/${LETTERS.length}`;
+  const placeholder = learningReferenceArt.querySelector(".reference-placeholder-text");
+
+  learningLetter.textContent = letterValue;
+  learningProgress.textContent = `${letterValue} — ${progressValue}`;
+
+  const imageName = letterValue.toLowerCase();
+  learningReferenceImage.src = `./assets/letras/${imageName}.png`;
+  learningReferenceImage.alt = `Seña de la letra ${letterValue}`;
+  learningReferenceImage.style.display = "block";
+  placeholder.style.display = "none";
 }
 
 function addBubble(who, text){
@@ -50,21 +92,19 @@ async function poll(){
     const st = await window.pywebview.api.get_state();
     if(st && st.logged_in){
       btnLogout.classList.remove("hidden");
-      if(viewInteraction.classList.contains("hidden")){
-        setView("interaction");
+      if(currentView() === "login" || currentView() === "register"){
+        setView("menu");
       }
 
       signText.value = st.sign_text || "";
       letterPill.textContent = "Letra: " + (st.letter || "-");
 
-      if(st.frame_jpeg_b64){
-        video.src = "data:image/jpeg;base64," + st.frame_jpeg_b64;
-        video.style.display = "block";
-        videoFallback.style.display = "none";
-      }else{
-        video.style.display = "none";
-        videoFallback.style.display = "grid";
+      if(currentView() !== "aprendizaje"){
+        syncLearningView(st.letter || "A", "1/27");
       }
+
+      renderFrame(st.frame_jpeg_b64, videoInteraction, videoFallbackInteraction);
+      renderFrame(st.frame_jpeg_b64, videoAprendizaje, videoFallbackAprendizaje);
 
       // append new messages
       if(Array.isArray(st.new_messages)){
@@ -77,7 +117,7 @@ async function poll(){
     }else{
       btnLogout.classList.add("hidden");
       // No forzar login si el usuario está en "Crear cuenta"
-      if(currentView() === "interaction"){
+      if(["interaction", "menu", "aprendizaje"].includes(currentView())){
         setView("login");
       }
 
@@ -96,10 +136,17 @@ async function poll(){
   }
 }
 
+function moveLearning(step) {
+  learningIndex = (learningIndex + step + LETTERS.length) % LETTERS.length;
+  const current = LETTERS[learningIndex];
+  syncLearningView(current, `${learningIndex + 1}/${LETTERS.length}`);
+}
+
 function startPolling(){
   if(pollTimer) return;
   pollTimer = setInterval(poll, 220);
   poll();
+  syncLearningView(LETTERS[learningIndex], `${learningIndex + 1}/${LETTERS.length}`);
 }
 
 // Auth
@@ -133,6 +180,21 @@ $("btnLogout").onclick = async () => {
   $("loginPass").value = "";
   setView("login");
 };
+
+$("btnLogoutMenu").onclick = async () => {
+  await window.pywebview.api.logout();
+  chat.innerHTML = "";
+  setView("login");
+};
+
+$("btnOpenInteraction").onclick = () => setView("interaction");
+$("btnOpenAprendizaje").onclick = () => {
+  learningIndex = 0;
+  syncLearningView(LETTERS[learningIndex], `${learningIndex + 1}/${LETTERS.length}`);
+  setView("aprendizaje");
+};
+$("btnPrevAprendizaje").onclick = () => moveLearning(-1);
+$("btnNextAprendizaje").onclick = () => moveLearning(1);
 
 // Interaction actions
 $("btnAccept").onclick = () => window.pywebview.api.sign_accept();

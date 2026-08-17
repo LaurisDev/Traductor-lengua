@@ -5,6 +5,7 @@ const viewRegister = $("viewRegister");
 const viewMenu = $("viewMenu");
 const viewInteraction = $("viewInteraction");
 const viewAprendizaje = $("viewAprendizaje");
+const viewReto = $("viewReto");
 
 const loginError = $("loginError");
 const regError = $("regError");
@@ -23,6 +24,19 @@ const learningReferenceArt = $("learningReferenceArt");
 const learningReferenceImage = $("learningReferenceImage");
 const btnLogout = $("btnLogout");
 
+const videoReto = $("videoReto");
+const videoFallbackReto = $("videoFallbackReto");
+const retoWord = $("retoWord");
+const retoGrid = $("retoGrid");
+const retoLetter = $("retoLetter");
+const retoReferenceArt = $("retoReferenceArt");
+const retoReferenceImage = $("retoReferenceImage");
+const retoCaption = $("retoCaption");
+const retoSubtitle = $("retoSubtitle");
+const retoProgressFill = $("retoProgressFill");
+const retoEmpty = $("retoEmpty");
+const retoComplete = $("retoComplete");
+
 const LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
 let pollTimer = null;
 let recording = false;
@@ -35,9 +49,11 @@ function setView(name){
   viewMenu.classList.toggle("hidden", name !== "menu");
   viewInteraction.classList.toggle("hidden", name !== "interaction");
   viewAprendizaje.classList.toggle("hidden", name !== "aprendizaje");
+  viewReto.classList.toggle("hidden", name !== "reto");
 }
 
 function currentView(){
+  if(!viewReto.classList.contains("hidden")) return "reto";
   if(!viewAprendizaje.classList.contains("hidden")) return "aprendizaje";
   if(!viewInteraction.classList.contains("hidden")) return "interaction";
   if(!viewMenu.classList.contains("hidden")) return "menu";
@@ -45,7 +61,56 @@ function currentView(){
   return "login";
 }
 
-function renderFrame(frameB64, videoEl, fallbackEl){
+function renderReto(st){
+  const letters = st.challenge_letters || [];
+  const idx = st.challenge_index || 0;
+  const done = !!st.challenge_done;
+
+  if(letters.length === 0){
+    retoEmpty.classList.remove("hidden");
+    retoGrid.classList.add("hidden");
+    retoWord.classList.add("hidden");
+    retoComplete.classList.add("hidden");
+    return;
+  }
+  retoEmpty.classList.add("hidden");
+  retoWord.classList.remove("hidden");
+
+  retoWord.innerHTML = "";
+  letters.forEach((l, i) => {
+    const tile = document.createElement("div");
+    let cls = "reto-letter-tile";
+    if(i < idx || done) cls += " done";
+    else if(i === idx) cls += " current";
+    tile.className = cls;
+    tile.textContent = l;
+    retoWord.appendChild(tile);
+  });
+
+  if(done){
+    retoGrid.classList.add("hidden");
+    retoComplete.classList.remove("hidden");
+    retoSubtitle.textContent = "¡Nombre completo!";
+    return;
+  }
+
+  retoGrid.classList.remove("hidden");
+  retoComplete.classList.add("hidden");
+
+  const target = letters[idx];
+  retoLetter.textContent = target;
+  retoReferenceImage.src = `./assets/letras/${target.toLowerCase()}.png`;
+  retoReferenceImage.alt = `Seña de la letra ${target}`;
+  retoReferenceImage.style.display = "block";
+  retoReferenceArt.querySelector(".reference-placeholder-text").style.display = "none";
+  retoCaption.textContent = `Haz la seña de la letra "${target}"`;
+  retoSubtitle.textContent = `Letra ${idx + 1} de ${letters.length}`;
+
+  const progress = Math.max(0, Math.min(1, st.challenge_progress || 0));
+  retoProgressFill.style.width = (progress * 100) + "%";
+}
+
+function renderFrame(frameB64, videoEl, fallbackEl, errorMsg){
   if(frameB64){
     videoEl.src = "data:image/jpeg;base64," + frameB64;
     videoEl.style.display = "block";
@@ -53,6 +118,7 @@ function renderFrame(frameB64, videoEl, fallbackEl){
   }else{
     videoEl.style.display = "none";
     fallbackEl.style.display = "grid";
+    fallbackEl.textContent = errorMsg || "Iniciando cámara…";
   }
 }
 
@@ -103,8 +169,10 @@ async function poll(){
         syncLearningView(st.letter || "A", "1/27");
       }
 
-      renderFrame(st.frame_jpeg_b64, videoInteraction, videoFallbackInteraction);
-      renderFrame(st.frame_jpeg_b64, videoAprendizaje, videoFallbackAprendizaje);
+      renderFrame(st.frame_jpeg_b64, videoInteraction, videoFallbackInteraction, st.camera_error);
+      renderFrame(st.frame_jpeg_b64, videoAprendizaje, videoFallbackAprendizaje, st.camera_error);
+      renderFrame(st.frame_jpeg_b64, videoReto, videoFallbackReto, st.camera_error);
+      renderReto(st);
 
       // append new messages
       if(Array.isArray(st.new_messages)){
@@ -117,7 +185,7 @@ async function poll(){
     }else{
       btnLogout.classList.add("hidden");
       // No forzar login si el usuario está en "Crear cuenta"
-      if(["interaction", "menu", "aprendizaje"].includes(currentView())){
+      if(["interaction", "menu", "aprendizaje", "reto"].includes(currentView())){
         setView("login");
       }
 
@@ -195,6 +263,23 @@ $("btnOpenAprendizaje").onclick = () => {
 };
 $("btnPrevAprendizaje").onclick = () => moveLearning(-1);
 $("btnNextAprendizaje").onclick = () => moveLearning(1);
+
+// Reto: deletrea tu nombre
+$("btnOpenReto").onclick = async () => {
+  await window.pywebview.api.challenge_start();
+  setView("reto");
+};
+$("btnRetoBack").onclick = async () => {
+  await window.pywebview.api.challenge_stop();
+  setView("menu");
+};
+$("btnRetoRetry").onclick = async () => {
+  await window.pywebview.api.challenge_start();
+};
+$("btnRetoMenu").onclick = async () => {
+  await window.pywebview.api.challenge_stop();
+  setView("menu");
+};
 
 // Interaction actions
 $("btnAccept").onclick = () => window.pywebview.api.sign_accept();

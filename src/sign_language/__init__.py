@@ -2,6 +2,7 @@
 
 from .feature_extractor import FEATURE_NAMES, N_FEATURES, extract_features
 from .sign_classifier import SignClassifier
+from .text_utils import letters_for_challenge
 
 # Clasificador por reglas (legacy, opcional)
 from .finger_analyzer import FingerAnalyzer, FingerState
@@ -12,6 +13,7 @@ __all__ = [
     "FEATURE_NAMES",
     "N_FEATURES",
     "SignClassifier",
+    "letters_for_challenge",
     "FingerAnalyzer",
     "FingerState",
     "GestureClassifier",

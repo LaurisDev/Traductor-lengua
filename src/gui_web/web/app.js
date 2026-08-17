@@ -5,6 +5,17 @@ const viewRegister = $("viewRegister");
 const viewMenu = $("viewMenu");
 const viewInteraction = $("viewInteraction");
 const viewAprendizaje = $("viewAprendizaje");
+const viewEvaluacionConfig = $("viewEvaluacionConfig");
+const viewEvaluacionRun = $("viewEvaluacionRun");
+
+// Evaluation elements
+const evalRequestedLetter = $("evalRequestedLetter");
+const evalDetectedLetter = $("evalDetectedLetter");
+const evalTime = $("evalTime");
+const evalScore = $("evalScore");
+const evalUpcoming = $("evalUpcoming");
+const videoEvaluacion = $("videoEvaluacion");
+const videoFallbackEvaluacion = $("videoFallbackEvaluacion");
 
 const loginError = $("loginError");
 const regError = $("regError");
@@ -35,9 +46,13 @@ function setView(name){
   viewMenu.classList.toggle("hidden", name !== "menu");
   viewInteraction.classList.toggle("hidden", name !== "interaction");
   viewAprendizaje.classList.toggle("hidden", name !== "aprendizaje");
+  viewEvaluacionConfig.classList.toggle("hidden", name !== "evaluacion_config");
+  viewEvaluacionRun.classList.toggle("hidden", name !== "evaluacion_run");
 }
 
 function currentView(){
+  if(!viewEvaluacionRun.classList.contains("hidden")) return "evaluacion_run";
+  if(!viewEvaluacionConfig.classList.contains("hidden")) return "evaluacion_config";
   if(!viewAprendizaje.classList.contains("hidden")) return "aprendizaje";
   if(!viewInteraction.classList.contains("hidden")) return "interaction";
   if(!viewMenu.classList.contains("hidden")) return "menu";
@@ -105,6 +120,14 @@ async function poll(){
 
       renderFrame(st.frame_jpeg_b64, videoInteraction, videoFallbackInteraction);
       renderFrame(st.frame_jpeg_b64, videoAprendizaje, videoFallbackAprendizaje);
+      // Si estamos en modo evaluación, actualizar video y letra detectada
+      try{
+        if(typeof videoEvaluacion !== 'undefined') renderFrame(st.frame_jpeg_b64, videoEvaluacion, videoFallbackEvaluacion);
+      }catch(e){}
+
+      try{
+        if(typeof evalDetectedLetter !== 'undefined') evalDetectedLetter.textContent = st.letter || "-";
+      }catch(e){}
 
       // append new messages
       if(Array.isArray(st.new_messages)){
@@ -193,8 +216,106 @@ $("btnOpenAprendizaje").onclick = () => {
   syncLearningView(LETTERS[learningIndex], `${learningIndex + 1}/${LETTERS.length}`);
   setView("aprendizaje");
 };
+// Abrir configuración de Modo Evaluación
+$("btnOpenEvaluacion").onclick = () => {
+  // reset UI
+  const radios = document.getElementsByName('evalDuration');
+  for(const r of radios) r.checked = (r.value === '30');
+  setView('evaluacion_config');
+};
+
 $("btnPrevAprendizaje").onclick = () => moveLearning(-1);
 $("btnNextAprendizaje").onclick = () => moveLearning(1);
+
+// Evaluación state
+let evalTimerId = null;
+let evalChangeId = null;
+let evalRemaining = 0;
+let evalScoreVal = 0;
+let evalChangeInterval = 5; // segundos por letra
+let evalUpcomingList = [];
+
+function formatTimeSec(s){
+  const mm = Math.floor(s/60).toString().padStart(2,'0');
+  const ss = (s%60).toString().padStart(2,'0');
+  return `${mm}:${ss}`;
+}
+
+function pickRandomLetter(){
+  return LETTERS[Math.floor(Math.random()*LETTERS.length)];
+}
+
+function renderUpcoming(){
+  evalUpcoming.innerHTML = '';
+  for(const l of evalUpcomingList.slice(0,10)){
+    const el = document.createElement('div');
+    el.className = 'pill';
+    el.style.padding = '6px 10px';
+    el.textContent = l;
+    evalUpcoming.appendChild(el);
+  }
+}
+
+async function startEvaluationWithDuration(seconds){
+  // prepare
+  evalRemaining = seconds;
+  evalScoreVal = 0;
+  evalUpcomingList = [];
+  evalTime.textContent = 'Tiempo: ' + formatTimeSec(evalRemaining);
+  evalScore.textContent = 'Puntaje: ' + evalScoreVal;
+  evalRequestedLetter.textContent = '-';
+  renderUpcoming();
+
+  setView('evaluacion_run');
+
+  // Generate initial upcoming letters
+  const totalSteps = Math.ceil(seconds / evalChangeInterval);
+  for(let i=0;i<totalSteps;i++) evalUpcomingList.push(pickRandomLetter());
+  renderUpcoming();
+
+  // show first requested
+  evalRequestedLetter.textContent = evalUpcomingList.shift() || '-';
+  renderUpcoming();
+
+  // Change requested letter periodically
+  evalChangeId = setInterval(() => {
+    evalRequestedLetter.textContent = evalUpcomingList.shift() || pickRandomLetter();
+    // refill upcoming so list remains populated
+    evalUpcomingList.push(pickRandomLetter());
+    renderUpcoming();
+  }, evalChangeInterval * 1000);
+
+  // Countdown timer
+  evalTimerId = setInterval(() => {
+    evalRemaining -= 1;
+    evalTime.textContent = 'Tiempo: ' + formatTimeSec(evalRemaining);
+    evalScore.textContent = 'Puntaje: ' + evalScoreVal;
+    if(evalRemaining <= 0){
+      stopEvaluation();
+    }
+  }, 1000);
+}
+
+function stopEvaluation(){
+  if(evalTimerId){ clearInterval(evalTimerId); evalTimerId = null; }
+  if(evalChangeId){ clearInterval(evalChangeId); evalChangeId = null; }
+  // reset UI and go back to menu
+  evalRequestedLetter.textContent = '-';
+  evalDetectedLetter.textContent = '-';
+  evalUpcomingList = [];
+  renderUpcoming();
+  setView('menu');
+}
+
+// Handlers for evaluation controls
+$("btnCancelEvaluation").onclick = () => setView('menu');
+$("btnStopEvaluation").onclick = () => stopEvaluation();
+$("btnStartEvaluation").onclick = () => {
+  const radios = document.getElementsByName('evalDuration');
+  let val = 30;
+  for(const r of radios){ if(r.checked) val = parseInt(r.value); }
+  startEvaluationWithDuration(val);
+};
 
 // Interaction actions
 $("btnAccept").onclick = () => window.pywebview.api.sign_accept();

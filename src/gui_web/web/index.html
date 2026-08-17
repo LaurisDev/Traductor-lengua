@@ -72,6 +72,7 @@
           <div class="stack">
             <button class="btn primary wide" id="btnOpenInteraction">Iniciar interacción</button>
             <button class="btn secondary wide" id="btnOpenAprendizaje">Aprendizaje</button>
+            <button class="btn secondary wide" id="btnOpenEvaluacion">Modo Evaluación</button>
             <button class="btn ghost wide" id="btnLogoutMenu">Cerrar sesión</button>
           </div>
         </section>
@@ -145,6 +146,67 @@
             </div>
           </div>
         </section>
+
+        <!-- EVALUACIÓN: CONFIGURACIÓN -->
+        <section class="card hidden" id="viewEvaluacionConfig">
+          <h2>Modo Evaluación</h2>
+          <p class="muted">Configura la evaluación antes de comenzar.</p>
+          <div class="field">
+            <label>Duración</label>
+            <div class="row">
+              <label><input type="radio" name="evalDuration" value="30" checked/> 30 segundos</label>
+              <label><input type="radio" name="evalDuration" value="60"/> 1 minuto</label>
+              <label><input type="radio" name="evalDuration" value="120"/> 2 minutos</label>
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn primary" id="btnStartEvaluation">Iniciar evaluación</button>
+            <button class="btn" id="btnCancelEvaluation">Volver</button>
+          </div>
+        </section>
+
+        <!-- EVALUACIÓN: EN CURSO -->
+        <section class="card hidden" id="viewEvaluacionRun">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Evaluación</h3>
+              <div class="row tight">
+                <div class="pill" id="evalTime">Tiempo: --</div>
+                <div class="pill" id="evalScore">Puntaje: 0</div>
+              </div>
+            </div>
+
+            <div class="grid" style="grid-template-columns: 1fr .6fr; gap:12px">
+              <div class="panel card">
+                <div class="panel-head"><h3>Seña solicitada</h3></div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+                  <div class="letter-reference" id="evalRequestedLetter">-</div>
+                  <div class="video-wrap" style="width:100%; max-height:360px;">
+                    <img id="videoEvaluacion" alt="video evaluacion" />
+                    <div class="video-fallback" id="videoFallbackEvaluacion">Iniciando cámara…</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel card">
+                <div class="panel-head"><h3>Estado</h3></div>
+                <div class="field">
+                  <label>Letra detectada</label>
+                  <div class="pill" id="evalDetectedLetter">-</div>
+                </div>
+                <div class="field">
+                  <label>Letras solicitadas (próximas)</label>
+                  <div id="evalUpcoming" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                </div>
+                <div class="row" style="margin-top:12px">
+                  <button class="btn ghost" id="btnStopEvaluation">Detener</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
       </main>
     </div>
 

@@ -32,6 +32,12 @@ const learningProgress = $("learningProgress");
 const learningLetter = $("learningLetter");
 const learningReferenceArt = $("learningReferenceArt");
 const learningReferenceImage = $("learningReferenceImage");
+const learningVideoWrap = $("learningVideoWrap");
+const learningOverlay = $("learningOverlay");
+const learningDetected = $("learningDetected");
+const learningStatusPill = $("learningStatusPill");
+const learningCaption = $("learningCaption");
+const learningCounter = $("learningCounter");
 const btnLogout = $("btnLogout");
 
 const LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
@@ -39,6 +45,12 @@ let pollTimer = null;
 let recording = false;
 let lastLoggedIn = null;
 let learningIndex = 0;
+let learningTargetLetter = "A";
+let learningCorrectCount = 0;
+let learningSameStreak = 0;
+let learningLastDetected = null;
+let learningIsCorrect = false;
+const LEARNING_STREAK_TO_CONFIRM = 3;
 
 function setView(name){
   viewLogin.classList.toggle("hidden", name !== "login");
@@ -71,6 +83,29 @@ function renderFrame(frameB64, videoEl, fallbackEl){
   }
 }
 
+function resetLearningFeedback(){
+  learningIsCorrect = false;
+  learningSameStreak = 0;
+  learningLastDetected = null;
+  if(learningVideoWrap){
+    learningVideoWrap.classList.remove("learning-correct", "learning-incorrect");
+  }
+  if(learningOverlay){
+    learningOverlay.classList.remove("learning-overlay-correct", "learning-overlay-incorrect");
+    learningOverlay.textContent = "";
+  }
+  if(learningStatusPill){
+    learningStatusPill.className = "learning-status-pill";
+    learningStatusPill.textContent = "Esperando seña…";
+  }
+  if(learningCaption){
+    learningCaption.textContent = "Repite la seña";
+  }
+  if(learningDetected){
+    learningDetected.textContent = "-";
+  }
+}
+
 function syncLearningView(letter, progressText){
   const letterValue = (letter && letter.trim()) ? letter.trim().toUpperCase() : "A";
   const idx = LETTERS.indexOf(letterValue);
@@ -78,6 +113,7 @@ function syncLearningView(letter, progressText){
   const progressValue = progressText || `${finalIndex + 1}/${LETTERS.length}`;
   const placeholder = learningReferenceArt.querySelector(".reference-placeholder-text");
 
+  learningTargetLetter = letterValue;
   learningLetter.textContent = letterValue;
   learningProgress.textContent = `${letterValue} — ${progressValue}`;
 
@@ -86,6 +122,90 @@ function syncLearningView(letter, progressText){
   learningReferenceImage.alt = `Seña de la letra ${letterValue}`;
   learningReferenceImage.style.display = "block";
   placeholder.style.display = "none";
+
+  resetLearningFeedback();
+}
+
+function updateLearningFeedback(detectedLetterRaw){
+  const detected = (detectedLetterRaw && String(detectedLetterRaw).trim()) ? String(detectedLetterRaw).trim().toUpperCase() : null;
+  if(learningDetected){
+    learningDetected.textContent = detected || "-";
+  }
+
+  if(!detected){
+    learningSameStreak = 0;
+    learningLastDetected = null;
+    if(!learningIsCorrect){
+      if(learningVideoWrap){
+        learningVideoWrap.classList.remove("learning-correct", "learning-incorrect");
+      }
+      if(learningOverlay){
+        learningOverlay.classList.remove("learning-overlay-correct", "learning-overlay-incorrect");
+        learningOverlay.textContent = "";
+      }
+      if(learningStatusPill){
+        learningStatusPill.className = "learning-status-pill";
+        learningStatusPill.textContent = "Esperando seña…";
+      }
+      if(learningCaption){
+        learningCaption.textContent = "Repite la seña";
+      }
+    }
+    return;
+  }
+
+  if(detected === learningLastDetected){
+    learningSameStreak += 1;
+  }else{
+    learningSameStreak = 1;
+    learningLastDetected = detected;
+  }
+
+  const isMatch = (detected === learningTargetLetter);
+
+  if(isMatch && learningSameStreak >= LEARNING_STREAK_TO_CONFIRM){
+    if(!learningIsCorrect){
+      learningIsCorrect = true;
+      learningCorrectCount += 1;
+      if(learningCounter){
+        learningCounter.textContent = `Correctas: ${learningCorrectCount}`;
+      }
+    }
+    if(learningVideoWrap){
+      learningVideoWrap.classList.add("learning-correct");
+      learningVideoWrap.classList.remove("learning-incorrect");
+    }
+    if(learningOverlay){
+      learningOverlay.classList.add("learning-overlay-correct");
+      learningOverlay.classList.remove("learning-overlay-incorrect");
+      learningOverlay.textContent = "✓ Correcto";
+    }
+    if(learningStatusPill){
+      learningStatusPill.className = "learning-status-pill learning-status-correct";
+      learningStatusPill.textContent = "¡Correcto!";
+    }
+    if(learningCaption){
+      learningCaption.textContent = "¡Bien hecho! Presiona Siguiente para continuar";
+    }
+  }else if(!isMatch && learningSameStreak >= LEARNING_STREAK_TO_CONFIRM){
+    learningIsCorrect = false;
+    if(learningVideoWrap){
+      learningVideoWrap.classList.add("learning-incorrect");
+      learningVideoWrap.classList.remove("learning-correct");
+    }
+    if(learningOverlay){
+      learningOverlay.classList.add("learning-overlay-incorrect");
+      learningOverlay.classList.remove("learning-overlay-correct");
+      learningOverlay.textContent = "✗ Intenta de nuevo";
+    }
+    if(learningStatusPill){
+      learningStatusPill.className = "learning-status-pill learning-status-incorrect";
+      learningStatusPill.textContent = `Se detectó: ${detected}`;
+    }
+    if(learningCaption){
+      learningCaption.textContent = `Busca la seña de la letra ${learningTargetLetter}`;
+    }
+  }
 }
 
 function addBubble(who, text){
@@ -116,6 +236,8 @@ async function poll(){
 
       if(currentView() !== "aprendizaje"){
         syncLearningView(st.letter || "A", "1/27");
+      }else{
+        updateLearningFeedback(st.letter);
       }
 
       renderFrame(st.frame_jpeg_b64, videoInteraction, videoFallbackInteraction);
@@ -213,6 +335,10 @@ $("btnLogoutMenu").onclick = async () => {
 $("btnOpenInteraction").onclick = () => setView("interaction");
 $("btnOpenAprendizaje").onclick = () => {
   learningIndex = 0;
+  learningCorrectCount = 0;
+  if(learningCounter){
+    learningCounter.textContent = "Correctas: 0";
+  }
   syncLearningView(LETTERS[learningIndex], `${learningIndex + 1}/${LETTERS.length}`);
   setView("aprendizaje");
 };
@@ -226,6 +352,16 @@ $("btnOpenEvaluacion").onclick = () => {
 
 $("btnPrevAprendizaje").onclick = () => moveLearning(-1);
 $("btnNextAprendizaje").onclick = () => moveLearning(1);
+
+$("btnBackInteraction").onclick = () => {
+  if(recording) return;
+  setView("menu");
+};
+$("btnBackAprendizaje").onclick = () => setView("menu");
+$("btnBackEvaluacionRun").onclick = () => {
+  stopEvaluation();
+  setView("menu");
+};
 
 // Evaluación state
 let evalTimerId = null;

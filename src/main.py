@@ -42,6 +42,7 @@ class MainController:
         self._register_screen = None
         self._translation_screen = None
         self._interaction_screen = None
+        self._aprendizaje_screen = None
         self._voice_screen = None
         self._voice_recording = False
         self._voice_stop_event: Optional[threading.Event] = None
@@ -89,6 +90,11 @@ class MainController:
         self._start_translation_loop()
         self._sync_sign_buffer()
 
+    def set_aprendizaje_screen(self, screen) -> None:
+        self._aprendizaje_screen = screen
+        self._translation_screen = screen
+        self._start_translation_loop()
+
     def on_login(self, username: str, password: str) -> None:
         user = self._auth.login(username, password)
         if user is None:
@@ -135,10 +141,21 @@ class MainController:
         else:
             self._app.show_interaction()
 
+    def on_open_aprendizaje(self) -> None:
+        if not USE_WEB_UI:
+            self._app.show_aprendizaje()
+
     def on_interaction_back(self) -> None:
         self._stop_translation_loop()
         self._release_translation_resources()
         self._interaction_screen = None
+        if not USE_WEB_UI:
+            self._app.show_main_menu(self._current_user.username)
+
+    def on_aprendizaje_back(self) -> None:
+        self._stop_translation_loop()
+        self._release_translation_resources()
+        self._aprendizaje_screen = None
         if not USE_WEB_UI:
             self._app.show_main_menu(self._current_user.username)
 
@@ -514,6 +531,7 @@ class MainController:
         self._stop_translation_event = None
         self._translation_queue = None
         self._translation_screen = None
+        self._aprendizaje_screen = None
 
     def run(self) -> None:
         """Punto de entrada: crea la GUI y arranca."""

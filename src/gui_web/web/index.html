@@ -207,9 +207,10 @@
                 <div class="panel-head"><h3>Seña solicitada</h3></div>
                 <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
                   <div class="letter-reference" id="evalRequestedLetter">-</div>
-                  <div class="video-wrap" style="width:100%; max-height:360px;">
+                  <div class="video-wrap learning-video-wrap" id="evalVideoWrap" style="width:100%; max-height:360px;">
                     <img id="videoEvaluacion" alt="video evaluacion" />
                     <div class="video-fallback" id="videoFallbackEvaluacion">Iniciando cámara…</div>
+                    <div class="learning-overlay" id="evalOverlay"></div>
                   </div>
                 </div>
               </div>
@@ -219,10 +220,6 @@
                 <div class="field">
                   <label>Letra detectada</label>
                   <div class="pill" id="evalDetectedLetter">-</div>
-                </div>
-                <div class="field">
-                  <label>Letras solicitadas (próximas)</label>
-                  <div id="evalUpcoming" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
                 </div>
                 <div class="row" style="margin-top:12px">
                   <button class="btn ghost" id="btnStopEvaluation">Detener</button>
@@ -240,4 +237,3 @@
     <script src="./app.js"></script>
   </body>
 </html>
-

@@ -13,9 +13,10 @@ const evalRequestedLetter = $("evalRequestedLetter");
 const evalDetectedLetter = $("evalDetectedLetter");
 const evalTime = $("evalTime");
 const evalScore = $("evalScore");
-const evalUpcoming = $("evalUpcoming");
 const videoEvaluacion = $("videoEvaluacion");
 const videoFallbackEvaluacion = $("videoFallbackEvaluacion");
+const evalVideoWrap = $("evalVideoWrap");
+const evalOverlay = $("evalOverlay");
 
 const loginError = $("loginError");
 const regError = $("regError");
@@ -248,7 +249,10 @@ async function poll(){
       }catch(e){}
 
       try{
-        if(typeof evalDetectedLetter !== 'undefined') evalDetectedLetter.textContent = st.letter || "-";
+        if(typeof evalDetectedLetter !== 'undefined'){
+          evalDetectedLetter.textContent = st.letter || "-";
+          if(currentView() === 'evaluacion_run') updateEvaluationScoring(st.letter);
+        }
       }catch(e){}
 
       // append new messages
@@ -369,7 +373,12 @@ let evalChangeId = null;
 let evalRemaining = 0;
 let evalScoreVal = 0;
 let evalChangeInterval = 5; // segundos por letra
-let evalUpcomingList = [];
+let evalLastDetected = null;
+let evalSameStreak = 0;
+let evalAlreadyScored = false;
+let evalFeedbackTimeoutId = null;
+const EVAL_STREAK_TO_CONFIRM = 3;
+const EVAL_FEEDBACK_DURATION_MS = 1200; // cuánto dura el borde/overlay verde o rojo // frames seguidos iguales para confirmar
 
 function formatTimeSec(s){
   const mm = Math.floor(s/60).toString().padStart(2,'0');
@@ -381,14 +390,65 @@ function pickRandomLetter(){
   return LETTERS[Math.floor(Math.random()*LETTERS.length)];
 }
 
-function renderUpcoming(){
-  evalUpcoming.innerHTML = '';
-  for(const l of evalUpcomingList.slice(0,10)){
-    const el = document.createElement('div');
-    el.className = 'pill';
-    el.style.padding = '6px 10px';
-    el.textContent = l;
-    evalUpcoming.appendChild(el);
+function clearEvalFeedback(){
+  if(evalFeedbackTimeoutId){
+    clearTimeout(evalFeedbackTimeoutId);
+    evalFeedbackTimeoutId = null;
+  }
+  if(evalVideoWrap){
+    evalVideoWrap.classList.remove("learning-correct", "learning-incorrect");
+  }
+  if(evalOverlay){
+    evalOverlay.classList.remove("learning-overlay-correct", "learning-overlay-incorrect");
+    evalOverlay.textContent = "";
+  }
+}
+
+function showEvalFeedback(isCorrect){
+  if(evalFeedbackTimeoutId){
+    clearTimeout(evalFeedbackTimeoutId);
+  }
+  if(evalVideoWrap){
+    evalVideoWrap.classList.toggle("learning-correct", isCorrect);
+    evalVideoWrap.classList.toggle("learning-incorrect", !isCorrect);
+  }
+  if(evalOverlay){
+    evalOverlay.classList.toggle("learning-overlay-correct", isCorrect);
+    evalOverlay.classList.toggle("learning-overlay-incorrect", !isCorrect);
+    evalOverlay.textContent = isCorrect ? "✓ Correcto" : "✗ Incorrecto";
+  }
+  evalFeedbackTimeoutId = setTimeout(clearEvalFeedback, EVAL_FEEDBACK_DURATION_MS);
+}
+
+function updateEvaluationScoring(detectedLetterRaw){
+  const detected = (detectedLetterRaw && String(detectedLetterRaw).trim())
+    ? String(detectedLetterRaw).trim().toUpperCase()
+    : null;
+
+  if(!detected){
+    evalSameStreak = 0;
+    return;
+  }
+
+  if(detected === evalLastDetected){
+    evalSameStreak += 1;
+  }else{
+    evalLastDetected = detected;
+    evalSameStreak = 1;
+  }
+
+  if(evalSameStreak >= EVAL_STREAK_TO_CONFIRM && !evalAlreadyScored){
+    evalAlreadyScored = true;
+    const target = (evalRequestedLetter.textContent || '').trim().toUpperCase();
+    const isCorrect = (detected === target);
+
+    if(isCorrect){
+      evalScoreVal += 5;
+    }else{
+      evalScoreVal -= 2;
+    }
+    evalScore.textContent = 'Puntaje: ' + evalScoreVal;
+    showEvalFeedback(isCorrect);
   }
 }
 
@@ -396,29 +456,27 @@ async function startEvaluationWithDuration(seconds){
   // prepare
   evalRemaining = seconds;
   evalScoreVal = 0;
-  evalUpcomingList = [];
+  evalLastDetected = null;
+  evalSameStreak = 0;
+  evalAlreadyScored = false;
+  clearEvalFeedback();
   evalTime.textContent = 'Tiempo: ' + formatTimeSec(evalRemaining);
   evalScore.textContent = 'Puntaje: ' + evalScoreVal;
   evalRequestedLetter.textContent = '-';
-  renderUpcoming();
 
   setView('evaluacion_run');
 
-  // Generate initial upcoming letters
-  const totalSteps = Math.ceil(seconds / evalChangeInterval);
-  for(let i=0;i<totalSteps;i++) evalUpcomingList.push(pickRandomLetter());
-  renderUpcoming();
+  // show first requested letter (aleatoria)
+  evalRequestedLetter.textContent = pickRandomLetter();
 
-  // show first requested
-  evalRequestedLetter.textContent = evalUpcomingList.shift() || '-';
-  renderUpcoming();
-
-  // Change requested letter periodically
+  // Change requested letter periodically (aleatoria, no se muestra la siguiente)
   evalChangeId = setInterval(() => {
-    evalRequestedLetter.textContent = evalUpcomingList.shift() || pickRandomLetter();
-    // refill upcoming so list remains populated
-    evalUpcomingList.push(pickRandomLetter());
-    renderUpcoming();
+    evalRequestedLetter.textContent = pickRandomLetter();
+    // Reinicia el estado de detección para la nueva letra pedida
+    evalLastDetected = null;
+    evalSameStreak = 0;
+    evalAlreadyScored = false;
+    clearEvalFeedback();
   }, evalChangeInterval * 1000);
 
   // Countdown timer
@@ -438,8 +496,10 @@ function stopEvaluation(){
   // reset UI and go back to menu
   evalRequestedLetter.textContent = '-';
   evalDetectedLetter.textContent = '-';
-  evalUpcomingList = [];
-  renderUpcoming();
+  evalLastDetected = null;
+  evalSameStreak = 0;
+  evalAlreadyScored = false;
+  clearEvalFeedback();
   setView('menu');
 }
 
@@ -481,4 +541,3 @@ $("btnRec").onclick = async () => {
 };
 
 startPolling();
-

@@ -73,6 +73,7 @@
             <button class="btn primary wide" id="btnOpenInteraction">Iniciar interacción</button>
             <button class="btn secondary wide" id="btnOpenAprendizaje">Aprendizaje</button>
             <button class="btn secondary wide" id="btnOpenEvaluacion">Modo Evaluación</button>
+            <button class="btn secondary wide" id="btnOpenRepaso">⭐ Repaso</button>
             <button class="btn ghost wide" id="btnLogoutMenu">Cerrar sesión</button>
           </div>
         </section>
@@ -139,7 +140,11 @@
                   <span class="reference-placeholder-text">Imagen de referencia</span>
                 </div>
                 <div class="letter-reference" id="learningLetter">A</div>
+                <button class="btn star-btn" id="btnStarLetter" type="button" title="Marcar como difícil" aria-label="Marcar letra como difícil">
+                  <span id="starIcon">☆</span>
+                </button>
               </div>
+              <div class="learning-difficult-count muted" id="learningDifficultCount">Letras marcadas: 0</div>
             </div>
 
             <div class="panel card learning-panel right-panel">
@@ -227,6 +232,59 @@
               </div>
             </div>
 
+          </div>
+          </div>
+        </section>
+
+        <!-- REPASO: letras marcadas con estrella -->
+        <section class="view-wrap hidden" id="viewRepaso">
+          <div class="view-bar">
+            <button class="btn ghost back-btn" id="btnBackRepaso">← Volver al menú</button>
+            <div class="view-title">Repaso de letras difíciles</div>
+          </div>
+
+          <div class="card" id="repasoEmptyState">
+            <h2>Aún no tienes letras marcadas</h2>
+            <p class="muted">Ve al modo Aprendizaje y toca la estrella ☆ en las letras que se te dificultan para agregarlas aquí.</p>
+          </div>
+
+          <div class="learning hidden" id="repasoPracticeWrap">
+          <div class="learning-grid">
+            <div class="panel card learning-panel left-panel">
+              <div class="learning-progress" id="repasoProgress">- — 0/0</div>
+              <div class="reference-box">
+                <div class="reference-figure" id="repasoReferenceArt" aria-label="Referencia de la seña">
+                  <img id="repasoReferenceImage" alt="Imagen de referencia de la seña" />
+                  <span class="reference-placeholder-text">Imagen de referencia</span>
+                </div>
+                <div class="letter-reference" id="repasoLetter">-</div>
+                <button class="btn star-btn starred" id="btnUnstarRepaso" type="button" title="Quitar de difíciles" aria-label="Quitar letra de difíciles">
+                  <span id="repasoStarIcon">★</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="panel card learning-panel right-panel">
+              <div class="camera-box">
+                <div class="learning-status-row">
+                  <div class="learning-detected">
+                    <span class="muted" style="font-size:12px;">Letra detectada:</span>
+                    <span class="pill learning-detected-pill" id="repasoDetected">-</span>
+                  </div>
+                  <div class="learning-status-pill" id="repasoStatusPill">Esperando seña…</div>
+                </div>
+                <div class="video-wrap learning-video-wrap" id="repasoVideoWrap">
+                  <img id="videoRepaso" alt="camara de repaso" />
+                  <div class="video-fallback" id="videoFallbackRepaso">Iniciando cámara…</div>
+                  <div class="learning-overlay" id="repasoOverlay"></div>
+                </div>
+                <div class="learning-caption" id="repasoCaption">Repite la seña</div>
+                <div class="learning-actions">
+                  <button class="btn" id="btnPrevRepaso">Anterior</button>
+                  <button class="btn primary" id="btnNextRepaso">Siguiente</button>
+                </div>
+              </div>
+            </div>
           </div>
           </div>
         </section>

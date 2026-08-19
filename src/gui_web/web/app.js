@@ -39,9 +39,220 @@ const learningDetected = $("learningDetected");
 const learningStatusPill = $("learningStatusPill");
 const learningCaption = $("learningCaption");
 const learningCounter = $("learningCounter");
+const btnStarLetter = $("btnStarLetter");
+const starIcon = $("starIcon");
+const learningDifficultCount = $("learningDifficultCount");
 const btnLogout = $("btnLogout");
 
+// Repaso (letras marcadas con estrella)
+const viewRepaso = $("viewRepaso");
+const repasoEmptyState = $("repasoEmptyState");
+const repasoPracticeWrap = $("repasoPracticeWrap");
+const repasoProgress = $("repasoProgress");
+const repasoReferenceArt = $("repasoReferenceArt");
+const repasoReferenceImage = $("repasoReferenceImage");
+const repasoLetter = $("repasoLetter");
+const repasoDetected = $("repasoDetected");
+const repasoStatusPill = $("repasoStatusPill");
+const repasoCaption = $("repasoCaption");
+const repasoVideoWrap = $("repasoVideoWrap");
+const repasoOverlay = $("repasoOverlay");
+const videoRepaso = $("videoRepaso");
+const videoFallbackRepaso = $("videoFallbackRepaso");
+const btnUnstarRepaso = $("btnUnstarRepaso");
+
 const LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
+
+// --- Letras marcadas como "difíciles" (estrella) ---
+const DIFFICULT_LETTERS_STORAGE_KEY = "difficultSignLetters";
+
+function loadDifficultLetters(){
+  try{
+    const raw = localStorage.getItem(DIFFICULT_LETTERS_STORAGE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  }catch(e){
+    return new Set();
+  }
+}
+
+function saveDifficultLetters(set){
+  try{
+    localStorage.setItem(DIFFICULT_LETTERS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  }catch(e){
+    // almacenamiento no disponible; se ignora silenciosamente
+  }
+}
+
+let difficultLetters = loadDifficultLetters();
+
+function updateDifficultCount(){
+  if(learningDifficultCount){
+    learningDifficultCount.textContent = `Letras marcadas: ${difficultLetters.size}`;
+  }
+}
+
+function updateStarButton(letter){
+  const isStarred = difficultLetters.has(letter);
+  if(btnStarLetter){
+    btnStarLetter.classList.toggle("starred", isStarred);
+    btnStarLetter.setAttribute("aria-pressed", isStarred ? "true" : "false");
+    btnStarLetter.title = isStarred ? "Quitar de difíciles" : "Marcar como difícil";
+  }
+  if(starIcon){
+    starIcon.textContent = isStarred ? "★" : "☆";
+  }
+}
+
+function toggleDifficultLetter(letter){
+  if(!letter) return;
+  if(difficultLetters.has(letter)){
+    difficultLetters.delete(letter);
+  }else{
+    difficultLetters.add(letter);
+  }
+  saveDifficultLetters(difficultLetters);
+  updateStarButton(letter);
+  updateDifficultCount();
+}
+
+// --- Vista de Repaso (practica solo las letras marcadas con estrella) ---
+let repasoList = [];
+let repasoIndex = 0;
+let repasoTargetLetter = null;
+let repasoSameStreak = 0;
+let repasoLastDetected = null;
+let repasoIsCorrect = false;
+const REPASO_STREAK_TO_CONFIRM = 3;
+
+function buildRepasoList(){
+  repasoList = Array.from(difficultLetters).sort();
+  if(repasoIndex >= repasoList.length){
+    repasoIndex = 0;
+  }
+}
+
+function resetRepasoFeedback(){
+  repasoIsCorrect = false;
+  repasoSameStreak = 0;
+  repasoLastDetected = null;
+  if(repasoVideoWrap){
+    repasoVideoWrap.classList.remove("learning-correct", "learning-incorrect");
+  }
+  if(repasoOverlay){
+    repasoOverlay.classList.remove("learning-overlay-correct", "learning-overlay-incorrect");
+    repasoOverlay.textContent = "";
+  }
+  if(repasoStatusPill){
+    repasoStatusPill.className = "learning-status-pill";
+    repasoStatusPill.textContent = "Esperando seña…";
+  }
+  if(repasoCaption){
+    repasoCaption.textContent = "Repite la seña";
+  }
+  if(repasoDetected){
+    repasoDetected.textContent = "-";
+  }
+}
+
+function syncRepasoView(){
+  buildRepasoList();
+
+  if(repasoList.length === 0){
+    if(repasoEmptyState) repasoEmptyState.classList.remove("hidden");
+    if(repasoPracticeWrap) repasoPracticeWrap.classList.add("hidden");
+    return;
+  }
+
+  if(repasoEmptyState) repasoEmptyState.classList.add("hidden");
+  if(repasoPracticeWrap) repasoPracticeWrap.classList.remove("hidden");
+
+  const letterValue = repasoList[repasoIndex];
+  repasoTargetLetter = letterValue;
+
+  if(repasoLetter) repasoLetter.textContent = letterValue;
+  if(repasoProgress) repasoProgress.textContent = `${letterValue} — ${repasoIndex + 1}/${repasoList.length}`;
+
+  if(repasoReferenceImage && repasoReferenceArt){
+    const placeholder = repasoReferenceArt.querySelector(".reference-placeholder-text");
+    const imageName = letterValue.toLowerCase();
+    repasoReferenceImage.src = `./assets/letras/${imageName}.png`;
+    repasoReferenceImage.alt = `Seña de la letra ${letterValue}`;
+    repasoReferenceImage.style.display = "block";
+    if(placeholder) placeholder.style.display = "none";
+  }
+
+  resetRepasoFeedback();
+}
+
+function moveRepaso(step){
+  if(repasoList.length === 0) return;
+  repasoIndex = (repasoIndex + step + repasoList.length) % repasoList.length;
+  syncRepasoView();
+}
+
+function updateRepasoFeedback(detectedLetterRaw){
+  const detected = (detectedLetterRaw && String(detectedLetterRaw).trim()) ? String(detectedLetterRaw).trim().toUpperCase() : null;
+  if(repasoDetected){
+    repasoDetected.textContent = detected || "-";
+  }
+
+  if(!detected){
+    repasoSameStreak = 0;
+    repasoLastDetected = null;
+    return;
+  }
+
+  if(detected === repasoLastDetected){
+    repasoSameStreak += 1;
+  }else{
+    repasoSameStreak = 1;
+    repasoLastDetected = detected;
+  }
+
+  const isMatch = (detected === repasoTargetLetter);
+
+  if(isMatch && repasoSameStreak >= REPASO_STREAK_TO_CONFIRM){
+    if(!repasoIsCorrect){
+      repasoIsCorrect = true;
+    }
+    if(repasoVideoWrap){
+      repasoVideoWrap.classList.add("learning-correct");
+      repasoVideoWrap.classList.remove("learning-incorrect");
+    }
+    if(repasoOverlay){
+      repasoOverlay.classList.add("learning-overlay-correct");
+      repasoOverlay.classList.remove("learning-overlay-incorrect");
+      repasoOverlay.textContent = "✓ Correcto";
+    }
+    if(repasoStatusPill){
+      repasoStatusPill.className = "learning-status-pill learning-status-correct";
+      repasoStatusPill.textContent = "¡Correcto!";
+    }
+    if(repasoCaption){
+      repasoCaption.textContent = "¡Bien hecho! Presiona Siguiente para continuar";
+    }
+  }else if(!isMatch && repasoSameStreak >= REPASO_STREAK_TO_CONFIRM){
+    repasoIsCorrect = false;
+    if(repasoVideoWrap){
+      repasoVideoWrap.classList.add("learning-incorrect");
+      repasoVideoWrap.classList.remove("learning-correct");
+    }
+    if(repasoOverlay){
+      repasoOverlay.classList.add("learning-overlay-incorrect");
+      repasoOverlay.classList.remove("learning-overlay-correct");
+      repasoOverlay.textContent = "✗ Intenta de nuevo";
+    }
+    if(repasoStatusPill){
+      repasoStatusPill.className = "learning-status-pill learning-status-incorrect";
+      repasoStatusPill.textContent = `Se detectó: ${detected}`;
+    }
+    if(repasoCaption){
+      repasoCaption.textContent = `Busca la seña de la letra ${repasoTargetLetter}`;
+    }
+  }
+}
+
 let pollTimer = null;
 let recording = false;
 let lastLoggedIn = null;
@@ -61,9 +272,11 @@ function setView(name){
   viewAprendizaje.classList.toggle("hidden", name !== "aprendizaje");
   viewEvaluacionConfig.classList.toggle("hidden", name !== "evaluacion_config");
   viewEvaluacionRun.classList.toggle("hidden", name !== "evaluacion_run");
+  if(typeof viewRepaso !== 'undefined') viewRepaso.classList.toggle("hidden", name !== "repaso");
 }
 
 function currentView(){
+  if(typeof viewRepaso !== 'undefined' && !viewRepaso.classList.contains("hidden")) return "repaso";
   if(!viewEvaluacionRun.classList.contains("hidden")) return "evaluacion_run";
   if(!viewEvaluacionConfig.classList.contains("hidden")) return "evaluacion_config";
   if(!viewAprendizaje.classList.contains("hidden")) return "aprendizaje";
@@ -124,6 +337,7 @@ function syncLearningView(letter, progressText){
   learningReferenceImage.style.display = "block";
   placeholder.style.display = "none";
 
+  updateStarButton(letterValue);
   resetLearningFeedback();
 }
 
@@ -255,6 +469,12 @@ async function poll(){
         }
       }catch(e){}
 
+      // Si estamos en modo Repaso, actualizar video y detección
+      try{
+        if(typeof videoRepaso !== 'undefined') renderFrame(st.frame_jpeg_b64, videoRepaso, videoFallbackRepaso);
+        if(currentView() === 'repaso') updateRepasoFeedback(st.letter);
+      }catch(e){}
+
       // append new messages
       if(Array.isArray(st.new_messages)){
         for(const m of st.new_messages){
@@ -343,6 +563,7 @@ $("btnOpenAprendizaje").onclick = () => {
   if(learningCounter){
     learningCounter.textContent = "Correctas: 0";
   }
+  updateDifficultCount();
   syncLearningView(LETTERS[learningIndex], `${learningIndex + 1}/${LETTERS.length}`);
   setView("aprendizaje");
 };
@@ -356,6 +577,38 @@ $("btnOpenEvaluacion").onclick = () => {
 
 $("btnPrevAprendizaje").onclick = () => moveLearning(-1);
 $("btnNextAprendizaje").onclick = () => moveLearning(1);
+if(btnStarLetter){
+  btnStarLetter.onclick = () => toggleDifficultLetter(learningTargetLetter);
+}
+
+// Repaso
+if($("btnOpenRepaso")){
+  $("btnOpenRepaso").onclick = () => {
+    repasoIndex = 0;
+    syncRepasoView();
+    setView("repaso");
+  };
+}
+if($("btnBackRepaso")){
+  $("btnBackRepaso").onclick = () => setView("menu");
+}
+if($("btnPrevRepaso")){
+  $("btnPrevRepaso").onclick = () => moveRepaso(-1);
+}
+if($("btnNextRepaso")){
+  $("btnNextRepaso").onclick = () => moveRepaso(1);
+}
+if(btnUnstarRepaso){
+  btnUnstarRepaso.onclick = () => {
+    if(!repasoTargetLetter) return;
+    toggleDifficultLetter(repasoTargetLetter);
+    // Si la letra actual se quitó de la lista, ajusta el índice antes de re-sincronizar
+    if(repasoIndex >= repasoList.length - 1){
+      repasoIndex = 0;
+    }
+    syncRepasoView();
+  };
+}
 
 $("btnBackInteraction").onclick = () => {
   if(recording) return;

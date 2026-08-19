@@ -62,6 +62,7 @@ WEB_VIDEO_INTERVAL_MS = 45         # cada cuántos ms se envía un frame (45ms �
 APP_TITLE = "Traductor de Lenguaje de Senas"
 WINDOW_MIN_WIDTH = 800
 WINDOW_MIN_HEIGHT = 600
+MAX_ATTEMPTS = 5
 
 # UI
 # True = interfaz web moderna (HTML/CSS) embebida con PyWebView

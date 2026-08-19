@@ -21,7 +21,7 @@ from src.auth import AuthService
 from src.gui import App
 from src.camera import CameraCapture
 from src.image_processing import HandDetector
-from src.sign_language import SignClassifier, letters_for_challenge
+from src.sign_language import LearningPerformanceAnalyzer, SignClassifier, letters_for_challenge
 from src.config import USE_WEB_UI
 
 
@@ -74,6 +74,7 @@ class MainController:
         self._web_last_frame_ts = 0.0
         self._voice_status = "Listo"
         self._voice_error = ""
+        self._learning_performance = LearningPerformanceAnalyzer()
 
         # ===== Reto: deletrear el nombre de usuario =====
         self._challenge_letters: list = []
@@ -233,6 +234,55 @@ class MainController:
         self._challenge_active = False
         self._challenge_match_count = 0
         self._camera_error = None
+
+    def web_learning_attempt(self, target_letter: str, detected_letter: str) -> dict:
+        """Registra un intento confirmado de APRENDIZAJE del usuario autenticado."""
+        if self._current_user is None:
+            return {"ok": False, "msg": "Debes iniciar sesión"}
+
+        target = (target_letter or "").strip().upper()
+        detected = (detected_letter or "").strip().upper()
+        if not target or not detected:
+            return {"ok": False, "msg": "El intento no tiene una letra válida"}
+
+        stats = self._db.record_learning_attempt(
+            self._current_user.username,
+            target,
+            detected == target,
+        )
+        analysis = self._learning_performance.analyze(stats, target)
+        return {"ok": True, "letter": target, "analysis": analysis.as_dict()}
+
+    def web_learning_performance(self, letter: str) -> dict:
+        """Devuelve el analisis actual de una letra para el asistente de APRENDIZAJE."""
+        if self._current_user is None:
+            return {"ok": False, "msg": "Debes iniciar sesión"}
+        target = (letter or "").strip().upper()
+        if not target:
+            return {"ok": False, "msg": "La letra no es válida"}
+        stats = self._db.get_learning_performance(self._current_user.username, target)
+        analysis = self._learning_performance.analyze(stats, target)
+        return {"ok": True, "letter": target, "analysis": analysis.as_dict()}
+
+    def web_get_favorite_letters(self) -> dict:
+        if self._current_user is None:
+            return {"ok": False, "msg": "Debes iniciar sesión", "letters": []}
+        return {
+            "ok": True,
+            "letters": self._db.get_favorite_letters(self._current_user.username),
+        }
+
+    def web_set_favorite_letter(self, letter: str, is_favorite: bool) -> dict:
+        if self._current_user is None:
+            return {"ok": False, "msg": "Debes iniciar sesión", "letters": []}
+        target = (letter or "").strip().upper()
+        if not target:
+            return {"ok": False, "msg": "La letra no es válida", "letters": []}
+        if is_favorite:
+            letters = self._db.add_favorite_letter(self._current_user.username, target)
+        else:
+            letters = self._db.remove_favorite_letter(self._current_user.username, target)
+        return {"ok": True, "letters": letters}
 
     def get_web_state(self):
         challenge_progress = 0.0

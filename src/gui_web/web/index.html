@@ -171,6 +171,28 @@
               </div>
             </div>
           </div>
+          <div class="learning-assistant" id="learningAssistant">
+            <div class="ai-card hidden" id="learningAssistantCard" role="dialog" aria-label="Asistente IA">
+              <div class="ai-card-head">
+                <strong>🤖 Asistente IA</strong>
+                <button class="ai-close" id="btnCloseLearningAssistant" type="button" aria-label="Cerrar asistente">×</button>
+              </div>
+              <div class="ai-card-body">
+                <p class="ai-greeting">¡Hola! 👋</p>
+                <p class="ai-message" id="learningAssistantMessage"></p>
+                <div class="ai-stats">
+                  <div>🔤 Letra: <strong id="learningAssistantLetter">-</strong></div>
+                  <div>🎯 Aciertos: <strong id="learningAssistantCorrect">0/5</strong></div>
+                  <div>📊 Desempeño: <strong id="learningAssistantAccuracy">0%</strong></div>
+                  <div>Intentos: <strong id="learningAssistantAttempts">0/5</strong></div>
+                </div>
+                <p class="ai-recommendation" id="learningAssistantRecommendation"></p>
+                <button class="btn ai-favorite-action" id="btnAssistantFavorite" type="button" aria-pressed="false">⭐ Guardar en favoritos</button>
+                <button class="btn primary ai-practice-action" id="btnPracticeNow" type="button">PRACTICAR AHORA</button>
+              </div>
+            </div>
+            <button class="ai-robot" id="btnOpenLearningAssistant" type="button" aria-label="Abrir asistente IA" title="Abrir asistente IA">🤖</button>
+          </div>
           </div>
         </section>
 
@@ -241,12 +263,12 @@
         <section class="view-wrap hidden" id="viewRepaso">
           <div class="view-bar">
             <button class="btn ghost back-btn" id="btnBackRepaso">← Volver al menú</button>
-            <div class="view-title">Repaso de letras difíciles</div>
+            <div class="view-title">⭐ Mis letras para practicar</div>
           </div>
 
           <div class="card" id="repasoEmptyState">
-            <h2>Aún no tienes letras marcadas</h2>
-            <p class="muted">Ve al modo Aprendizaje y toca la estrella ☆ en las letras que se te dificultan para agregarlas aquí.</p>
+            <h2>Aún no tienes letras favoritas</h2>
+            <p class="muted">Guarda letras desde Aprendizaje o desde el asistente IA para practicarlas aquí.</p>
           </div>
 
           <div class="learning hidden" id="repasoPracticeWrap">
@@ -259,7 +281,7 @@
                   <span class="reference-placeholder-text">Imagen de referencia</span>
                 </div>
                 <div class="letter-reference" id="repasoLetter">-</div>
-                <button class="btn star-btn starred" id="btnUnstarRepaso" type="button" title="Quitar de difíciles" aria-label="Quitar letra de difíciles">
+                <button class="btn star-btn starred" id="btnUnstarRepaso" type="button" title="Quitar de favoritos" aria-label="Quitar letra de favoritos">
                   <span id="repasoStarIcon">★</span>
                 </button>
               </div>

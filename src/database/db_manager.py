@@ -10,7 +10,7 @@ from typing import Optional, Tuple
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
-from src.config import MONGO_DB_NAME, MONGO_URI, MONGO_USERS_COLLECTION
+from src.config import MAX_ATTEMPTS, MONGO_DB_NAME, MONGO_URI, MONGO_USERS_COLLECTION
 from .models import User
 
 
@@ -99,3 +99,80 @@ class DatabaseManager:
         """Comprueba si existe un usuario con el nombre dado."""
         users = self._users_collection()
         return users.count_documents({"username": username.strip()}, limit=1) > 0
+
+    def record_learning_attempt(self, username: str, letter: str, is_correct: bool) -> dict:
+        """Registra un intento confirmado de aprendizaje para un usuario y letra."""
+        username_clean = (username or "").strip()
+        letter_clean = (letter or "").strip().upper()
+        if not username_clean or not letter_clean:
+            raise ValueError("El usuario y la letra son obligatorios")
+
+        performance_path = f"learning_performance.{letter_clean}"
+        field = f"{performance_path}.{'correct' if is_correct else 'incorrect'}"
+        users = self._users_collection()
+        result = users.update_one(
+            {
+                "username": username_clean,
+                "$or": [
+                    {f"{performance_path}.attempts": {"$lt": MAX_ATTEMPTS}},
+                    {f"{performance_path}.attempts": {"$exists": False}},
+                ],
+            },
+            {"$inc": {f"{performance_path}.attempts": 1, field: 1}},
+        )
+        if result.matched_count != 1 and not users.find_one({"username": username_clean}, {"_id": 1}):
+            raise ValueError("El usuario autenticado no existe")
+        return self.get_learning_performance(username_clean, letter_clean)
+
+    def get_learning_performance(self, username: str, letter: str) -> dict:
+        """Obtiene los conteos persistidos de una letra, sin crear datos."""
+        username_clean = (username or "").strip()
+        letter_clean = (letter or "").strip().upper()
+        if not username_clean or not letter_clean:
+            return {"attempts": 0, "correct": 0, "incorrect": 0}
+
+        users = self._users_collection()
+        doc = users.find_one(
+            {"username": username_clean},
+            {f"learning_performance.{letter_clean}": 1},
+        )
+        stats = (doc or {}).get("learning_performance", {}).get(letter_clean, {})
+        correct = int(stats.get("correct", 0))
+        incorrect = int(stats.get("incorrect", 0))
+        return {
+            "attempts": min(int(stats.get("attempts", correct + incorrect)), MAX_ATTEMPTS),
+            "correct": correct,
+            "incorrect": incorrect,
+        }
+
+    def add_favorite_letter(self, username: str, letter: str) -> list:
+        """Guarda una letra favorita en la cuenta del usuario autenticado."""
+        return self._update_favorite_letters(username, letter, add=True)
+
+    def remove_favorite_letter(self, username: str, letter: str) -> list:
+        """Elimina una letra favorita de la cuenta del usuario autenticado."""
+        return self._update_favorite_letters(username, letter, add=False)
+
+    def get_favorite_letters(self, username: str) -> list:
+        """Obtiene las letras favoritas persistidas del usuario, ordenadas y sin duplicados."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return []
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"favorite_letters": 1})
+        return sorted(set((doc or {}).get("favorite_letters", [])))
+
+    def _update_favorite_letters(self, username: str, letter: str, add: bool) -> list:
+        username_clean = (username or "").strip()
+        letter_clean = (letter or "").strip().upper()
+        if not username_clean or not letter_clean:
+            raise ValueError("El usuario y la letra son obligatorios")
+
+        users = self._users_collection()
+        operation = {"$addToSet": {"favorite_letters": letter_clean}}
+        if not add:
+            operation = {"$pull": {"favorite_letters": letter_clean}}
+        result = users.update_one({"username": username_clean}, operation)
+        if result.matched_count != 1:
+            raise ValueError("El usuario autenticado no existe")
+        return self.get_favorite_letters(username_clean)

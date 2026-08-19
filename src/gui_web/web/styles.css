@@ -110,6 +110,7 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   min-height:0;
   width:100%;
 }
+#viewAprendizaje .learning{padding-bottom:76px}
 
 .learning-grid{
   display:grid;
@@ -245,6 +246,11 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   display:flex;
   justify-content:space-between;
   gap:12px;
+  position:sticky;
+  bottom:0;
+  z-index:3;
+  padding-top:8px;
+  background:rgba(255,255,255,.92);
 }
 .learning-status-row{
   display:flex;
@@ -347,6 +353,82 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   border-radius:10px;
   width:max-content;
 }
+
+.learning-assistant{
+  position:fixed;
+  right:24px;
+  bottom:20px;
+  display:flex;
+  justify-content:flex-end;
+  min-height:58px;
+  z-index:5;
+}
+.ai-robot{
+  width:58px;
+  height:58px;
+  padding:0;
+  border:1px solid rgba(37,99,235,.18);
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--bg1),var(--primary));
+  color:white;
+  font-size:29px;
+  line-height:1;
+  cursor:pointer;
+  box-shadow:0 10px 24px rgba(37,99,235,.28), 0 3px 8px rgba(2,6,23,.14);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.ai-robot:hover{transform:translateY(-2px) scale(1.03); box-shadow:0 13px 28px rgba(37,99,235,.34), 0 4px 10px rgba(2,6,23,.16)}
+.ai-robot:active{transform:scale(.96)}
+.ai-card{
+  position:absolute;
+  right:0;
+  bottom:68px;
+  width:min(330px, calc(100vw - 28px));
+  overflow:hidden;
+  border:1px solid rgba(37,99,235,.16);
+  border-radius:16px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 18px 42px rgba(2,6,23,.22);
+  max-height:min(560px, calc(100vh - 104px));
+  overflow-y:auto;
+}
+.ai-card-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 14px;
+  color:white;
+  background:linear-gradient(135deg,var(--bg1),var(--primary));
+}
+.ai-close{
+  width:28px;
+  height:28px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  color:white;
+  background:rgba(255,255,255,.16);
+  font-size:22px;
+  line-height:1;
+  cursor:pointer;
+}
+.ai-card-body{padding:14px}
+.ai-card p{margin:0}
+.ai-greeting{font-weight:800; margin-bottom:6px !important}
+.ai-message{color:var(--muted); font-size:13px; line-height:1.45}
+.ai-stats{
+  display:grid;
+  gap:7px;
+  margin:14px 0;
+  padding:11px 12px;
+  border-radius:12px;
+  background:rgba(37,99,235,.06);
+  color:var(--text);
+  font-size:13px;
+}
+.ai-recommendation{font-size:13px; font-weight:800; line-height:1.4; margin-bottom:12px !important}
+.ai-favorite-action{width:100%; margin-top:8px}
+.ai-disabled-action{width:100%; margin-top:8px; cursor:not-allowed; opacity:.58}
 
 @media (max-width: 980px){
   .grid{grid-template-columns:1fr; height:auto}
@@ -535,6 +617,7 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   body{overflow:auto}
   .topbar{padding:12px 14px}
   .content{padding:10px; align-items:start}
+  .learning-assistant{right:14px; bottom:14px}
   .view-wrap{
     width:100%;
     height:auto;
@@ -575,4 +658,12 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   .letter-confirm{justify-content:flex-start}
   .learning-actions{flex-direction:column}
   .learning-actions .btn{width:100%}
+}
+
+@media (max-height: 760px) and (min-width: 701px){
+  .view-wrap{height:calc(100vh - 90px)}
+  .learning-video-wrap{min-height:170px}
+  .camera-box{gap:8px}
+  .learning-caption{font-size:1rem}
+  .learning-counter{padding:6px 10px}
 }

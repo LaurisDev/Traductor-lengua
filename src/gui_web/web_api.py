@@ -63,6 +63,19 @@ class WebAPI:
         self._c.on_challenge_stop()
         return {"ok": True}
 
+    # ===== Desempeno de aprendizaje =====
+    def learning_attempt(self, target_letter: str, detected_letter: str) -> Dict[str, Any]:
+        return self._c.web_learning_attempt(target_letter, detected_letter)
+
+    def learning_performance(self, letter: str) -> Dict[str, Any]:
+        return self._c.web_learning_performance(letter)
+
+    def get_favorite_letters(self) -> Dict[str, Any]:
+        return self._c.web_get_favorite_letters()
+
+    def set_favorite_letter(self, letter: str, is_favorite: bool) -> Dict[str, Any]:
+        return self._c.web_set_favorite_letter(letter, is_favorite)
+
     # ===== Poll =====
     def get_state(self) -> Dict[str, Any]:
         st = self._c.get_web_state()

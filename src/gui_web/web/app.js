@@ -43,6 +43,15 @@ const learningCounter = $("learningCounter");
 const btnStarLetter = $("btnStarLetter");
 const starIcon = $("starIcon");
 const learningDifficultCount = $("learningDifficultCount");
+const learningAssistantCard = $("learningAssistantCard");
+const learningAssistantMessage = $("learningAssistantMessage");
+const learningAssistantLetter = $("learningAssistantLetter");
+const learningAssistantCorrect = $("learningAssistantCorrect");
+const learningAssistantAccuracy = $("learningAssistantAccuracy");
+const learningAssistantAttempts = $("learningAssistantAttempts");
+const learningAssistantRecommendation = $("learningAssistantRecommendation");
+const btnAssistantFavorite = $("btnAssistantFavorite");
+const btnPracticeNow = $("btnPracticeNow");
 const btnLogout = $("btnLogout");
 
 // Repaso (letras marcadas con estrella)
@@ -78,62 +87,71 @@ const retoComplete = $("retoComplete");
 
 const LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
 
-// --- Letras marcadas como "difíciles" (estrella) ---
-const DIFFICULT_LETTERS_STORAGE_KEY = "difficultSignLetters";
-
-function loadDifficultLetters(){
-  try{
-    const raw = localStorage.getItem(DIFFICULT_LETTERS_STORAGE_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    return new Set(Array.isArray(arr) ? arr : []);
-  }catch(e){
-    return new Set();
-  }
-}
-
-function saveDifficultLetters(set){
-  try{
-    localStorage.setItem(DIFFICULT_LETTERS_STORAGE_KEY, JSON.stringify(Array.from(set)));
-  }catch(e){
-    // almacenamiento no disponible; se ignora silenciosamente
-  }
-}
-
-let difficultLetters = loadDifficultLetters();
+// --- Favoritos del usuario autenticado ---
+let favoriteLetters = new Set();
+let favoriteUsername = null;
 
 function updateDifficultCount(){
   if(learningDifficultCount){
-    learningDifficultCount.textContent = `Letras marcadas: ${difficultLetters.size}`;
+    learningDifficultCount.textContent = `Letras favoritas: ${favoriteLetters.size}`;
   }
 }
 
 function updateStarButton(letter){
-  const isStarred = difficultLetters.has(letter);
+  const isStarred = favoriteLetters.has(letter);
   if(btnStarLetter){
     btnStarLetter.classList.toggle("starred", isStarred);
     btnStarLetter.setAttribute("aria-pressed", isStarred ? "true" : "false");
-    btnStarLetter.title = isStarred ? "Quitar de difíciles" : "Marcar como difícil";
+    btnStarLetter.title = isStarred ? "Quitar de favoritos" : "Guardar en favoritos";
+    btnStarLetter.setAttribute("aria-label", isStarred ? "Quitar letra de favoritos" : "Guardar letra en favoritos");
   }
   if(starIcon){
     starIcon.textContent = isStarred ? "★" : "☆";
   }
 }
 
-function toggleDifficultLetter(letter){
-  if(!letter) return;
-  if(difficultLetters.has(letter)){
-    difficultLetters.delete(letter);
-  }else{
-    difficultLetters.add(letter);
+function updateAssistantFavoriteButton(letter){
+  if(!btnAssistantFavorite) return;
+  const isFavorite = favoriteLetters.has(letter);
+  btnAssistantFavorite.textContent = isFavorite ? "★ Quitar de favoritos" : "⭐ Guardar en favoritos";
+  btnAssistantFavorite.setAttribute("aria-pressed", isFavorite ? "true" : "false");
+}
+
+async function refreshFavoriteLetters(){
+  try{
+    const result = await window.pywebview.api.get_favorite_letters();
+    if(!result || !result.ok) return;
+    favoriteLetters = new Set(result.letters || []);
+    updateDifficultCount();
+    updateStarButton(learningTargetLetter);
+    updateAssistantFavoriteButton(learningTargetLetter);
+    if(currentView() === "repaso") syncRepasoView();
+  }catch(e){
+    // Conserva los favoritos ya cargados si la consulta falla.
   }
-  saveDifficultLetters(difficultLetters);
-  updateStarButton(letter);
-  updateDifficultCount();
+}
+
+async function toggleFavoriteLetter(letter){
+  if(!letter) return;
+  const target = letter.toUpperCase();
+  const isFavorite = !favoriteLetters.has(target);
+  try{
+    const result = await window.pywebview.api.set_favorite_letter(target, isFavorite);
+    if(!result || !result.ok) return;
+    favoriteLetters = new Set(result.letters || []);
+    updateDifficultCount();
+    updateStarButton(target);
+    updateAssistantFavoriteButton(target);
+    if(currentView() === "repaso") syncRepasoView();
+  }catch(e){
+    // No cambia la UI si el guardado no fue confirmado por el backend.
+  }
 }
 
 // --- Vista de Repaso (practica solo las letras marcadas con estrella) ---
 let repasoList = [];
 let repasoIndex = 0;
+let repasoInitialLetter = null;
 let repasoTargetLetter = null;
 let repasoSameStreak = 0;
 let repasoLastDetected = null;
@@ -141,7 +159,7 @@ let repasoIsCorrect = false;
 const REPASO_STREAK_TO_CONFIRM = 3;
 
 function buildRepasoList(){
-  repasoList = Array.from(difficultLetters).sort();
+  repasoList = Array.from(favoriteLetters).sort();
   if(repasoIndex >= repasoList.length){
     repasoIndex = 0;
   }
@@ -182,6 +200,12 @@ function syncRepasoView(){
   if(repasoEmptyState) repasoEmptyState.classList.add("hidden");
   if(repasoPracticeWrap) repasoPracticeWrap.classList.remove("hidden");
 
+  if(repasoInitialLetter){
+    const initialIndex = repasoList.indexOf(repasoInitialLetter);
+    if(initialIndex >= 0) repasoIndex = initialIndex;
+    repasoInitialLetter = null;
+  }
+
   const letterValue = repasoList[repasoIndex];
   repasoTargetLetter = letterValue;
 
@@ -204,6 +228,23 @@ function moveRepaso(step){
   if(repasoList.length === 0) return;
   repasoIndex = (repasoIndex + step + repasoList.length) % repasoList.length;
   syncRepasoView();
+}
+
+async function openRepasoForLetter(letter){
+  const target = (letter || "").trim().toUpperCase();
+  if(!target) return;
+  try{
+    const result = await window.pywebview.api.set_favorite_letter(target, true);
+    if(!result || !result.ok) return;
+    favoriteLetters = new Set(result.letters || []);
+    updateDifficultCount();
+    repasoInitialLetter = target;
+    repasoIndex = 0;
+    setView("repaso");
+    syncRepasoView();
+  }catch(e){
+    // No navega si la recomendacion no pudo guardarse para el usuario.
+  }
 }
 
 function updateRepasoFeedback(detectedLetterRaw){
@@ -277,6 +318,8 @@ let learningCorrectCount = 0;
 let learningSameStreak = 0;
 let learningLastDetected = null;
 let learningIsCorrect = false;
+let learningAttemptLogged = false;
+let learningAnalysis = null;
 const LEARNING_STREAK_TO_CONFIRM = 3;
 
 function setView(name){
@@ -366,6 +409,7 @@ function renderFrame(frameB64, videoEl, fallbackEl, errorMsg){
 
 function resetLearningFeedback(){
   learningIsCorrect = false;
+  learningAttemptLogged = false;
   learningSameStreak = 0;
   learningLastDetected = null;
   if(learningVideoWrap){
@@ -387,6 +431,45 @@ function resetLearningFeedback(){
   }
 }
 
+function logLearningAttempt(detectedLetter){
+  if(learningAttemptLogged) return;
+  learningAttemptLogged = true;
+  window.pywebview.api.learning_attempt(learningTargetLetter, detectedLetter).then((result) => {
+    if(result && result.ok && result.analysis){
+      renderLearningAssistant(result.analysis, result.letter);
+    }
+  }).catch(() => {
+    learningAttemptLogged = false;
+  });
+}
+
+function renderLearningAssistant(analysis, letter){
+  if(!analysis) return;
+  learningAnalysis = analysis;
+  learningAssistantLetter.textContent = letter || learningTargetLetter || "-";
+  learningAssistantCorrect.textContent = `${analysis.correct}/${analysis.attempts || 5}`;
+  learningAssistantAccuracy.textContent = `${analysis.accuracy}%`;
+  learningAssistantAttempts.textContent = `${analysis.attempts}/5`;
+  learningAssistantMessage.textContent = analysis.message || "";
+  learningAssistantRecommendation.textContent = analysis.recommendation === "practice"
+    ? "⚠️ Necesitas practicar más esta letra."
+    : analysis.recommendation === "optional_practice"
+      ? "💡 Puedes practicar esta letra nuevamente si lo deseas."
+      : analysis.recommendation === "good"
+        ? "✅ Tu desempeño es bueno."
+        : "";
+  updateAssistantFavoriteButton(letter || learningTargetLetter);
+}
+
+async function refreshLearningAssistant(letter){
+  try{
+    const result = await window.pywebview.api.learning_performance(letter);
+    if(result && result.ok) renderLearningAssistant(result.analysis, result.letter);
+  }catch(e){
+    // El asistente conserva el ultimo analisis valido si la consulta falla.
+  }
+}
+
 function syncLearningView(letter, progressText){
   const letterValue = (letter && letter.trim()) ? letter.trim().toUpperCase() : "A";
   const idx = LETTERS.indexOf(letterValue);
@@ -405,7 +488,9 @@ function syncLearningView(letter, progressText){
   placeholder.style.display = "none";
 
   updateStarButton(letterValue);
+  updateAssistantFavoriteButton(letterValue);
   resetLearningFeedback();
+  refreshLearningAssistant(letterValue);
 }
 
 function updateLearningFeedback(detectedLetterRaw){
@@ -449,6 +534,7 @@ function updateLearningFeedback(detectedLetterRaw){
     if(!learningIsCorrect){
       learningIsCorrect = true;
       learningCorrectCount += 1;
+      logLearningAttempt(detected);
       if(learningCounter){
         learningCounter.textContent = `Correctas: ${learningCorrectCount}`;
       }
@@ -471,6 +557,7 @@ function updateLearningFeedback(detectedLetterRaw){
     }
   }else if(!isMatch && learningSameStreak >= LEARNING_STREAK_TO_CONFIRM){
     learningIsCorrect = false;
+    logLearningAttempt(detected);
     if(learningVideoWrap){
       learningVideoWrap.classList.add("learning-incorrect");
       learningVideoWrap.classList.remove("learning-correct");
@@ -509,6 +596,10 @@ async function poll(){
     const st = await window.pywebview.api.get_state();
     if(st && st.logged_in){
       btnLogout.classList.remove("hidden");
+      if(st.username && favoriteUsername !== st.username){
+        favoriteUsername = st.username;
+        refreshFavoriteLetters();
+      }
       if(currentView() === "login" || currentView() === "register"){
         setView("menu");
       }
@@ -568,6 +659,9 @@ async function poll(){
         $("regPass").value = "";
         $("regPass2").value = "";
       }
+      favoriteLetters = new Set();
+      favoriteUsername = null;
+      updateDifficultCount();
     }
     lastLoggedIn = !!(st && st.logged_in);
   }catch(e){
@@ -615,6 +709,8 @@ $("btnRegister").onclick = async () => {
 $("btnLogout").onclick = async () => {
   await window.pywebview.api.logout();
   chat.innerHTML = "";
+  favoriteLetters = new Set();
+  favoriteUsername = null;
   $("loginUser").value = "";
   $("loginPass").value = "";
   setView("login");
@@ -623,6 +719,8 @@ $("btnLogout").onclick = async () => {
 $("btnLogoutMenu").onclick = async () => {
   await window.pywebview.api.logout();
   chat.innerHTML = "";
+  favoriteLetters = new Set();
+  favoriteUsername = null;
   setView("login");
 };
 
@@ -648,14 +746,23 @@ $("btnOpenEvaluacion").onclick = () => {
 $("btnPrevAprendizaje").onclick = () => moveLearning(-1);
 $("btnNextAprendizaje").onclick = () => moveLearning(1);
 if(btnStarLetter){
-  btnStarLetter.onclick = () => toggleDifficultLetter(learningTargetLetter);
+  btnStarLetter.onclick = () => toggleFavoriteLetter(learningTargetLetter);
 }
+if(btnAssistantFavorite){
+  btnAssistantFavorite.onclick = () => toggleFavoriteLetter(learningTargetLetter);
+}
+if(btnPracticeNow){
+  btnPracticeNow.onclick = () => openRepasoForLetter(learningAnalysis && learningAnalysis.letter || learningTargetLetter);
+}
+$("btnOpenLearningAssistant").onclick = () => learningAssistantCard.classList.toggle("hidden");
+$("btnCloseLearningAssistant").onclick = () => learningAssistantCard.classList.add("hidden");
 
 // Repaso
 if($("btnOpenRepaso")){
   $("btnOpenRepaso").onclick = () => {
+    repasoInitialLetter = null;
     repasoIndex = 0;
-    syncRepasoView();
+    refreshFavoriteLetters().then(() => syncRepasoView());
     setView("repaso");
   };
 }
@@ -669,9 +776,9 @@ if($("btnNextRepaso")){
   $("btnNextRepaso").onclick = () => moveRepaso(1);
 }
 if(btnUnstarRepaso){
-  btnUnstarRepaso.onclick = () => {
+  btnUnstarRepaso.onclick = async () => {
     if(!repasoTargetLetter) return;
-    toggleDifficultLetter(repasoTargetLetter);
+    await toggleFavoriteLetter(repasoTargetLetter);
     // Si la letra actual se quitó de la lista, ajusta el índice antes de re-sincronizar
     if(repasoIndex >= repasoList.length - 1){
       repasoIndex = 0;

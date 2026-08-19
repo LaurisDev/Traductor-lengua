@@ -54,6 +54,15 @@ class WebAPI:
         self._c.on_sign_send()
         return {"ok": True}
 
+    # ===== Reto: deletrear nombre =====
+    def challenge_start(self) -> Dict[str, Any]:
+        self._c.on_challenge_start()
+        return {"ok": True}
+
+    def challenge_stop(self) -> Dict[str, Any]:
+        self._c.on_challenge_stop()
+        return {"ok": True}
+
     # ===== Poll =====
     def get_state(self) -> Dict[str, Any]:
         st = self._c.get_web_state()

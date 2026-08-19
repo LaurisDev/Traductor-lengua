@@ -74,6 +74,7 @@
             <button class="btn secondary wide" id="btnOpenAprendizaje">Aprendizaje</button>
             <button class="btn secondary wide" id="btnOpenEvaluacion">Modo Evaluación</button>
             <button class="btn secondary wide" id="btnOpenRepaso">⭐ Repaso</button>
+            <button class="btn secondary wide" id="btnOpenReto">Reto: deletrea tu nombre</button>
             <button class="btn ghost wide" id="btnLogoutMenu">Cerrar sesión</button>
           </div>
         </section>
@@ -289,6 +290,59 @@
           </div>
         </section>
 
+        <!-- RETO: DELETREA TU NOMBRE -->
+        <section class="view-wrap hidden" id="viewReto">
+          <div class="reto-head">
+            <button class="btn ghost" id="btnRetoBack">← Menú</button>
+            <div>
+              <h3 class="reto-title">Reto: deletrea tu nombre</h3>
+              <div class="muted" id="retoSubtitle">Haz la seña de cada letra en orden.</div>
+            </div>
+          </div>
+
+          <div class="reto-word" id="retoWord"></div>
+
+          <div class="learning-grid" id="retoGrid">
+            <div class="panel card learning-panel left-panel">
+              <div class="reference-box">
+                <div class="reference-figure" id="retoReferenceArt" aria-label="Referencia de la seña">
+                  <img id="retoReferenceImage" alt="Imagen de referencia de la seña" />
+                  <span class="reference-placeholder-text">Imagen de referencia</span>
+                </div>
+                <div class="letter-reference" id="retoLetter">-</div>
+              </div>
+            </div>
+
+            <div class="panel card learning-panel right-panel">
+              <div class="camera-box">
+                <div class="video-wrap learning-video-wrap">
+                  <img id="videoReto" alt="camara del reto" />
+                  <div class="video-fallback" id="videoFallbackReto">Iniciando cámara…</div>
+                </div>
+                <div class="learning-caption" id="retoCaption">Haz la seña de la letra</div>
+                <div class="reto-progress-track">
+                  <div class="reto-progress-fill" id="retoProgressFill"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="reto-empty hidden" id="retoEmpty">
+            Tu nombre de usuario no tiene letras que se puedan deletrear con el abecedario dactilológico.
+          </div>
+
+          <div class="reto-complete hidden" id="retoComplete">
+            <div class="reto-complete-card">
+              <div class="reto-complete-emoji">🎉</div>
+              <h3>¡Completaste el reto!</h3>
+              <p class="muted">Deletreaste tu nombre correctamente en señas.</p>
+              <div class="row">
+                <button class="btn primary" id="btnRetoRetry">Reintentar</button>
+                <button class="btn" id="btnRetoMenu">Volver al menú</button>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
 

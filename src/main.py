@@ -21,7 +21,7 @@ from src.auth import AuthService
 from src.gui import App
 from src.camera import CameraCapture
 from src.image_processing import HandDetector
-from src.sign_language import SignClassifier
+from src.sign_language import SignClassifier, letters_for_challenge
 from src.config import USE_WEB_UI
 
 
@@ -59,6 +59,7 @@ class MainController:
         self._after_id = None
         self._read_fail_count = 0
         self._MAX_READ_FAILS_BEFORE_MESSAGE = 45
+        self._camera_error: Optional[str] = None
 
         # Threading para que la GUI no se congele
         self._translation_thread: Optional[threading.Thread] = None
@@ -73,6 +74,14 @@ class MainController:
         self._web_last_frame_ts = 0.0
         self._voice_status = "Listo"
         self._voice_error = ""
+
+        # ===== Reto: deletrear el nombre de usuario =====
+        self._challenge_letters: list = []
+        self._challenge_index: int = 0
+        self._challenge_done: bool = False
+        self._challenge_active: bool = False
+        self._challenge_match_count: int = 0
+        self._challenge_hold_frames: int = 10  # frames consecutivos para confirmar cada letra
 
     def set_current_login_screen(self, screen) -> None:
         self._login_screen = screen
@@ -218,8 +227,17 @@ class MainController:
         self._web_last_frame_ts = 0.0
         self._voice_status = "Listo"
         self._voice_error = ""
+        self._challenge_letters = []
+        self._challenge_index = 0
+        self._challenge_done = False
+        self._challenge_active = False
+        self._challenge_match_count = 0
+        self._camera_error = None
 
     def get_web_state(self):
+        challenge_progress = 0.0
+        if self._challenge_letters and not self._challenge_done:
+            challenge_progress = self._challenge_match_count / float(self._challenge_hold_frames)
         return {
             "logged_in": self._current_user is not None,
             "username": self._current_user.username if self._current_user else None,
@@ -229,7 +247,46 @@ class MainController:
             "messages": list(self._web_messages),
             "voice_status": self._voice_status,
             "voice_error": self._voice_error,
+            "camera_error": self._camera_error,
+            "challenge_letters": list(self._challenge_letters),
+            "challenge_index": self._challenge_index,
+            "challenge_done": self._challenge_done,
+            "challenge_progress": min(1.0, challenge_progress),
         }
+
+    # ====== Reto: deletrear el nombre de usuario ======
+    def on_challenge_start(self) -> None:
+        """Arranca (o reinicia) el reto de deletrear el nombre del usuario."""
+        username = self._current_user.username if self._current_user else ""
+        self._challenge_letters = letters_for_challenge(username)
+        self._challenge_index = 0
+        self._challenge_done = False
+        self._challenge_match_count = 0
+        self._challenge_active = True
+
+    def on_challenge_stop(self) -> None:
+        """El usuario salio de la pantalla de reto (no hace falta seguir comparando letras)."""
+        self._challenge_active = False
+
+    def _advance_challenge(self, letter: Optional[str]) -> None:
+        """
+        Compara la letra detectada con la letra objetivo actual del reto.
+        Requiere sostener la seña correcta varios frames seguidos antes de avanzar,
+        para evitar que una deteccion aislada cuente como acierto.
+        """
+        if not self._challenge_letters or self._challenge_done:
+            return
+        target = self._challenge_letters[self._challenge_index]
+        if letter != target:
+            self._challenge_match_count = 0
+            return
+        self._challenge_match_count += 1
+        if self._challenge_match_count < self._challenge_hold_frames:
+            return
+        self._challenge_match_count = 0
+        self._challenge_index += 1
+        if self._challenge_index >= len(self._challenge_letters):
+            self._challenge_done = True
 
     # ====== Buffer de señas ======
     def _sync_sign_buffer(self) -> None:
@@ -360,8 +417,13 @@ class MainController:
 
     def _start_translation_loop(self) -> None:
         """Inicializa camara, detectores y arranca el bucle de traduccion."""
+        self._camera_error = None
         self._camera = CameraCapture()
         if not self._camera.open():
+            self._camera_error = (
+                "No se pudo abrir la camara. Verifique permisos y que no la use otra app "
+                "(Chrome, Zoom, Teams, etc.)."
+            )
             if self._translation_screen:
                 self._translation_screen.show_camera_error()
             return
@@ -397,42 +459,54 @@ class MainController:
                 self._read_fail_count += 1
                 if self._read_fail_count >= self._MAX_READ_FAILS_BEFORE_MESSAGE:
                     self._put_latest((None, None, "no_frames"))
+                    self._camera_error = (
+                        "La camara no envia imagenes. Cierre Chrome/Zoom/Teams y reintente."
+                    )
                 continue
 
             self._read_fail_count = 0
+            self._camera_error = None
             try:
                 landmarks, frame_out = self._hand_detector.process(frame)
             except RuntimeError:
                 break
             landmarks_classify = landmarks
-            if landmarks is not None:
-                try:
-                    from src.config import LANDMARK_SMOOTH_ALPHA, LANDMARK_SMOOTH_FOR_CLASSIFY
-                    a = float(LANDMARK_SMOOTH_ALPHA)
-                    smooth_classify = bool(LANDMARK_SMOOTH_FOR_CLASSIFY)
-                except Exception:
-                    a = 0.65
-                    smooth_classify = False
-                if self._lm_smooth is None or len(self._lm_smooth) != len(landmarks):
-                    self._lm_smooth = [dict(lm) for lm in landmarks]
+            try:
+                if landmarks is not None:
+                    try:
+                        from src.config import LANDMARK_SMOOTH_ALPHA, LANDMARK_SMOOTH_FOR_CLASSIFY
+                        a = float(LANDMARK_SMOOTH_ALPHA)
+                        smooth_classify = bool(LANDMARK_SMOOTH_FOR_CLASSIFY)
+                    except Exception:
+                        a = 0.65
+                        smooth_classify = False
+                    if self._lm_smooth is None or len(self._lm_smooth) != len(landmarks):
+                        self._lm_smooth = [dict(lm) for lm in landmarks]
+                    else:
+                        for i in range(len(landmarks)):
+                            cur = landmarks[i]
+                            prev = self._lm_smooth[i]
+                            prev["x"] = a * float(prev.get("x", 0.0)) + (1.0 - a) * float(cur.get("x", 0.0))
+                            prev["y"] = a * float(prev.get("y", 0.0)) + (1.0 - a) * float(cur.get("y", 0.0))
+                            prev["z"] = a * float(prev.get("z", 0.0)) + (1.0 - a) * float(cur.get("z", 0.0))
+                    landmarks_draw = self._lm_smooth if a > 0 else landmarks
+                    landmarks_classify = self._lm_smooth if smooth_classify else landmarks
+                    self._hand_detector.draw_landmarks(frame_out, landmarks_draw)
                 else:
-                    for i in range(len(landmarks)):
-                        cur = landmarks[i]
-                        prev = self._lm_smooth[i]
-                        prev["x"] = a * float(prev.get("x", 0.0)) + (1.0 - a) * float(cur.get("x", 0.0))
-                        prev["y"] = a * float(prev.get("y", 0.0)) + (1.0 - a) * float(cur.get("y", 0.0))
-                        prev["z"] = a * float(prev.get("z", 0.0)) + (1.0 - a) * float(cur.get("z", 0.0))
-                landmarks_draw = self._lm_smooth if a > 0 else landmarks
-                landmarks_classify = self._lm_smooth if smooth_classify else landmarks
-                self._hand_detector.draw_landmarks(frame_out, landmarks_draw)
-            else:
-                self._lm_smooth = None
+                    self._lm_smooth = None
 
-            letter, _conf = self._sign_classifier.letter_for_display(landmarks_classify)
-            self._put_latest((frame_out, letter, "ok"))
+                letter, _conf = self._sign_classifier.letter_for_display(landmarks_classify)
+                self._put_latest((frame_out, letter, "ok"))
 
-            # Solo mostrar la letra detectada; el usuario confirma con "Aceptar".
-            self._web_letter = letter
+                # Solo mostrar la letra detectada; el usuario confirma con "Aceptar".
+                self._web_letter = letter
+
+                if self._challenge_active:
+                    self._advance_challenge(letter)
+            except Exception:
+                # Nunca dejar que un frame problematico mate el hilo de camara completo.
+                print(traceback.format_exc())
+                continue
 
             # Enviar frame a la UI web
             now = time.monotonic()

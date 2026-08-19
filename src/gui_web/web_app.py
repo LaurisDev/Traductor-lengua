@@ -24,7 +24,7 @@ class WebApp:
             js_api=api,
             width=1280,
             height=720,
-            min_size=(960, 600),
+            min_size=(360, 600),
         )
 
         # Cierre limpio

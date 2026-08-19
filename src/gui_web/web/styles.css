@@ -530,3 +530,49 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
 }
 .reto-complete-emoji{font-size:48px; margin-bottom:8px}
 .reto-complete-card .row{justify-content:center; margin-top:18px}
+
+@media (max-width: 700px){
+  body{overflow:auto}
+  .topbar{padding:12px 14px}
+  .content{padding:10px; align-items:start}
+  .view-wrap{
+    width:100%;
+    height:auto;
+    min-height:calc(100vh - 76px);
+    gap:10px;
+  }
+  .view-bar{
+    flex-wrap:wrap;
+    gap:8px 10px;
+    padding:9px 11px;
+  }
+  .view-title{flex:1; min-width:150px}
+  .grid,
+  .learning-grid{gap:10px}
+  .panel{padding:12px}
+  .panel-head{align-items:flex-start; gap:10px}
+  .letter-confirm{flex-wrap:wrap; justify-content:flex-end}
+  .video-wrap{min-height:clamp(190px, 58vw, 280px)}
+  .row{flex-wrap:wrap}
+  .row .spacer{display:none}
+  .row .btn{flex:1 1 auto}
+  .row .btn.success{flex-basis:100%}
+  .learning-actions .btn{flex:1}
+  .learning-status-row{align-items:flex-start}
+  .learning-status-pill{max-width:100%;}
+  .reference-figure{width:min(230px, 62vw)}
+  .reference-box{padding:12px}
+  .reto-head{align-items:flex-start; flex-wrap:wrap}
+  .reto-complete-card{padding:24px 18px}
+}
+
+@media (max-width: 420px){
+  .brand{gap:8px}
+  .logo{width:34px; height:34px; border-radius:10px}
+  .subtitle{display:none}
+  .auth,.menu{padding:20px 16px 18px}
+  .panel-head{flex-direction:column}
+  .letter-confirm{justify-content:flex-start}
+  .learning-actions{flex-direction:column}
+  .learning-actions .btn{width:100%}
+}

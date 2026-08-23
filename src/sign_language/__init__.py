@@ -7,6 +7,7 @@ from .text_utils import letters_for_challenge
 # Clasificador por reglas (legacy, opcional)
 from .finger_analyzer import FingerAnalyzer, FingerState
 from .gesture_classifier import GestureClassifier
+from .motion_detector import MotionDetector
 from .performance_analyzer import LearningPerformanceAnalyzer, MAX_ATTEMPTS, PerformanceAnalysis
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "FingerAnalyzer",
     "FingerState",
     "GestureClassifier",
+    "MotionDetector",
     "LearningPerformanceAnalyzer",
     "MAX_ATTEMPTS",
     "PerformanceAnalysis",

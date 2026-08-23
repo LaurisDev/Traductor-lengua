@@ -21,7 +21,12 @@ from src.auth import AuthService
 from src.gui import App
 from src.camera import CameraCapture
 from src.image_processing import HandDetector
-from src.sign_language import SignClassifier, letters_for_challenge
+from src.sign_language import (
+    FingerAnalyzer,
+    MotionDetector,
+    SignClassifier,
+    letters_for_challenge,
+)
 from src.config import USE_WEB_UI
 
 
@@ -54,6 +59,9 @@ class MainController:
         self._camera: CameraCapture = None
         self._hand_detector: HandDetector = None
         self._sign_classifier: SignClassifier = None
+        # Deteccion de movimiento para J y Z (el modelo ML solo ve una postura estatica).
+        self._finger_analyzer: FingerAnalyzer = None
+        self._motion_detector: MotionDetector = None
         self._translation_running = False
         self._after_id = None
         self._read_fail_count = 0
@@ -414,6 +422,8 @@ class MainController:
             self._camera.read()
         self._hand_detector = HandDetector()
         self._sign_classifier = SignClassifier()
+        self._finger_analyzer = FingerAnalyzer()
+        self._motion_detector = MotionDetector()
         if not self._sign_classifier.is_trained():
             print(
                 "[Senas] Modelo no entrenado. Ejecute: python collect_sign_samples.py"
@@ -479,6 +489,28 @@ class MainController:
                     self._lm_smooth = None
 
                 letter, _conf = self._sign_classifier.letter_for_display(landmarks_classify)
+
+                # J y Z son senas de MOVIMIENTO: el modelo ML solo ve una postura estatica
+                # por frame y no puede distinguirlas de I / D en una sola imagen. Se rastrea
+                # la trayectoria de la punta del dedo entre frames y, si calza con el gancho
+                # de J o el zigzag de Z, se prioriza sobre la prediccion estatica del modelo.
+                finger_state = self._finger_analyzer.analyze(landmarks_classify) if self._finger_analyzer else None
+                j_motion, z_motion = (
+                    self._motion_detector.update(finger_state) if self._motion_detector else (False, False)
+                )
+                if finger_state is not None:
+                    if j_motion and finger_state.pinky and not finger_state.index and not finger_state.middle:
+                        letter = "J"
+                    elif (
+                        z_motion
+                        and finger_state.index
+                        and finger_state.index_up
+                        and not finger_state.middle
+                        and not finger_state.ring
+                        and not finger_state.pinky
+                    ):
+                        letter = "Z"
+
                 self._put_latest((frame_out, letter, "ok"))
 
                 # Solo mostrar la letra detectada; el usuario confirma con "Aceptar".

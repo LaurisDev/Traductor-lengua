@@ -9,6 +9,7 @@ import queue
 import traceback
 from typing import Optional
 import base64
+import copy
 import time
 
 # Asegurar que el directorio raiz del proyecto esta en el path
@@ -25,6 +26,7 @@ from src.sign_language import (
     FingerAnalyzer,
     LearningPerformanceAnalyzer,
     MotionDetector,
+    ReviewAI,
     SignClassifier,
     letters_for_challenge,
 )
@@ -80,11 +82,19 @@ class MainController:
         self._web_messages = []  # {"who": str, "text": str}
         self._web_frame_b64: Optional[str] = None
         self._web_letter: Optional[str] = None
+        self._web_finger_state= None
+        self._web_confidence:float = 0.0
+        self._web_landmarks= None
+        self._web_features = None
         self._web_last_frame_ts = 0.0
         self._voice_status = "Listo"
         self._voice_error = ""
         self._learning_performance = LearningPerformanceAnalyzer()
-
+        self._review_ai = ReviewAI()
+        # Historial efimero: solo conserva los intentos confirmados de la
+        # letra actual en Repaso; nunca se persiste en MongoDB.
+        self._review_attempts: list[dict] = []
+        
         # ===== Reto: deletrear el nombre de usuario =====
         self._challenge_letters: list = []
         self._challenge_index: int = 0
@@ -145,6 +155,7 @@ class MainController:
 
     def on_logout(self) -> None:
         self._current_user = None
+        self._review_attempts.clear()
         if not USE_WEB_UI:
             self._app.show_login()
 
@@ -228,12 +239,15 @@ class MainController:
 
     def web_logout(self) -> None:
         self._current_user = None
+        self._review_attempts.clear()
         self._stop_translation_loop()
         self._release_translation_resources()
         self._web_messages.clear()
         self._sign_buffer = ""
         self._web_frame_b64 = None
-        self._web_letter = None
+        self._web_letter = None                             # <-- LÍNEA NUEVA
+        self._web_landmarks = None 
+        self._web_features = None
         self._web_last_frame_ts = 0.0
         self._voice_status = "Listo"
         self._voice_error = ""
@@ -261,6 +275,79 @@ class MainController:
         )
         analysis = self._learning_performance.analyze(stats, target)
         return {"ok": True, "letter": target, "analysis": analysis.as_dict()}
+
+    def web_review_attempt(self, target_letter: str, detected_letter: str) -> dict:
+        """Registra un intento del modo REPASO y devuelve retroalimentación de la IA."""
+        if self._current_user is None:
+            return {"ok": False, "msg": "Debes iniciar sesión"}
+
+        target = (target_letter or "").strip().upper()
+        detected = (detected_letter or "").strip().upper()
+        if not target or not detected:
+            return {"ok": False, "msg": "El intento no tiene una letra válida"}
+
+        # Reutiliza el mismo contador de 5 intentos que ya usa Aprendizaje.
+        stats = self._db.record_learning_attempt(
+            self._current_user.username,
+            target,
+            detected == target,
+        )
+        analysis = self._learning_performance.analyze(stats, target)
+
+        # Un cambio de letra inicia una nueva sesion de Repaso. Las copias
+        # profundas evitan que los datos del frame siguiente alteren intentos
+        # ya confirmados. Solo se guardan como maximo los cinco intentos.
+        if self._review_attempts and self._review_attempts[0]["target_letter"] != target:
+            self._review_attempts.clear()
+        if len(self._review_attempts) < 5:
+            self._review_attempts.append(
+                {
+                    "target_letter": target,
+                    "detected_letter": detected,
+                    "confidence": float(self._web_confidence or 0.0),
+                    "finger_state": copy.deepcopy(self._web_finger_state),
+                    "features": copy.deepcopy(self._web_features),
+                    "landmarks": copy.deepcopy(self._web_landmarks),
+                }
+            )
+
+        # Un acierto siempre debe reemplazar una correccion previa, incluso
+        # si ya se completo el analisis de cinco intentos.
+        if detected == target:
+            feedback = self._review_ai.analyze(
+                target_letter=target,
+                detected_letter=detected,
+                confidence=self._web_confidence,
+                finger_state=self._web_finger_state,
+                features=self._web_features,
+                landmarks=self._web_landmarks,
+            )
+        elif len(self._review_attempts) == 5:
+            feedback = self._review_ai.analyze_attempts(self._review_attempts)
+        else:
+            feedback = self._review_ai.analyze(
+                target_letter=target,
+                detected_letter=detected,
+                confidence=self._web_confidence,
+                finger_state=self._web_finger_state,
+                features=self._web_features,
+                landmarks=self._web_landmarks,
+            )
+
+        return {
+            "ok": True,
+            "letter": target,
+            "analysis": analysis.as_dict(),
+            "feedback": feedback.as_dict(),
+            "review_attempt": len(self._review_attempts),
+            "review_attempt_limit": 5,
+            "review_analysis_ready": len(self._review_attempts) == 5,
+        }
+
+    def web_reset_review_attempts(self) -> dict:
+        """Descarta el historial temporal al salir o reiniciar Repaso."""
+        self._review_attempts.clear()
+        return {"ok": True}
 
     def web_learning_performance(self, letter: str) -> dict:
         """Devuelve el analisis actual de una letra para el asistente de APRENDIZAJE."""
@@ -563,6 +650,10 @@ class MainController:
                 # la trayectoria de la punta del dedo entre frames y, si calza con el gancho
                 # de J o el zigzag de Z, se prioriza sobre la prediccion estatica del modelo.
                 finger_state = self._finger_analyzer.analyze(landmarks_classify) if self._finger_analyzer else None
+                self._web_finger_state = finger_state
+                self._web_confidence= float(_conf or 0.0)
+                self._web_landmarks=landmarks_classify
+                self._web_features = self._sign_classifier.latest_features() if self._sign_classifier else None
                 j_motion, z_motion = (
                     self._motion_detector.update(finger_state) if self._motion_detector else (False, False)
                 )

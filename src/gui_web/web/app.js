@@ -70,6 +70,11 @@ const repasoOverlay = $("repasoOverlay");
 const videoRepaso = $("videoRepaso");
 const videoFallbackRepaso = $("videoFallbackRepaso");
 const btnUnstarRepaso = $("btnUnstarRepaso");
+// Asistente IA de Repaso
+const repasoAssistantCard = $("repasoAssistantCard");
+const repasoAssistantTitle = $("repasoAssistantTitle");
+const repasoAssistantMessage = $("repasoAssistantMessage");
+const repasoAssistantTip = $("repasoAssistantTip");
 
 // Reto (deletrea tu nombre)
 const videoReto = $("videoReto");
@@ -156,6 +161,9 @@ let repasoTargetLetter = null;
 let repasoSameStreak = 0;
 let repasoLastDetected = null;
 let repasoIsCorrect = false;
+let repasoAttemptLogged = false;
+let repasoAwaitingNewAttempt = false;
+let repasoResetTimer = null;
 const REPASO_STREAK_TO_CONFIRM = 3;
 
 function buildRepasoList(){
@@ -166,7 +174,13 @@ function buildRepasoList(){
 }
 
 function resetRepasoFeedback(){
+  if(repasoResetTimer){
+    clearTimeout(repasoResetTimer);
+    repasoResetTimer = null;
+  }
   repasoIsCorrect = false;
+  repasoAttemptLogged = false;
+  repasoAwaitingNewAttempt = false;
   repasoSameStreak = 0;
   repasoLastDetected = null;
   if(repasoVideoWrap){
@@ -185,6 +199,9 @@ function resetRepasoFeedback(){
   }
   if(repasoDetected){
     repasoDetected.textContent = "-";
+  }
+  if(repasoAssistantCard){
+    repasoAssistantCard.classList.add("hidden");
   }
 }
 
@@ -247,6 +264,66 @@ async function openRepasoForLetter(letter){
   }
 }
 
+function renderRepasoFeedback(feedback){
+  if(!feedback || !repasoAssistantCard) return;
+  if(repasoAssistantTitle){
+    repasoAssistantTitle.textContent = feedback.correct ? "¡Bien hecho! 👋" : "🤖 " + (feedback.title || "Revisa tu seña");
+  }
+  if(repasoAssistantMessage){
+    repasoAssistantMessage.textContent = feedback.message || "";
+  }
+  if(repasoAssistantTip){
+    repasoAssistantTip.textContent = feedback.tip || "";
+  }
+  repasoAssistantCard.classList.remove("hidden");
+}
+
+function showRepasoRetry(attemptNumber, attemptLimit){
+  const number = attemptNumber || 1;
+  const limit = attemptLimit || 5;
+  if(repasoCaption){
+    repasoCaption.textContent = `❌ Intento ${number}/${limit}: No coincide. Inténtalo nuevamente.`;
+  }
+  if(repasoResetTimer) clearTimeout(repasoResetTimer);
+  repasoResetTimer = setTimeout(() => {
+    if(currentView() !== "repaso" || repasoIsCorrect) return;
+    if(repasoVideoWrap){
+      repasoVideoWrap.classList.remove("learning-incorrect");
+    }
+    if(repasoOverlay){
+      repasoOverlay.classList.remove("learning-overlay-incorrect");
+      repasoOverlay.textContent = "";
+    }
+    if(repasoStatusPill){
+      repasoStatusPill.className = "learning-status-pill";
+      repasoStatusPill.textContent = `Intento ${number}/${limit} — Intenta de nuevo`;
+    }
+  }, 850);
+}
+
+function logRepasoAttempt(detectedLetter){
+  if(repasoAttemptLogged) return;
+  repasoAttemptLogged = true;
+  window.pywebview.api.review_attempt(repasoTargetLetter, detectedLetter).then((result) => {
+    if(result && result.ok && result.feedback){
+      const details = result.feedback.details || [];
+      const isComparativeFeedback = details.includes("attempts_analyzed=5");
+      // Los primeros cuatro intentos conservan la indicacion corta de la
+      // camara. La explicacion de IA se reserva para la comparacion final.
+      if(isComparativeFeedback || result.feedback.correct){
+        renderRepasoFeedback(result.feedback);
+      }
+      if(detectedLetter !== repasoTargetLetter){
+        repasoAttemptLogged = false;
+        repasoAwaitingNewAttempt = true;
+        showRepasoRetry(result.review_attempt, result.review_attempt_limit);
+      }
+    }
+  }).catch(() => {
+    repasoAttemptLogged = false;
+  });
+}
+
 function updateRepasoFeedback(detectedLetterRaw){
   const detected = (detectedLetterRaw && String(detectedLetterRaw).trim()) ? String(detectedLetterRaw).trim().toUpperCase() : null;
   if(repasoDetected){
@@ -256,7 +333,18 @@ function updateRepasoFeedback(detectedLetterRaw){
   if(!detected){
     repasoSameStreak = 0;
     repasoLastDetected = null;
+    repasoAwaitingNewAttempt = false;
     return;
+  }
+
+  // Tras un error, exigir que el usuario cambie o retire la mano antes de
+  // confirmar otro intento. Asi una misma seña sostenida no suma intentos
+  // repetidos en cada frame.
+  if(repasoAwaitingNewAttempt && detected === repasoLastDetected){
+    return;
+  }
+  if(repasoAwaitingNewAttempt){
+    repasoAwaitingNewAttempt = false;
   }
 
   if(detected === repasoLastDetected){
@@ -269,8 +357,13 @@ function updateRepasoFeedback(detectedLetterRaw){
   const isMatch = (detected === repasoTargetLetter);
 
   if(isMatch && repasoSameStreak >= REPASO_STREAK_TO_CONFIRM){
+    if(repasoResetTimer){
+      clearTimeout(repasoResetTimer);
+      repasoResetTimer = null;
+    }
     if(!repasoIsCorrect){
       repasoIsCorrect = true;
+      logRepasoAttempt(detected);
     }
     if(repasoVideoWrap){
       repasoVideoWrap.classList.add("learning-correct");
@@ -290,6 +383,7 @@ function updateRepasoFeedback(detectedLetterRaw){
     }
   }else if(!isMatch && repasoSameStreak >= REPASO_STREAK_TO_CONFIRM){
     repasoIsCorrect = false;
+    logRepasoAttempt(detected);
     if(repasoVideoWrap){
       repasoVideoWrap.classList.add("learning-incorrect");
       repasoVideoWrap.classList.remove("learning-correct");
@@ -767,7 +861,12 @@ if($("btnOpenRepaso")){
   };
 }
 if($("btnBackRepaso")){
-  $("btnBackRepaso").onclick = () => setView("menu");
+  $("btnBackRepaso").onclick = () => {
+    if(window.pywebview && window.pywebview.api && window.pywebview.api.reset_review_attempts){
+      window.pywebview.api.reset_review_attempts().catch(() => {});
+    }
+    setView("menu");
+  };
 }
 if($("btnPrevRepaso")){
   $("btnPrevRepaso").onclick = () => moveRepaso(-1);
@@ -785,6 +884,12 @@ if(btnUnstarRepaso){
     }
     syncRepasoView();
   };
+}
+if($("btnOpenRepasoAssistant")){
+  $("btnOpenRepasoAssistant").onclick = () => repasoAssistantCard.classList.toggle("hidden");
+}
+if($("btnCloseRepasoAssistant")){
+  $("btnCloseRepasoAssistant").onclick = () => repasoAssistantCard.classList.add("hidden");
 }
 
 $("btnBackInteraction").onclick = () => {

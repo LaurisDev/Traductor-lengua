@@ -9,6 +9,8 @@ from .finger_analyzer import FingerAnalyzer, FingerState
 from .gesture_classifier import GestureClassifier
 from .motion_detector import MotionDetector
 from .performance_analyzer import LearningPerformanceAnalyzer, MAX_ATTEMPTS, PerformanceAnalysis
+from .review_ai import ReviewAI, ReviewFeedback, analyze_review_attempt
+
 
 __all__ = [
     "extract_features",
@@ -23,4 +25,7 @@ __all__ = [
     "LearningPerformanceAnalyzer",
     "MAX_ATTEMPTS",
     "PerformanceAnalysis",
+    "ReviewAI",
+    "ReviewFeedback",
+    "analyze_review_attempt"
 ]

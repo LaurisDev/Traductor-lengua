@@ -67,6 +67,12 @@ class WebAPI:
     def learning_attempt(self, target_letter: str, detected_letter: str) -> Dict[str, Any]:
         return self._c.web_learning_attempt(target_letter, detected_letter)
 
+    def review_attempt(self, target_letter: str, detected_letter: str) -> Dict[str, Any]:
+        return self._c.web_review_attempt(target_letter, detected_letter)
+
+    def reset_review_attempts(self) -> Dict[str, Any]:
+        return self._c.web_reset_review_attempts()
+
     def learning_performance(self, letter: str) -> Dict[str, Any]:
         return self._c.web_learning_performance(letter)
 

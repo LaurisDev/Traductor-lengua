@@ -89,6 +89,9 @@ class SignClassifier:
         self._label_encoder: Optional[LabelEncoder] = None
         self._last_letter: Optional[str] = None
         self._stability_count = 0
+        # Rasgos geometricos ya calculados por el clasificador en el frame.
+        # Repaso los reutiliza sin ejecutar otro extractor.
+        self._last_features: Optional[np.ndarray] = None
         try:
             from src.config import SIGN_STABILITY_FRAMES
             self._stability_threshold = max(4, int(SIGN_STABILITY_FRAMES) - 2)
@@ -308,6 +311,7 @@ class SignClassifier:
         feat = extract_features(hand_landmarks)
         if feat is None:
             return None, 0.0
+        self._last_features = feat.copy()
 
         proba = self._proba_dict(feat)
         letter = max(proba, key=proba.get)
@@ -329,6 +333,7 @@ class SignClassifier:
         feat = extract_features(hand_landmarks)
         if feat is None:
             return None, 0.0, {}
+        self._last_features = feat.copy()
         proba = self._proba_dict(feat)
         letter = max(proba, key=proba.get)
         conf = proba[letter]
@@ -343,7 +348,10 @@ class SignClassifier:
         if hand_landmarks is None:
             self._stability_count = 0
             self._last_letter = None
+            self._last_features = None
             return None, 0.0
+
+        self._last_features = None
 
         stable = self.classify_with_stability(hand_landmarks)
         if stable is not None:
@@ -359,6 +367,10 @@ class SignClassifier:
         if letter and conf >= disp_thr:
             return letter, conf
         return None, conf
+
+    def latest_features(self) -> Optional[np.ndarray]:
+        """Copia de los rasgos ya usados para clasificar el frame actual."""
+        return self._last_features.copy() if self._last_features is not None else None
 
     def classify_with_stability(self, hand_landmarks) -> Optional[str]:
         letter, _ = self.predict(hand_landmarks)

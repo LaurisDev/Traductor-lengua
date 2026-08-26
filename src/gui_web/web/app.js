@@ -7,12 +7,29 @@ const viewInteraction = $("viewInteraction");
 const viewAprendizaje = $("viewAprendizaje");
 const viewEvaluacionConfig = $("viewEvaluacionConfig");
 const viewEvaluacionRun = $("viewEvaluacionRun");
+const viewEvaluacionResultados = $("viewEvaluacionResultados");
+const viewEvaluacionHistorial = $("viewEvaluacionHistorial");
 
 // Evaluation elements
 const evalRequestedLetter = $("evalRequestedLetter");
 const evalDetectedLetter = $("evalDetectedLetter");
 const evalTime = $("evalTime");
 const evalScore = $("evalScore");
+const evalHits = $("evalHits");
+const evalErrors = $("evalErrors");
+const evalResultScore = $("evalResultScore");
+const evalResultHits = $("evalResultHits");
+const evalResultErrors = $("evalResultErrors");
+const evalResultDuration = $("evalResultDuration");
+const evalResultHitLetters = $("evalResultHitLetters");
+const evalResultErrorLetters = $("evalResultErrorLetters");
+const evaluationHistoryList = $("evaluationHistoryList");
+const evaluationHistoryEmpty = $("evaluationHistoryEmpty");
+const evaluationHistorySummary = $("evaluationHistorySummary");
+const evaluationHistoryMeta = $("evaluationHistoryMeta");
+const historyHitLetters = $("historyHitLetters");
+const historyErrorLetters = $("historyErrorLetters");
+const evaluationScoreProgress = $("evaluationScoreProgress");
 const videoEvaluacion = $("videoEvaluacion");
 const videoFallbackEvaluacion = $("videoFallbackEvaluacion");
 const evalVideoWrap = $("evalVideoWrap");
@@ -70,11 +87,6 @@ const repasoOverlay = $("repasoOverlay");
 const videoRepaso = $("videoRepaso");
 const videoFallbackRepaso = $("videoFallbackRepaso");
 const btnUnstarRepaso = $("btnUnstarRepaso");
-// Asistente IA de Repaso
-const repasoAssistantCard = $("repasoAssistantCard");
-const repasoAssistantTitle = $("repasoAssistantTitle");
-const repasoAssistantMessage = $("repasoAssistantMessage");
-const repasoAssistantTip = $("repasoAssistantTip");
 
 // Reto (deletrea tu nombre)
 const videoReto = $("videoReto");
@@ -161,9 +173,6 @@ let repasoTargetLetter = null;
 let repasoSameStreak = 0;
 let repasoLastDetected = null;
 let repasoIsCorrect = false;
-let repasoAttemptLogged = false;
-let repasoAwaitingNewAttempt = false;
-let repasoResetTimer = null;
 const REPASO_STREAK_TO_CONFIRM = 3;
 
 function buildRepasoList(){
@@ -174,13 +183,7 @@ function buildRepasoList(){
 }
 
 function resetRepasoFeedback(){
-  if(repasoResetTimer){
-    clearTimeout(repasoResetTimer);
-    repasoResetTimer = null;
-  }
   repasoIsCorrect = false;
-  repasoAttemptLogged = false;
-  repasoAwaitingNewAttempt = false;
   repasoSameStreak = 0;
   repasoLastDetected = null;
   if(repasoVideoWrap){
@@ -199,9 +202,6 @@ function resetRepasoFeedback(){
   }
   if(repasoDetected){
     repasoDetected.textContent = "-";
-  }
-  if(repasoAssistantCard){
-    repasoAssistantCard.classList.add("hidden");
   }
 }
 
@@ -264,66 +264,6 @@ async function openRepasoForLetter(letter){
   }
 }
 
-function renderRepasoFeedback(feedback){
-  if(!feedback || !repasoAssistantCard) return;
-  if(repasoAssistantTitle){
-    repasoAssistantTitle.textContent = feedback.correct ? "¡Bien hecho! 👋" : "🤖 " + (feedback.title || "Revisa tu seña");
-  }
-  if(repasoAssistantMessage){
-    repasoAssistantMessage.textContent = feedback.message || "";
-  }
-  if(repasoAssistantTip){
-    repasoAssistantTip.textContent = feedback.tip || "";
-  }
-  repasoAssistantCard.classList.remove("hidden");
-}
-
-function showRepasoRetry(attemptNumber, attemptLimit){
-  const number = attemptNumber || 1;
-  const limit = attemptLimit || 5;
-  if(repasoCaption){
-    repasoCaption.textContent = `❌ Intento ${number}/${limit}: No coincide. Inténtalo nuevamente.`;
-  }
-  if(repasoResetTimer) clearTimeout(repasoResetTimer);
-  repasoResetTimer = setTimeout(() => {
-    if(currentView() !== "repaso" || repasoIsCorrect) return;
-    if(repasoVideoWrap){
-      repasoVideoWrap.classList.remove("learning-incorrect");
-    }
-    if(repasoOverlay){
-      repasoOverlay.classList.remove("learning-overlay-incorrect");
-      repasoOverlay.textContent = "";
-    }
-    if(repasoStatusPill){
-      repasoStatusPill.className = "learning-status-pill";
-      repasoStatusPill.textContent = `Intento ${number}/${limit} — Intenta de nuevo`;
-    }
-  }, 850);
-}
-
-function logRepasoAttempt(detectedLetter){
-  if(repasoAttemptLogged) return;
-  repasoAttemptLogged = true;
-  window.pywebview.api.review_attempt(repasoTargetLetter, detectedLetter).then((result) => {
-    if(result && result.ok && result.feedback){
-      const details = result.feedback.details || [];
-      const isComparativeFeedback = details.includes("attempts_analyzed=5");
-      // Los primeros cuatro intentos conservan la indicacion corta de la
-      // camara. La explicacion de IA se reserva para la comparacion final.
-      if(isComparativeFeedback || result.feedback.correct){
-        renderRepasoFeedback(result.feedback);
-      }
-      if(detectedLetter !== repasoTargetLetter){
-        repasoAttemptLogged = false;
-        repasoAwaitingNewAttempt = true;
-        showRepasoRetry(result.review_attempt, result.review_attempt_limit);
-      }
-    }
-  }).catch(() => {
-    repasoAttemptLogged = false;
-  });
-}
-
 function updateRepasoFeedback(detectedLetterRaw){
   const detected = (detectedLetterRaw && String(detectedLetterRaw).trim()) ? String(detectedLetterRaw).trim().toUpperCase() : null;
   if(repasoDetected){
@@ -333,18 +273,7 @@ function updateRepasoFeedback(detectedLetterRaw){
   if(!detected){
     repasoSameStreak = 0;
     repasoLastDetected = null;
-    repasoAwaitingNewAttempt = false;
     return;
-  }
-
-  // Tras un error, exigir que el usuario cambie o retire la mano antes de
-  // confirmar otro intento. Asi una misma seña sostenida no suma intentos
-  // repetidos en cada frame.
-  if(repasoAwaitingNewAttempt && detected === repasoLastDetected){
-    return;
-  }
-  if(repasoAwaitingNewAttempt){
-    repasoAwaitingNewAttempt = false;
   }
 
   if(detected === repasoLastDetected){
@@ -357,13 +286,8 @@ function updateRepasoFeedback(detectedLetterRaw){
   const isMatch = (detected === repasoTargetLetter);
 
   if(isMatch && repasoSameStreak >= REPASO_STREAK_TO_CONFIRM){
-    if(repasoResetTimer){
-      clearTimeout(repasoResetTimer);
-      repasoResetTimer = null;
-    }
     if(!repasoIsCorrect){
       repasoIsCorrect = true;
-      logRepasoAttempt(detected);
     }
     if(repasoVideoWrap){
       repasoVideoWrap.classList.add("learning-correct");
@@ -383,7 +307,6 @@ function updateRepasoFeedback(detectedLetterRaw){
     }
   }else if(!isMatch && repasoSameStreak >= REPASO_STREAK_TO_CONFIRM){
     repasoIsCorrect = false;
-    logRepasoAttempt(detected);
     if(repasoVideoWrap){
       repasoVideoWrap.classList.add("learning-incorrect");
       repasoVideoWrap.classList.remove("learning-correct");
@@ -424,6 +347,8 @@ function setView(name){
   viewAprendizaje.classList.toggle("hidden", name !== "aprendizaje");
   viewEvaluacionConfig.classList.toggle("hidden", name !== "evaluacion_config");
   viewEvaluacionRun.classList.toggle("hidden", name !== "evaluacion_run");
+  viewEvaluacionResultados.classList.toggle("hidden", name !== "evaluacion_resultados");
+  viewEvaluacionHistorial.classList.toggle("hidden", name !== "evaluacion_historial");
   if(typeof viewRepaso !== 'undefined') viewRepaso.classList.toggle("hidden", name !== "repaso");
   viewReto.classList.toggle("hidden", name !== "reto");
 }
@@ -432,6 +357,8 @@ function currentView(){
   if(typeof viewRepaso !== 'undefined' && !viewRepaso.classList.contains("hidden")) return "repaso";
   if(!viewEvaluacionRun.classList.contains("hidden")) return "evaluacion_run";
   if(!viewEvaluacionConfig.classList.contains("hidden")) return "evaluacion_config";
+  if(!viewEvaluacionResultados.classList.contains("hidden")) return "evaluacion_resultados";
+  if(!viewEvaluacionHistorial.classList.contains("hidden")) return "evaluacion_historial";
   if(!viewReto.classList.contains("hidden")) return "reto";
   if(!viewAprendizaje.classList.contains("hidden")) return "aprendizaje";
   if(!viewInteraction.classList.contains("hidden")) return "interaction";
@@ -717,15 +644,19 @@ async function poll(){
       renderFrame(st.frame_jpeg_b64, videoReto, videoFallbackReto, st.camera_error);
       renderReto(st);
 
-      // Si estamos en modo evaluación, actualizar video y letra detectada
+      // Si estamos en modo evaluación, mostrar el estado calculado por backend.
       try{
         if(typeof videoEvaluacion !== 'undefined') renderFrame(st.frame_jpeg_b64, videoEvaluacion, videoFallbackEvaluacion, st.camera_error);
-      }catch(e){}
-
-      try{
         if(typeof evalDetectedLetter !== 'undefined'){
-          evalDetectedLetter.textContent = st.letter || "-";
-          if(currentView() === 'evaluacion_run') updateEvaluationScoring(st.letter);
+          evalDetectedLetter.textContent = st.evaluation_detected || st.letter || "-";
+          evalRequestedLetter.textContent = st.evaluation_target || "-";
+          evalTime.textContent = "Tiempo: " + formatTimeSec(st.evaluation_remaining || 0);
+          evalScore.textContent = "Puntaje: " + (st.evaluation_score || 0);
+          evalHits.textContent = "Aciertos: " + (st.evaluation_hits || 0);
+          evalErrors.textContent = "Errores: " + (st.evaluation_errors || 0);
+          if(currentView() === "evaluacion_run" && !st.evaluation_active && st.evaluation_duration){
+            stopEvaluation();
+          }
         }
       }catch(e){}
 
@@ -746,7 +677,7 @@ async function poll(){
     }else{
       btnLogout.classList.add("hidden");
       // No forzar login si el usuario está en "Crear cuenta"
-      if(["interaction", "menu", "aprendizaje", "reto"].includes(currentView())){
+      if(["interaction", "menu", "aprendizaje", "reto", "evaluacion_run", "evaluacion_config", "evaluacion_resultados"].includes(currentView())){
         setView("login");
       }
 
@@ -866,12 +797,7 @@ if($("btnOpenRepaso")){
   };
 }
 if($("btnBackRepaso")){
-  $("btnBackRepaso").onclick = () => {
-    if(window.pywebview && window.pywebview.api && window.pywebview.api.reset_review_attempts){
-      window.pywebview.api.reset_review_attempts().catch(() => {});
-    }
-    setView("menu");
-  };
+  $("btnBackRepaso").onclick = () => setView("menu");
 }
 if($("btnPrevRepaso")){
   $("btnPrevRepaso").onclick = () => moveRepaso(-1);
@@ -890,12 +816,6 @@ if(btnUnstarRepaso){
     syncRepasoView();
   };
 }
-if($("btnOpenRepasoAssistant")){
-  $("btnOpenRepasoAssistant").onclick = () => repasoAssistantCard.classList.toggle("hidden");
-}
-if($("btnCloseRepasoAssistant")){
-  $("btnCloseRepasoAssistant").onclick = () => repasoAssistantCard.classList.add("hidden");
-}
 
 $("btnBackInteraction").onclick = () => {
   if(recording) return;
@@ -903,21 +823,13 @@ $("btnBackInteraction").onclick = () => {
 };
 $("btnBackAprendizaje").onclick = () => setView("menu");
 $("btnBackEvaluacionRun").onclick = () => {
-  stopEvaluation();
-  setView("menu");
+  stopEvaluation(false);
 };
 
 // Evaluación state
 let evalTimerId = null;
-let evalChangeId = null;
-let evalRemaining = 0;
-let evalScoreVal = 0;
-let evalChangeInterval = 5; // segundos por letra
-let evalLastDetected = null;
-let evalSameStreak = 0;
-let evalAlreadyScored = false;
 let evalFeedbackTimeoutId = null;
-const EVAL_STREAK_TO_CONFIRM = 3;
+let evaluationStopPending = false;
 const EVAL_FEEDBACK_DURATION_MS = 1200; // cuánto dura el borde/overlay verde o rojo // frames seguidos iguales para confirmar
 
 function formatTimeSec(s){
@@ -960,92 +872,179 @@ function showEvalFeedback(isCorrect){
   evalFeedbackTimeoutId = setTimeout(clearEvalFeedback, EVAL_FEEDBACK_DURATION_MS);
 }
 
-function updateEvaluationScoring(detectedLetterRaw){
-  const detected = (detectedLetterRaw && String(detectedLetterRaw).trim())
-    ? String(detectedLetterRaw).trim().toUpperCase()
-    : null;
+async function startEvaluationWithDuration(seconds){
+  const result = await window.pywebview.api.eval_start(seconds);
+  if(!result || !result.ok) return;
+  evaluationStopPending = false;
+  clearEvalFeedback();
+  evalRequestedLetter.textContent = result.target_letter || "-";
+  evalDetectedLetter.textContent = "-";
+  evalTime.textContent = "Tiempo: " + formatTimeSec(seconds);
+  evalScore.textContent = "Puntaje: 0";
+  evalHits.textContent = "Aciertos: 0";
+  evalErrors.textContent = "Errores: 0";
+  setView("evaluacion_run");
+}
 
-  if(!detected){
-    evalSameStreak = 0;
+async function stopEvaluation(showResults = true){
+  if(evaluationStopPending) return;
+  evaluationStopPending = true;
+  let response;
+  try{
+    response = await window.pywebview.api.eval_stop();
+  }catch(e){
+    evaluationStopPending = false;
     return;
   }
-
-  if(detected === evalLastDetected){
-    evalSameStreak += 1;
-  }else{
-    evalLastDetected = detected;
-    evalSameStreak = 1;
+  if(!response || !response.ok){
+    evaluationStopPending = false;
+    return;
   }
-
-  if(evalSameStreak >= EVAL_STREAK_TO_CONFIRM && !evalAlreadyScored){
-    evalAlreadyScored = true;
-    const target = (evalRequestedLetter.textContent || '').trim().toUpperCase();
-    const isCorrect = (detected === target);
-
-    if(isCorrect){
-      evalScoreVal += 5;
-    }else{
-      evalScoreVal -= 2;
-    }
-    evalScore.textContent = 'Puntaje: ' + evalScoreVal;
-    showEvalFeedback(isCorrect);
+  if(!showResults){
+    evaluationStopPending = false;
+    setView("menu");
+    return;
   }
-}
-
-async function startEvaluationWithDuration(seconds){
-  // prepare
-  evalRemaining = seconds;
-  evalScoreVal = 0;
-  evalLastDetected = null;
-  evalSameStreak = 0;
-  evalAlreadyScored = false;
-  clearEvalFeedback();
-  evalTime.textContent = 'Tiempo: ' + formatTimeSec(evalRemaining);
-  evalScore.textContent = 'Puntaje: ' + evalScoreVal;
-  evalRequestedLetter.textContent = '-';
-
-  setView('evaluacion_run');
-
-  // show first requested letter (aleatoria)
-  evalRequestedLetter.textContent = pickRandomLetter();
-
-  // Change requested letter periodically (aleatoria, no se muestra la siguiente)
-  evalChangeId = setInterval(() => {
-    evalRequestedLetter.textContent = pickRandomLetter();
-    // Reinicia el estado de detección para la nueva letra pedida
-    evalLastDetected = null;
-    evalSameStreak = 0;
-    evalAlreadyScored = false;
-    clearEvalFeedback();
-  }, evalChangeInterval * 1000);
-
-  // Countdown timer
-  evalTimerId = setInterval(() => {
-    evalRemaining -= 1;
-    evalTime.textContent = 'Tiempo: ' + formatTimeSec(evalRemaining);
-    evalScore.textContent = 'Puntaje: ' + evalScoreVal;
-    if(evalRemaining <= 0){
-      stopEvaluation();
-    }
-  }, 1000);
-}
-
-function stopEvaluation(){
-  if(evalTimerId){ clearInterval(evalTimerId); evalTimerId = null; }
-  if(evalChangeId){ clearInterval(evalChangeId); evalChangeId = null; }
-  // reset UI and go back to menu
+  const results = response.results || {};
+  saveEvaluationSession(results);
+  evalResultScore.textContent = results.score || 0;
+  evalResultHits.textContent = results.hits || 0;
+  evalResultErrors.textContent = results.errors || 0;
+  evalResultDuration.textContent = formatTimeSec(results.elapsed_seconds || results.duration_seconds || 0);
+  renderEvaluationLetters(evalResultHitLetters, results.hit_letters, "Sin aciertos");
+  renderEvaluationLetters(evalResultErrorLetters, results.error_letters, "Sin errores");
   evalRequestedLetter.textContent = '-';
   evalDetectedLetter.textContent = '-';
-  evalLastDetected = null;
-  evalSameStreak = 0;
-  evalAlreadyScored = false;
   clearEvalFeedback();
-  setView('menu');
+  evaluationStopPending = false;
+  setView("evaluacion_resultados");
+}
+
+function renderEvaluationLetters(container, letters, emptyText){
+  container.innerHTML = "";
+  if(!Array.isArray(letters) || letters.length === 0){
+    container.textContent = emptyText;
+    return;
+  }
+  letters.forEach((letter) => {
+    const pill = document.createElement("span");
+    pill.className = "evaluation-letter-pill";
+    pill.textContent = letter;
+    container.appendChild(pill);
+  });
+}
+
+function evaluationHistoryKey(){
+  const user = favoriteUsername || "guest";
+  return `traductor.evaluationHistory.${user}`;
+}
+
+function loadEvaluationHistory(){
+  try{
+    const history = JSON.parse(localStorage.getItem(evaluationHistoryKey()) || "[]");
+    return Array.isArray(history) ? history : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function saveEvaluationSession(results){
+  const session = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    date: new Date().toISOString(),
+    duration_seconds: Number(results.duration_seconds || 0),
+    score: Number(results.score || 0),
+    hits: Number(results.hits || 0),
+    errors: Number(results.errors || 0),
+    hit_letters: Array.isArray(results.hit_letters) ? results.hit_letters.slice() : [],
+    error_letters: Array.isArray(results.error_letters) ? results.error_letters.slice() : []
+  };
+  const history = [session, ...loadEvaluationHistory()];
+  try{
+    localStorage.setItem(evaluationHistoryKey(), JSON.stringify(history));
+  }catch(e){
+    // La evaluación y sus resultados siguen disponibles aunque el navegador no permita persistir.
+  }
+  return session;
+}
+
+function formatEvaluationDate(isoDate){
+  const date = new Date(isoDate);
+  if(Number.isNaN(date.getTime())) return "Fecha desconocida";
+  return date.toLocaleDateString("es-ES", {day:"2-digit", month:"2-digit", year:"numeric"});
+}
+
+function formatEvaluationDateTime(isoDate){
+  const date = new Date(isoDate);
+  if(Number.isNaN(date.getTime())) return "Fecha desconocida";
+  return date.toLocaleString("es-ES", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
+}
+
+function formatEvaluationDuration(seconds){
+  const total = Math.max(0, Number(seconds) || 0);
+  if(total < 60) return `${total} segundos`;
+  const minutes = Math.floor(total / 60);
+  const rest = total % 60;
+  return rest ? `${minutes} min ${rest} s` : `${minutes} ${minutes === 1 ? "minuto" : "minutos"}`;
+}
+
+function showEvaluationHistorySession(session){
+  if(!session) return;
+  evaluationHistoryEmpty.classList.add("hidden");
+  evaluationHistorySummary.classList.remove("hidden");
+  evaluationHistoryMeta.textContent = `${formatEvaluationDateTime(session.date)} — ${formatEvaluationDuration(session.duration_seconds)} — ${session.score} puntos — ${session.hits} aciertos — ${session.errors} errores`;
+  renderEvaluationLetters(historyHitLetters, session.hit_letters, "Sin aciertos");
+  renderEvaluationLetters(historyErrorLetters, session.error_letters, "Sin errores");
+  document.querySelectorAll(".evaluation-history-item").forEach((item) => {
+    item.classList.toggle("selected", item.dataset.sessionId === session.id);
+  });
+}
+
+function renderEvaluationHistory(){
+  const history = loadEvaluationHistory();
+  evaluationHistoryList.innerHTML = "";
+  if(history.length === 0){
+    evaluationHistoryList.innerHTML = '<p class="muted">Todavía no hay evaluaciones guardadas.</p>';
+    evaluationHistoryEmpty.classList.remove("hidden");
+    evaluationHistorySummary.classList.add("hidden");
+  }else{
+    history.forEach((session) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "evaluation-history-item";
+      item.dataset.sessionId = session.id;
+      item.innerHTML = `<strong>${formatEvaluationDate(session.date)}</strong><span>${formatEvaluationDuration(session.duration_seconds)} — ${session.score} puntos — ${session.hits} aciertos — ${session.errors} errores</span>`;
+      item.onclick = () => showEvaluationHistorySession(session);
+      evaluationHistoryList.appendChild(item);
+    });
+    showEvaluationHistorySession(history[0]);
+  }
+
+  evaluationScoreProgress.innerHTML = "";
+  if(history.length === 0){
+    evaluationScoreProgress.innerHTML = '<p class="muted">Completa una evaluación para ver tu progreso.</p>';
+    return;
+  }
+  const maxMagnitude = Math.max(1, ...history.map((session) => Math.abs(Number(session.score) || 0)));
+  history.slice(0, 12).reverse().forEach((session, index) => {
+    const row = document.createElement("div");
+    row.className = "evaluation-score-row";
+    const width = Math.max(4, Math.round(Math.abs(session.score || 0) / maxMagnitude * 100));
+    row.innerHTML = `<span>#${index + 1}</span><div class="evaluation-score-track"><i class="${session.score < 0 ? "negative" : ""}" style="width:${width}%"></i></div><strong>${session.score}</strong>`;
+    evaluationScoreProgress.appendChild(row);
+  });
 }
 
 // Handlers for evaluation controls
 $("btnCancelEvaluation").onclick = () => setView('menu');
 $("btnStopEvaluation").onclick = () => stopEvaluation();
+$("btnRetryEvaluation").onclick = () => setView("evaluacion_config");
+$("btnResultsMenu").onclick = () => setView("menu");
+$("btnOpenEvaluacionHistorial").onclick = () => {
+  renderEvaluationHistory();
+  setView("evaluacion_historial");
+};
+$("btnBackEvaluacionHistorial").onclick = () => setView("menu");
 $("btnStartEvaluation").onclick = () => {
   const radios = document.getElementsByName('evalDuration');
   let val = 30;

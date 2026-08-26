@@ -82,6 +82,13 @@ class WebAPI:
     def set_favorite_letter(self, letter: str, is_favorite: bool) -> Dict[str, Any]:
         return self._c.web_set_favorite_letter(letter, is_favorite)
 
+    # ===== Evaluacion WEB =====
+    def eval_start(self, duration_seconds: int) -> Dict[str, Any]:
+        return self._c.web_start_evaluation(duration_seconds)
+
+    def eval_stop(self) -> Dict[str, Any]:
+        return self._c.web_stop_evaluation()
+
     # ===== Poll =====
     def get_state(self) -> Dict[str, Any]:
         st = self._c.get_web_state()

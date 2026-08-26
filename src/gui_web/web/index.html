@@ -74,9 +74,39 @@
             <button class="btn primary wide" id="btnOpenInteraction">Iniciar interacción</button>
             <button class="btn secondary wide" id="btnOpenAprendizaje">Aprendizaje</button>
             <button class="btn secondary wide" id="btnOpenEvaluacion">Modo Evaluación</button>
+            <button class="btn secondary wide" id="btnOpenEvaluacionHistorial">Historial de evaluaciones</button>
             <button class="btn secondary wide" id="btnOpenRepaso">⭐ Repaso</button>
             <button class="btn secondary wide" id="btnOpenReto">Reto: deletrea tu nombre</button>
             <button class="btn ghost wide" id="btnLogoutMenu">Cerrar sesión</button>
+          </div>
+        </section>
+
+        <!-- HISTORIAL DE EVALUACIONES -->
+        <section class="view-wrap hidden" id="viewEvaluacionHistorial">
+          <div class="view-bar">
+            <button class="btn ghost back-btn" id="btnBackEvaluacionHistorial">← Volver al menú</button>
+            <div class="view-title">Historial de evaluaciones</div>
+          </div>
+          <div class="evaluation-history-layout">
+            <div class="panel card evaluation-history-list-panel">
+              <div class="panel-head"><h3>Sesiones guardadas</h3></div>
+              <div id="evaluationHistoryList" class="evaluation-history-list"></div>
+            </div>
+            <div class="panel card evaluation-history-detail" id="evaluationHistoryDetail">
+              <h3>Resumen de la sesión</h3>
+              <p class="muted" id="evaluationHistoryEmpty">Selecciona una sesión para ver sus letras.</p>
+              <div id="evaluationHistorySummary" class="hidden">
+                <div class="evaluation-history-meta" id="evaluationHistoryMeta"></div>
+                <div class="evaluation-result-lists">
+                  <div class="panel card"><h3>Letras acertadas</h3><div class="evaluation-letter-list hit-list" id="historyHitLetters"></div></div>
+                  <div class="panel card"><h3>Letras equivocadas</h3><div class="evaluation-letter-list error-list" id="historyErrorLetters"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel card evaluation-progress-panel">
+            <div class="panel-head"><h3>Progreso de puntajes</h3></div>
+            <div id="evaluationScoreProgress" class="evaluation-score-progress"></div>
           </div>
         </section>
 
@@ -237,6 +267,8 @@
               <div class="row tight">
                 <div class="pill" id="evalTime">Tiempo: --</div>
                 <div class="pill" id="evalScore">Puntaje: 0</div>
+                <div class="pill" id="evalHits">Aciertos: 0</div>
+                <div class="pill" id="evalErrors">Errores: 0</div>
               </div>
             </div>
 
@@ -266,6 +298,31 @@
             </div>
 
           </div>
+          </div>
+        </section>
+
+        <!-- EVALUACIÓN: RESULTADOS -->
+        <section class="card evaluation-results hidden" id="viewEvaluacionResultados">
+          <h2>Resultados de la evaluación</h2>
+          <div class="evaluation-result-summary">
+            <div><span class="muted">Puntaje final</span><strong id="evalResultScore">0</strong></div>
+            <div><span class="muted">Aciertos</span><strong id="evalResultHits">0</strong></div>
+            <div><span class="muted">Errores</span><strong id="evalResultErrors">0</strong></div>
+            <div><span class="muted">Duración</span><strong id="evalResultDuration">00:00</strong></div>
+          </div>
+          <div class="evaluation-result-lists">
+            <div class="panel card">
+              <h3>Letras acertadas</h3>
+              <div class="evaluation-letter-list hit-list" id="evalResultHitLetters">Sin aciertos</div>
+            </div>
+            <div class="panel card">
+              <h3>Letras equivocadas</h3>
+              <div class="evaluation-letter-list error-list" id="evalResultErrorLetters">Sin errores</div>
+            </div>
+          </div>
+          <div class="row evaluation-actions">
+            <button class="btn primary" id="btnRetryEvaluation">Nueva evaluación</button>
+            <button class="btn" id="btnResultsMenu">Volver al menú</button>
           </div>
         </section>
 

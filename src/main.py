@@ -11,6 +11,7 @@ from typing import Optional
 import base64
 import copy
 import time
+import random
 
 # Asegurar que el directorio raiz del proyecto esta en el path
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -103,6 +104,21 @@ class MainController:
         self._challenge_active: bool = False
         self._challenge_match_count: int = 0
         self._challenge_hold_frames: int = 10  # frames consecutivos para confirmar cada letra
+
+        # ===== Estado de evaluacion WEB =====
+        self._evaluation_active = False
+        self._evaluation_duration = 0
+        self._evaluation_deadline = 0.0
+        self._evaluation_score = 0
+        self._evaluation_hits = 0
+        self._evaluation_errors = 0
+        self._evaluation_target: Optional[str] = None
+        self._evaluation_detected: Optional[str] = None
+        self._evaluation_hit_letters: list[str] = []
+        self._evaluation_error_letters: list[str] = []
+        self._evaluation_last_detected: Optional[str] = None
+        self._evaluation_same_streak = 0
+        self._evaluation_hold_frames = 3
 
     def set_current_login_screen(self, screen) -> None:
         self._login_screen = screen
@@ -262,6 +278,94 @@ class MainController:
         self._challenge_active = False
         self._challenge_match_count = 0
         self._camera_error = None
+        self._reset_evaluation_state()
+
+    def _random_evaluation_letter(self) -> str:
+        return random.choice(list("ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"))
+
+    def _reset_evaluation_state(self) -> None:
+        self._evaluation_active = False
+        self._evaluation_duration = 0
+        self._evaluation_deadline = 0.0
+        self._evaluation_score = 0
+        self._evaluation_hits = 0
+        self._evaluation_errors = 0
+        self._evaluation_target = None
+        self._evaluation_detected = None
+        self._evaluation_hit_letters = []
+        self._evaluation_error_letters = []
+        self._evaluation_last_detected = None
+        self._evaluation_same_streak = 0
+
+    def web_start_evaluation(self, duration_seconds: int) -> dict:
+        if self._current_user is None:
+            return {"ok": False, "msg": "Debes iniciar sesión"}
+        try:
+            duration = int(duration_seconds)
+        except (TypeError, ValueError):
+            return {"ok": False, "msg": "La duración no es válida"}
+        if duration <= 0:
+            return {"ok": False, "msg": "La duración debe ser positiva"}
+
+        self._reset_evaluation_state()
+        self._evaluation_active = True
+        self._evaluation_duration = duration
+        self._evaluation_deadline = time.monotonic() + duration
+        self._evaluation_target = self._random_evaluation_letter()
+        self._ensure_translation_running()
+        return {"ok": True, "duration_seconds": duration, "target_letter": self._evaluation_target}
+
+    def web_stop_evaluation(self) -> dict:
+        results = self._evaluation_results()
+        self._evaluation_active = False
+        return {"ok": True, "results": results}
+
+    def _evaluation_results(self) -> dict:
+        remaining = max(0, int(self._evaluation_deadline - time.monotonic())) if self._evaluation_active else 0
+        elapsed = self._evaluation_duration - remaining
+        return {
+            "score": self._evaluation_score,
+            "hits": self._evaluation_hits,
+            "errors": self._evaluation_errors,
+            "duration_seconds": self._evaluation_duration,
+            "elapsed_seconds": max(0, min(self._evaluation_duration, elapsed)),
+            "hit_letters": list(self._evaluation_hit_letters),
+            "error_letters": list(self._evaluation_error_letters),
+        }
+
+    def _process_evaluation(self, detected_letter: Optional[str]) -> None:
+        if not self._evaluation_active:
+            return
+        if time.monotonic() >= self._evaluation_deadline:
+            self._evaluation_active = False
+            return
+
+        detected = (detected_letter or "").strip().upper()
+        self._evaluation_detected = detected or None
+        if not detected:
+            self._evaluation_last_detected = None
+            self._evaluation_same_streak = 0
+            return
+        if detected == self._evaluation_last_detected:
+            self._evaluation_same_streak += 1
+        else:
+            self._evaluation_last_detected = detected
+            self._evaluation_same_streak = 1
+        if self._evaluation_same_streak < self._evaluation_hold_frames:
+            return
+
+        target = self._evaluation_target
+        if detected == target:
+            self._evaluation_score += 5
+            self._evaluation_hits += 1
+            self._evaluation_hit_letters.append(detected)
+        else:
+            self._evaluation_score -= 2
+            self._evaluation_errors += 1
+            self._evaluation_error_letters.append(target)
+        self._evaluation_target = self._random_evaluation_letter()
+        self._evaluation_last_detected = None
+        self._evaluation_same_streak = 0
 
     def web_learning_attempt(self, target_letter: str, detected_letter: str) -> dict:
         """Registra un intento confirmado de APRENDIZAJE del usuario autenticado."""
@@ -402,6 +506,11 @@ class MainController:
         challenge_progress = 0.0
         if self._challenge_letters and not self._challenge_done:
             challenge_progress = self._challenge_match_count / float(self._challenge_hold_frames)
+        evaluation_remaining = 0
+        if self._evaluation_active:
+            evaluation_remaining = max(0, int(self._evaluation_deadline - time.monotonic()))
+            if evaluation_remaining == 0:
+                self._evaluation_active = False
         return {
             "logged_in": self._current_user is not None,
             "username": self._current_user.username if self._current_user else None,
@@ -417,6 +526,14 @@ class MainController:
             "challenge_done": self._challenge_done,
             "challenge_progress": min(1.0, challenge_progress),
             "study_streak": self._study_streak,
+            "evaluation_active": self._evaluation_active,
+            "evaluation_remaining": evaluation_remaining,
+            "evaluation_duration": self._evaluation_duration,
+            "evaluation_score": self._evaluation_score,
+            "evaluation_hits": self._evaluation_hits,
+            "evaluation_errors": self._evaluation_errors,
+            "evaluation_target": self._evaluation_target,
+            "evaluation_detected": self._evaluation_detected,
         }
 
     # ====== Reto: deletrear el nombre de usuario ======
@@ -693,6 +810,8 @@ class MainController:
 
                 # Solo mostrar la letra detectada; el usuario confirma con "Aceptar".
                 self._web_letter = letter
+
+                self._process_evaluation(letter)
 
                 if self._challenge_active:
                     self._advance_challenge(letter)

@@ -69,6 +69,7 @@
         <section class="card menu hidden" id="viewMenu">
           <h2>Menú principal</h2>
           <p class="muted">Elige cómo quieres continuar.</p>
+          <div class="streak-indicator" id="studyStreak" aria-live="polite">Racha: 0 días 🔥</div>
           <div class="stack">
             <button class="btn primary wide" id="btnOpenInteraction">Iniciar interacción</button>
             <button class="btn secondary wide" id="btnOpenAprendizaje">Aprendizaje</button>
@@ -383,5 +384,20 @@
     </div>
 
     <script src="./app.js"></script>
+    <script>
+      (function(){
+        function refreshStudyStreak(){
+          if(!window.pywebview || !window.pywebview.api || !window.pywebview.api.get_state) return;
+          window.pywebview.api.get_state().then(function(state){
+            var indicator = document.getElementById("studyStreak");
+            if(!indicator || !state || !state.logged_in || !state.study_streak) return;
+            var current = Number(state.study_streak.current_streak) || 0;
+            indicator.textContent = "Racha: " + current + " " + (current === 1 ? "día" : "días") + " 🔥";
+          }).catch(function(){});
+        }
+        window.setInterval(refreshStudyStreak, 300);
+        refreshStudyStreak();
+      })();
+    </script>
   </body>
 </html>

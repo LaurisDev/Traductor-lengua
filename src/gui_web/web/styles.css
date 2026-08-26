@@ -95,6 +95,17 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   width:min(420px, 92vw);
   padding:28px 26px 22px;
 }
+.streak-indicator{
+  width:max-content;
+  margin-top:14px;
+  padding:7px 11px;
+  border:1px solid rgba(245,158,11,.25);
+  border-radius:999px;
+  background:rgba(245,158,11,.08);
+  color:#9a6700;
+  font-size:13px;
+  font-weight:800;
+}
 
 .grid{
   flex:1;

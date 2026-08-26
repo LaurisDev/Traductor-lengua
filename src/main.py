@@ -89,6 +89,7 @@ class MainController:
         self._web_last_frame_ts = 0.0
         self._voice_status = "Listo"
         self._voice_error = ""
+        self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
         self._learning_performance = LearningPerformanceAnalyzer()
         self._review_ai = ReviewAI()
         # Historial efimero: solo conserva los intentos confirmados de la
@@ -131,6 +132,7 @@ class MainController:
                 self._login_screen.show_error("Usuario o contrasena incorrectos")
             return
         self._current_user = user
+        self._study_streak = self._db.get_study_streak(user.username)
         self._app.show_main_menu(user.username)
 
     def on_go_register(self) -> None:
@@ -155,6 +157,7 @@ class MainController:
 
     def on_logout(self) -> None:
         self._current_user = None
+        self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
         self._review_attempts.clear()
         if not USE_WEB_UI:
             self._app.show_login()
@@ -231,6 +234,7 @@ class MainController:
         if user is None:
             return False, "Usuario o contraseña incorrectos"
         self._current_user = user
+        self._study_streak = self._db.get_study_streak(user.username)
         self._ensure_translation_running()
         return True, "OK"
 
@@ -239,6 +243,7 @@ class MainController:
 
     def web_logout(self) -> None:
         self._current_user = None
+        self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
         self._review_attempts.clear()
         self._stop_translation_loop()
         self._release_translation_resources()
@@ -273,8 +278,14 @@ class MainController:
             target,
             detected == target,
         )
+        self._study_streak = self._db.get_study_streak(self._current_user.username)
         analysis = self._learning_performance.analyze(stats, target)
-        return {"ok": True, "letter": target, "analysis": analysis.as_dict()}
+        return {
+            "ok": True,
+            "letter": target,
+            "analysis": analysis.as_dict(),
+            "study_streak": self._study_streak,
+        }
 
     def web_review_attempt(self, target_letter: str, detected_letter: str) -> dict:
         """Registra un intento del modo REPASO y devuelve retroalimentación de la IA."""
@@ -292,6 +303,7 @@ class MainController:
             target,
             detected == target,
         )
+        self._study_streak = self._db.get_study_streak(self._current_user.username)
         analysis = self._learning_performance.analyze(stats, target)
 
         # Un cambio de letra inicia una nueva sesion de Repaso. Las copias
@@ -342,6 +354,7 @@ class MainController:
             "review_attempt": len(self._review_attempts),
             "review_attempt_limit": 5,
             "review_analysis_ready": len(self._review_attempts) == 5,
+            "study_streak": self._study_streak,
         }
 
     def web_reset_review_attempts(self) -> dict:
@@ -358,7 +371,12 @@ class MainController:
             return {"ok": False, "msg": "La letra no es válida"}
         stats = self._db.get_learning_performance(self._current_user.username, target)
         analysis = self._learning_performance.analyze(stats, target)
-        return {"ok": True, "letter": target, "analysis": analysis.as_dict()}
+        return {
+            "ok": True,
+            "letter": target,
+            "analysis": analysis.as_dict(),
+            "study_streak": self._study_streak,
+        }
 
     def web_get_favorite_letters(self) -> dict:
         if self._current_user is None:
@@ -398,6 +416,7 @@ class MainController:
             "challenge_index": self._challenge_index,
             "challenge_done": self._challenge_done,
             "challenge_progress": min(1.0, challenge_progress),
+            "study_streak": self._study_streak,
         }
 
     # ====== Reto: deletrear el nombre de usuario ======

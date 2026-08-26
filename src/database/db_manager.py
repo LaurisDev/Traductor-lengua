@@ -5,6 +5,7 @@
 
 import hashlib
 import os
+from datetime import date, timedelta
 from typing import Optional, Tuple
 
 from pymongo import MongoClient
@@ -122,7 +123,59 @@ class DatabaseManager:
         )
         if result.matched_count != 1 and not users.find_one({"username": username_clean}, {"_id": 1}):
             raise ValueError("El usuario autenticado no existe")
+        self._record_study_day(username_clean)
         return self.get_learning_performance(username_clean, letter_clean)
+
+    def _record_study_day(self, username: str) -> dict:
+        """Actualiza la racha una sola vez por dia para el usuario."""
+        users = self._users_collection()
+        today = date.today()
+        today_value = today.isoformat()
+        doc = users.find_one(
+            {"username": username},
+            {"current_streak": 1, "best_streak": 1, "last_study_date": 1},
+        ) or {}
+        last_value = doc.get("last_study_date")
+        current = max(0, int(doc.get("current_streak", 0)))
+        best = max(0, int(doc.get("best_streak", 0)))
+
+        if last_value == today_value:
+            return {
+                "current_streak": current,
+                "best_streak": best,
+                "last_study_date": today_value,
+            }
+
+        try:
+            last_date = date.fromisoformat(str(last_value))
+        except (TypeError, ValueError):
+            last_date = None
+
+        if last_date == today - timedelta(days=1):
+            current += 1
+        else:
+            current = 1
+        best = max(best, current)
+        streak = {
+            "current_streak": current,
+            "best_streak": best,
+            "last_study_date": today_value,
+        }
+        users.update_one({"username": username}, {"$set": streak})
+        return streak
+
+    def get_study_streak(self, username: str) -> dict:
+        """Obtiene la racha persistida, sin registrar actividad."""
+        users = self._users_collection()
+        doc = users.find_one(
+            {"username": (username or "").strip()},
+            {"current_streak": 1, "best_streak": 1, "last_study_date": 1},
+        ) or {}
+        return {
+            "current_streak": max(0, int(doc.get("current_streak", 0))),
+            "best_streak": max(0, int(doc.get("best_streak", 0))),
+            "last_study_date": doc.get("last_study_date"),
+        }
 
     def get_learning_performance(self, username: str, letter: str) -> dict:
         """Obtiene los conteos persistidos de una letra, sin crear datos."""

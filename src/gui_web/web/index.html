@@ -198,18 +198,27 @@
         </section>
 
         <!-- EVALUACIÓN: CONFIGURACIÓN -->
-        <section class="card hidden" id="viewEvaluacionConfig">
+        <section class="card evaluation-config hidden" id="viewEvaluacionConfig">
           <h2>Modo Evaluación</h2>
           <p class="muted">Configura la evaluación antes de comenzar.</p>
-          <div class="field">
-            <label>Duración</label>
-            <div class="row">
-              <label><input type="radio" name="evalDuration" value="30" checked/> 30 segundos</label>
-              <label><input type="radio" name="evalDuration" value="60"/> 1 minuto</label>
-              <label><input type="radio" name="evalDuration" value="120"/> 2 minutos</label>
+          <div class="field evaluation-duration-field">
+            <label class="evaluation-label">Duración de la evaluación</label>
+            <div class="evaluation-options">
+              <label class="evaluation-option">
+                <input type="radio" name="evalDuration" value="30" checked/>
+                <span class="evaluation-option-content"><strong>30</strong><span>segundos</span></span>
+              </label>
+              <label class="evaluation-option">
+                <input type="radio" name="evalDuration" value="60"/>
+                <span class="evaluation-option-content"><strong>1</strong><span>minuto</span></span>
+              </label>
+              <label class="evaluation-option">
+                <input type="radio" name="evalDuration" value="120"/>
+                <span class="evaluation-option-content"><strong>2</strong><span>minutos</span></span>
+              </label>
             </div>
           </div>
-          <div class="row">
+          <div class="row evaluation-actions">
             <button class="btn primary" id="btnStartEvaluation">Iniciar evaluación</button>
             <button class="btn" id="btnCancelEvaluation">Volver</button>
           </div>

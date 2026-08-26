@@ -107,6 +107,42 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   font-weight:800;
 }
 
+.evaluation-config{
+  width:min(760px, 94vw);
+  padding:34px 38px 30px;
+}
+.evaluation-config h2{font-size:26px}
+.evaluation-config > .muted{font-size:15px; margin-top:8px}
+.evaluation-duration-field{margin:28px 0 30px}
+.evaluation-label{font-size:14px; color:var(--text); font-weight:800; margin-bottom:12px}
+.evaluation-options{display:grid; grid-template-columns:repeat(3, 1fr); gap:14px}
+.evaluation-option{
+  min-height:126px;
+  margin:0;
+  padding:18px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:2px solid rgba(37,99,235,.14);
+  border-radius:16px;
+  background:rgba(255,255,255,.78);
+  color:var(--text);
+  cursor:pointer;
+  transition:border-color .15s, background .15s, transform .15s, box-shadow .15s;
+}
+.evaluation-option:hover{border-color:rgba(37,99,235,.45); transform:translateY(-2px)}
+.evaluation-option:has(input:checked){
+  border-color:var(--primary);
+  background:rgba(37,99,235,.08);
+  box-shadow:0 8px 20px rgba(37,99,235,.14);
+}
+.evaluation-option input{width:18px; height:18px; flex:0 0 auto; accent-color:var(--primary)}
+.evaluation-option-content{display:flex; flex-direction:column; align-items:center; gap:3px; margin-left:10px}
+.evaluation-option-content strong{font-size:32px; line-height:1; color:var(--primary)}
+.evaluation-option-content span{font-size:14px; color:var(--muted); font-weight:700}
+.evaluation-actions{justify-content:flex-end; gap:12px}
+.evaluation-actions .btn{min-width:150px; padding:13px 18px}
+
 .grid{
   flex:1;
   min-height:0;
@@ -305,6 +341,7 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   position:relative;
   transition: box-shadow .25s ease, border-color .25s ease, background .25s ease;
 }
+/* ===== INICIO: estilos del feedback de sena correcta/incorrecta ===== */
 .learning-video-wrap.learning-correct{
   border:3px solid rgba(22,163,74,.85);
   box-shadow:0 0 0 4px rgba(22,163,74,.18), 0 10px 30px rgba(22,163,74,.18);
@@ -354,6 +391,7 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   60%{transform:translateX(-50%) translateX(-5px)}
   80%{transform:translateX(-50%) translateX(5px)}
 }
+/* ===== FIN: estilos del feedback de sena correcta/incorrecta ===== */
 .learning-counter{
   font-weight:800;
   font-size:14px;
@@ -644,6 +682,14 @@ input:focus{border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,2
   .grid,
   .learning-grid{gap:10px}
   .panel{padding:12px}
+  .evaluation-config{padding:26px 20px 22px}
+  .evaluation-config h2{font-size:23px}
+  .evaluation-options{grid-template-columns:1fr; gap:10px}
+  .evaluation-option{min-height:78px; justify-content:flex-start; padding:14px 18px}
+  .evaluation-option-content{flex-direction:row; gap:6px}
+  .evaluation-option-content strong{font-size:26px}
+  .evaluation-actions{flex-direction:column-reverse; align-items:stretch}
+  .evaluation-actions .btn{width:100%}
   .panel-head{align-items:flex-start; gap:10px}
   .letter-confirm{flex-wrap:wrap; justify-content:flex-end}
   .video-wrap{min-height:clamp(190px, 58vw, 280px)}

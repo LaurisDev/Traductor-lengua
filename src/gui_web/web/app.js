@@ -622,6 +622,7 @@ function updateLearningFeedback(detectedLetterRaw){
     learningLastDetected = detected;
   }
 
+  // ===== INICIO: identifica si la letra es correcta y pinta el marco =====
   const isMatch = (detected === learningTargetLetter);
 
   if(isMatch && learningSameStreak >= LEARNING_STREAK_TO_CONFIRM){
@@ -669,7 +670,11 @@ function updateLearningFeedback(detectedLetterRaw){
       learningCaption.textContent = `Busca la seña de la letra ${learningTargetLetter}`;
     }
   }
+  // ===== FIN: identifica si la letra es correcta y pinta el marco =====
 }
+
+
+
 
 function addBubble(who, text){
   const div = document.createElement("div");

@@ -74,6 +74,7 @@ const btnPracticeNow = $("btnPracticeNow");
 const btnLogout = $("btnLogout");
 const settingsColorBlindMode = $("settingsColorBlindMode");
 const settingsAccessibleReadingMode = $("settingsAccessibleReadingMode");
+const settingsNightMode = $("settingsNightMode");
 const btnSaveSettings = $("btnSaveSettings");
 const settingsError = $("settingsError");
 
@@ -392,9 +393,18 @@ function applyAccessibleReadingMode(enabled, syncControl = true){
   }
 }
 
-function applyAccessibilityPreferences(colorBlindMode, accessibleReadingMode, syncControls = true){
+function applyNightMode(enabled, syncControl = true){
+  const isEnabled = !!enabled;
+  document.body.classList.toggle("night-mode", isEnabled);
+  if(syncControl && settingsNightMode){
+    settingsNightMode.checked = isEnabled;
+  }
+}
+
+function applyAccessibilityPreferences(colorBlindMode, accessibleReadingMode, nightMode, syncControls = true){
   applyColorBlindMode(colorBlindMode, syncControls);
   applyAccessibleReadingMode(accessibleReadingMode, syncControls);
+  applyNightMode(nightMode, syncControls);
 }
 
 function renderReto(st){
@@ -653,7 +663,7 @@ async function poll(){
     if(st && st.logged_in){
       btnLogout.classList.remove("hidden");
       if(!accessibilitySettingsDirty){
-        applyAccessibilityPreferences(st.color_blind_mode, st.accessible_reading_mode);
+        applyAccessibilityPreferences(st.color_blind_mode, st.accessible_reading_mode, st.night_mode);
       }
       if(st.username && favoriteUsername !== st.username){
         favoriteUsername = st.username;
@@ -725,7 +735,9 @@ async function poll(){
       favoriteLetters = new Set();
       favoriteUsername = null;
       accessibilitySettingsDirty = false;
-      applyAccessibilityPreferences(false, false);
+      applyColorBlindMode(false);
+      applyAccessibleReadingMode(false);
+      applyNightMode(false);
       updateDifficultCount();
     }
     lastLoggedIn = !!(st && st.logged_in);
@@ -753,7 +765,19 @@ $("btnLogin").onclick = async () => {
   const u = $("loginUser").value.trim();
   const p = $("loginPass").value;
   const res = await window.pywebview.api.login(u, p);
-  if(!res.ok) loginError.textContent = res.msg || "Error";
+  if(!res.ok){
+    loginError.textContent = res.msg || "Error";
+    return;
+  }
+  accessibilitySettingsDirty = false;
+  const state = await window.pywebview.api.get_state();
+  if(state && state.logged_in){
+    applyAccessibilityPreferences(
+      state.color_blind_mode,
+      state.accessible_reading_mode,
+      state.night_mode,
+    );
+  }
 };
 $("btnGoRegister").onclick = () => { loginError.textContent=""; setView("register"); };
 $("btnGoLogin").onclick = () => { regError.textContent=""; setView("login"); };
@@ -828,12 +852,17 @@ settingsAccessibleReadingMode.onchange = () => {
   accessibilitySettingsDirty = true;
   applyAccessibleReadingMode(settingsAccessibleReadingMode.checked, false);
 };
+settingsNightMode.onchange = () => {
+  accessibilitySettingsDirty = true;
+  applyNightMode(settingsNightMode.checked, false);
+};
 btnSaveSettings.onclick = async () => {
   settingsError.textContent = "";
   btnSaveSettings.disabled = true;
   const result = await window.pywebview.api.set_accessibility_preferences(
     settingsColorBlindMode.checked,
     settingsAccessibleReadingMode.checked,
+    settingsNightMode.checked,
   );
   btnSaveSettings.disabled = false;
   if(!result || !result.ok){
@@ -842,7 +871,7 @@ btnSaveSettings.onclick = async () => {
     return;
   }
   accessibilitySettingsDirty = false;
-  applyAccessibilityPreferences(result.color_blind_mode, result.accessible_reading_mode);
+  applyAccessibilityPreferences(result.color_blind_mode, result.accessible_reading_mode, result.night_mode);
   btnSaveSettings.disabled = false;
   setView("menu");
 };
@@ -1189,4 +1218,5 @@ $("btnRec").onclick = async () => {
   }
 };
 
+applyNightMode(false);
 startPolling();

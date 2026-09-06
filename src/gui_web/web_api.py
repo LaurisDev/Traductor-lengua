@@ -44,10 +44,12 @@ class WebAPI:
         self,
         color_blind_mode: bool,
         accessible_reading_mode: bool,
+        night_mode: bool = False,
     ) -> Dict[str, Any]:
         return self._c.web_set_accessibility_preferences(
             color_blind_mode,
             accessible_reading_mode,
+            night_mode,
         )
 
     # ===== Voice =====

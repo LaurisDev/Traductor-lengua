@@ -140,6 +140,7 @@ class DatabaseManager:
         username: str,
         color_blind_mode: Optional[bool] = None,
         accessible_reading_mode: Optional[bool] = None,
+        night_mode: Optional[bool] = None,
     ) -> dict:
         """Actualiza solo las preferencias de accesibilidad indicadas."""
         username_clean = (username or "").strip()
@@ -150,10 +151,13 @@ class DatabaseManager:
             updates["accessibility.color_blind_mode"] = bool(color_blind_mode)
         if accessible_reading_mode is not None:
             updates["accessibility.accessible_reading_mode"] = bool(accessible_reading_mode)
+        if night_mode is not None:
+            updates["accessibility.night_mode"] = bool(night_mode)
         if not updates:
             return {
                 "color_blind_mode": self.get_color_blind_mode(username_clean),
                 "accessible_reading_mode": self.get_accessible_reading_mode(username_clean),
+                "night_mode": self.get_night_mode(username_clean),
             }
         users = self._users_collection()
         result = users.update_one(
@@ -165,7 +169,18 @@ class DatabaseManager:
         return {
             "color_blind_mode": self.get_color_blind_mode(username_clean),
             "accessible_reading_mode": self.get_accessible_reading_mode(username_clean),
+            "night_mode": self.get_night_mode(username_clean),
         }
+
+    def get_night_mode(self, username: str) -> bool:
+        """Obtiene el modo noche guardado para un usuario."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return False
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"accessibility.night_mode": 1}) or {}
+        accessibility = doc.get("accessibility", {})
+        return bool(accessibility.get("night_mode", False))
 
     def record_learning_attempt(self, username: str, letter: str, is_correct: bool) -> dict:
         """Registra un intento confirmado de aprendizaje para un usuario y letra."""

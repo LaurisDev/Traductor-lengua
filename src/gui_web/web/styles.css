@@ -896,6 +896,75 @@ body.color-blind-mode{background:var(--color-fondo); color:var(--color-texto)}
 .accessible-reading-mode .view-title{line-height:1.35}
 .accessible-reading-mode .accessibility-option-content,
 .accessible-reading-mode .settings-toggle small{line-height:1.6}
+
+.night-mode{
+  --color-fondo:#17242b;
+  --color-texto:#edf5f1;
+  --color-fondo-alt:#20333b;
+  --card:#243840;
+  --text:#edf5f1;
+  --muted:#757c7c;
+  --border:rgba(218,239,235,.2);
+  --shadow:0 18px 44px rgba(0,0,0,.28);
+  --bg1:#285d6b;
+  --bg2:#704d4c;
+}
+body.night-mode{background:var(--color-fondo); color:var(--text)}
+.night-mode .bg{
+  background:
+    radial-gradient(700px 420px at 6% 8%, rgba(249,185,92,.1), transparent 68%),
+    radial-gradient(760px 500px at 94% 14%, rgba(150,199,179,.1), transparent 68%),
+    linear-gradient(135deg, #17242b 0%, #1d2c33 52%, #20333b 100%);
+}
+.night-mode .card,
+.night-mode .panel,
+.night-mode .evaluation-option-content,
+.night-mode .evaluation-history-item,
+.night-mode .settings-toggle,
+.night-mode .bubble,
+.night-mode .chat,
+.night-mode .ai-card,
+.night-mode .video-panel{background:rgba(36,56,64,.94); color:var(--text)}
+.night-mode input,
+.night-mode textarea,
+.night-mode select{background:#1d3038; color:var(--text); border-color:var(--border)}
+.night-mode input:focus{background:#223740}
+.night-mode .muted,
+.night-mode .settings-toggle small{color:var(--muted)}
+.night-mode .settings-toggle strong,
+.night-mode .evaluation-option-content,
+.night-mode .evaluation-history-item{color:var(--text)}
+.night-mode .settings-toggle:hover,
+.night-mode .evaluation-history-item:hover,
+.night-mode .evaluation-history-item.selected{background:#2b4650}
+.night-mode .btn.ghost{color:var(--text)}
+.night-mode #btnGoRegister,
+.night-mode #btnRegister,
+.night-mode #btnBackRegister{
+  background:#345763;
+  border-color:#668b96;
+  color:#f4fbf9;
+  box-shadow:0 4px 12px rgba(0,0,0,.18);
+}
+.night-mode #btnGoRegister:hover,
+.night-mode #btnRegister:hover,
+.night-mode #btnBackRegister:hover{
+  background:#416c79;
+  border-color:#82b4be;
+}
+.night-mode .back-btn{
+  background:#345763;
+  border-color:#668b96;
+  color:#f4fbf9;
+  box-shadow:0 4px 12px rgba(0,0,0,.18);
+}
+.night-mode .back-btn:hover{
+  background:#416c79;
+  border-color:#82b4be;
+}
+.night-mode .topbar,
+.night-mode .view-bar{border-color:var(--border)}
+.night-mode .video-fallback{background:rgba(23,36,43,.88)}
 .register-accessibility{max-height:calc(100vh - 120px); overflow-y:auto; overscroll-behavior:contain}
 
 @media (max-width:700px){

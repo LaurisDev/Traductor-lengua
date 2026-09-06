@@ -43,9 +43,9 @@ class LearningPerformanceAnalyzer:
             attempts = correct + incorrect
         correct = min(correct, attempts)
         incorrect = min(incorrect, attempts - correct)
-        accuracy = round((correct / attempts) * 100, 2) if attempts else 0.0
+        accuracy = round((correct / attempts) * 100, 2) if attempts else 0.0 # calcula el porcentaje de aciertos
 
-        if attempts < MAX_ATTEMPTS:
+        if attempts < MAX_ATTEMPTS:  # despues aplicamos estas reglas
             return PerformanceAnalysis(
                 attempts=attempts,
                 correct=correct,
@@ -55,7 +55,7 @@ class LearningPerformanceAnalyzer:
                 recommendation="continue",
             )
 
-        if accuracy < MIN_RECOMMENDATION_PERCENTAGE:
+        if accuracy < MIN_RECOMMENDATION_PERCENTAGE:  # cuando es menos del 70  muestra estos mensajes:
             message = (
                 f"🤖 He notado que la letra {letter} necesita más práctica. "
                 f"Has acertado {correct} de {attempts} intentos. Te recomiendo practicarla nuevamente."

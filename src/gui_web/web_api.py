@@ -15,14 +15,40 @@ class WebAPI:
         ok, msg = self._c.web_login(username, password)
         return {"ok": ok, "msg": msg}
 
-    def register(self, username: str, password: str, confirm_password: str) -> Dict[str, Any]:
-        ok, msg = self._c.web_register(username, password, confirm_password)
+    def register(
+        self,
+        username: str,
+        password: str,
+        confirm_password: str,
+        color_blind_mode: bool = False,
+        accessible_reading_mode: bool = False,
+    ) -> Dict[str, Any]:
+        ok, msg = self._c.web_register(
+            username,
+            password,
+            confirm_password,
+            color_blind_mode,
+            accessible_reading_mode,
+        )
         return {"ok": ok, "msg": msg}
 
     def logout(self) -> Dict[str, Any]:
         self._c.web_logout()
         self._last_msg_idx = 0
         return {"ok": True}
+
+    def set_color_blind_mode(self, enabled: bool) -> Dict[str, Any]:
+        return self._c.web_set_color_blind_mode(enabled)
+
+    def set_accessibility_preferences(
+        self,
+        color_blind_mode: bool,
+        accessible_reading_mode: bool,
+    ) -> Dict[str, Any]:
+        return self._c.web_set_accessibility_preferences(
+            color_blind_mode,
+            accessible_reading_mode,
+        )
 
     # ===== Voice =====
     def voice_start(self) -> Dict[str, Any]:

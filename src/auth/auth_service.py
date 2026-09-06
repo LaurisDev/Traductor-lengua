@@ -17,7 +17,14 @@ class AuthService:
     def __init__(self, db_manager: DatabaseManager) -> None:
         self._db = db_manager
 
-    def register(self, username: str, password: str, confirm_password: str) -> Tuple[bool, str]:
+    def register(
+        self,
+        username: str,
+        password: str,
+        confirm_password: str,
+        color_blind_mode: bool = False,
+        accessible_reading_mode: bool = False,
+    ) -> Tuple[bool, str]:
         """
         Registra un usuario tras validar formato y coincidencia de contrasenas.
         Retorna (exito, mensaje).
@@ -27,7 +34,12 @@ class AuthService:
             return False, msg
         if password != confirm_password:
             return False, "Las contrasenas no coinciden"
-        return self._db.register_user(username, password)
+        return self._db.register_user(
+            username,
+            password,
+            color_blind_mode=color_blind_mode,
+            accessible_reading_mode=accessible_reading_mode,
+        )
 
     def _validate_credentials(self, username: str, password: str) -> str:
         """Valida longitud y caracteres. Retorna mensaje de error o cadena vacia."""

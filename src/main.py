@@ -91,6 +91,8 @@ class MainController:
         self._voice_status = "Listo"
         self._voice_error = ""
         self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
+        self._web_color_blind_mode = False
+        self._web_accessible_reading_mode = False
         self._learning_performance = LearningPerformanceAnalyzer()
         self._review_ai = ReviewAI()
         # Historial efimero: solo conserva los intentos confirmados de la
@@ -251,14 +253,31 @@ class MainController:
             return False, "Usuario o contraseña incorrectos"
         self._current_user = user
         self._study_streak = self._db.get_study_streak(user.username)
+        self._web_color_blind_mode = self._db.get_color_blind_mode(user.username)
+        self._web_accessible_reading_mode = self._db.get_accessible_reading_mode(user.username)
         self._ensure_translation_running()
         return True, "OK"
 
-    def web_register(self, username: str, password: str, confirm_password: str):
-        return self._auth.register(username, password, confirm_password)
+    def web_register(
+        self,
+        username: str,
+        password: str,
+        confirm_password: str,
+        color_blind_mode: bool = False,
+        accessible_reading_mode: bool = False,
+    ):
+        return self._auth.register(
+            username,
+            password,
+            confirm_password,
+            color_blind_mode,
+            accessible_reading_mode,
+        )
 
     def web_logout(self) -> None:
         self._current_user = None
+        self._web_color_blind_mode = False
+        self._web_accessible_reading_mode = False
         self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
         self._review_attempts.clear()
         self._stop_translation_loop()
@@ -279,6 +298,36 @@ class MainController:
         self._challenge_match_count = 0
         self._camera_error = None
         self._reset_evaluation_state()
+
+    def web_set_color_blind_mode(self, enabled: bool) -> dict:
+        result = self.web_set_accessibility_preferences(enabled, self._web_accessible_reading_mode)
+        if not result.get("ok"):
+            return {"ok": False, "msg": result.get("msg", "Error"), "enabled": False}
+        return {"ok": True, "enabled": result["color_blind_mode"]}
+
+    def web_set_accessibility_preferences(
+        self,
+        color_blind_mode: bool,
+        accessible_reading_mode: bool,
+    ) -> dict:
+        if self._current_user is None:
+            return {
+                "ok": False,
+                "msg": "Debes iniciar sesión",
+                "color_blind_mode": False,
+                "accessible_reading_mode": False,
+            }
+        try:
+            preferences = self._db.set_accessibility_preferences(
+                self._current_user.username,
+                color_blind_mode=bool(color_blind_mode),
+                accessible_reading_mode=bool(accessible_reading_mode),
+            )
+        except ValueError as exc:
+            return {"ok": False, "msg": str(exc)}
+        self._web_color_blind_mode = preferences["color_blind_mode"]
+        self._web_accessible_reading_mode = preferences["accessible_reading_mode"]
+        return {"ok": True, **preferences}
 
     def _random_evaluation_letter(self) -> str:
         return random.choice(list("ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"))
@@ -514,6 +563,8 @@ class MainController:
         return {
             "logged_in": self._current_user is not None,
             "username": self._current_user.username if self._current_user else None,
+            "color_blind_mode": self._web_color_blind_mode if self._current_user else False,
+            "accessible_reading_mode": self._web_accessible_reading_mode if self._current_user else False,
             "frame_jpeg_b64": self._web_frame_b64,
             "letter": self._web_letter,
             "sign_text": self._sign_buffer,

@@ -2,6 +2,7 @@ const $ = (id) => document.getElementById(id);
 
 const viewLogin = $("viewLogin");
 const viewRegister = $("viewRegister");
+const viewRegisterAccessibility = $("viewRegisterAccessibility");
 const viewMenu = $("viewMenu");
 const viewInteraction = $("viewInteraction");
 const viewAprendizaje = $("viewAprendizaje");
@@ -9,6 +10,7 @@ const viewEvaluacionConfig = $("viewEvaluacionConfig");
 const viewEvaluacionRun = $("viewEvaluacionRun");
 const viewEvaluacionResultados = $("viewEvaluacionResultados");
 const viewEvaluacionHistorial = $("viewEvaluacionHistorial");
+const viewSettings = $("viewSettings");
 
 // Evaluation elements
 const evalRequestedLetter = $("evalRequestedLetter");
@@ -70,6 +72,10 @@ const learningAssistantRecommendation = $("learningAssistantRecommendation");
 const btnAssistantFavorite = $("btnAssistantFavorite");
 const btnPracticeNow = $("btnPracticeNow");
 const btnLogout = $("btnLogout");
+const settingsColorBlindMode = $("settingsColorBlindMode");
+const settingsAccessibleReadingMode = $("settingsAccessibleReadingMode");
+const btnSaveSettings = $("btnSaveSettings");
+const settingsError = $("settingsError");
 
 // Repaso (letras marcadas con estrella)
 const viewRepaso = $("viewRepaso");
@@ -337,11 +343,13 @@ let learningLastDetected = null;
 let learningIsCorrect = false;
 let learningAttemptLogged = false;
 let learningAnalysis = null;
+let accessibilitySettingsDirty = false;
 const LEARNING_STREAK_TO_CONFIRM = 3;
 
 function setView(name){
   viewLogin.classList.toggle("hidden", name !== "login");
   viewRegister.classList.toggle("hidden", name !== "register");
+  viewRegisterAccessibility.classList.toggle("hidden", name !== "register_accessibility");
   viewMenu.classList.toggle("hidden", name !== "menu");
   viewInteraction.classList.toggle("hidden", name !== "interaction");
   viewAprendizaje.classList.toggle("hidden", name !== "aprendizaje");
@@ -349,22 +357,44 @@ function setView(name){
   viewEvaluacionRun.classList.toggle("hidden", name !== "evaluacion_run");
   viewEvaluacionResultados.classList.toggle("hidden", name !== "evaluacion_resultados");
   viewEvaluacionHistorial.classList.toggle("hidden", name !== "evaluacion_historial");
+  viewSettings.classList.toggle("hidden", name !== "settings");
   if(typeof viewRepaso !== 'undefined') viewRepaso.classList.toggle("hidden", name !== "repaso");
   viewReto.classList.toggle("hidden", name !== "reto");
 }
 
 function currentView(){
+  if(!viewRegisterAccessibility.classList.contains("hidden")) return "register_accessibility";
   if(typeof viewRepaso !== 'undefined' && !viewRepaso.classList.contains("hidden")) return "repaso";
   if(!viewEvaluacionRun.classList.contains("hidden")) return "evaluacion_run";
   if(!viewEvaluacionConfig.classList.contains("hidden")) return "evaluacion_config";
   if(!viewEvaluacionResultados.classList.contains("hidden")) return "evaluacion_resultados";
   if(!viewEvaluacionHistorial.classList.contains("hidden")) return "evaluacion_historial";
+  if(!viewSettings.classList.contains("hidden")) return "settings";
   if(!viewReto.classList.contains("hidden")) return "reto";
   if(!viewAprendizaje.classList.contains("hidden")) return "aprendizaje";
   if(!viewInteraction.classList.contains("hidden")) return "interaction";
   if(!viewMenu.classList.contains("hidden")) return "menu";
   if(!viewRegister.classList.contains("hidden")) return "register";
   return "login";
+}
+
+function applyColorBlindMode(enabled, syncControl = true){
+  document.body.classList.toggle("color-blind-mode", !!enabled);
+  if(syncControl && settingsColorBlindMode){
+    settingsColorBlindMode.checked = !!enabled;
+  }
+}
+
+function applyAccessibleReadingMode(enabled, syncControl = true){
+  document.body.classList.toggle("accessible-reading-mode", !!enabled);
+  if(syncControl && settingsAccessibleReadingMode){
+    settingsAccessibleReadingMode.checked = !!enabled;
+  }
+}
+
+function applyAccessibilityPreferences(colorBlindMode, accessibleReadingMode, syncControls = true){
+  applyColorBlindMode(colorBlindMode, syncControls);
+  applyAccessibleReadingMode(accessibleReadingMode, syncControls);
 }
 
 function renderReto(st){
@@ -622,6 +652,9 @@ async function poll(){
     const st = await window.pywebview.api.get_state();
     if(st && st.logged_in){
       btnLogout.classList.remove("hidden");
+      if(!accessibilitySettingsDirty){
+        applyAccessibilityPreferences(st.color_blind_mode, st.accessible_reading_mode);
+      }
       if(st.username && favoriteUsername !== st.username){
         favoriteUsername = st.username;
         refreshFavoriteLetters();
@@ -676,8 +709,8 @@ async function poll(){
       voiceError.textContent = st.voice_error || "";
     }else{
       btnLogout.classList.add("hidden");
-      // No forzar login si el usuario está en "Crear cuenta"
-      if(["interaction", "menu", "aprendizaje", "reto", "evaluacion_run", "evaluacion_config", "evaluacion_resultados"].includes(currentView())){
+      // No interrumpir el registro mientras todavía no existe una sesión.
+      if(["interaction", "menu", "aprendizaje", "reto", "evaluacion_run", "evaluacion_config", "evaluacion_resultados", "settings"].includes(currentView())){
         setView("login");
       }
 
@@ -691,6 +724,8 @@ async function poll(){
       }
       favoriteLetters = new Set();
       favoriteUsername = null;
+      accessibilitySettingsDirty = false;
+      applyAccessibilityPreferences(false, false);
       updateDifficultCount();
     }
     lastLoggedIn = !!(st && st.logged_in);
@@ -722,17 +757,39 @@ $("btnLogin").onclick = async () => {
 };
 $("btnGoRegister").onclick = () => { loginError.textContent=""; setView("register"); };
 $("btnGoLogin").onclick = () => { regError.textContent=""; setView("login"); };
+$("btnContinueRegister").onclick = () => {
+  regError.textContent = "";
+  const username = $("regUser").value.trim();
+  const password = $("regPass").value;
+  const confirmation = $("regPass2").value;
+  if(!username || !password || !confirmation){
+    regError.textContent = "Completa todos los campos para continuar";
+    return;
+  }
+  setView("register_accessibility");
+};
+$("btnBackRegister").onclick = () => {
+  $("regAccessibilityError").textContent = "";
+  setView("register");
+};
 $("btnRegister").onclick = async () => {
   regError.textContent = "";
+  $("regAccessibilityError").textContent = "";
   const u = $("regUser").value.trim();
   const p = $("regPass").value;
   const p2 = $("regPass2").value;
-  const res = await window.pywebview.api.register(u, p, p2);
-  if(!res.ok) regError.textContent = res.msg || "Error";
+  const colorBlindMode = $("regColorBlindMode").checked;
+  const accessibleReadingMode = $("regAccessibleReadingMode").checked;
+  const res = await window.pywebview.api.register(u, p, p2, colorBlindMode, accessibleReadingMode);
+  if(!res.ok) {
+    $("regAccessibilityError").textContent = res.msg || "Error";
+  }
   else{
     // limpiar por seguridad
     $("regPass").value = "";
     $("regPass2").value = "";
+    $("regColorBlindMode").checked = false;
+    $("regAccessibleReadingMode").checked = false;
     setView("login");
   }
 };
@@ -752,6 +809,42 @@ $("btnLogoutMenu").onclick = async () => {
   favoriteLetters = new Set();
   favoriteUsername = null;
   setView("login");
+};
+
+$("btnOpenSettings").onclick = () => {
+  settingsError.textContent = "";
+  accessibilitySettingsDirty = false;
+  setView("settings");
+};
+$("btnBackSettings").onclick = () => {
+  accessibilitySettingsDirty = false;
+  setView("menu");
+};
+settingsColorBlindMode.onchange = () => {
+  accessibilitySettingsDirty = true;
+  applyColorBlindMode(settingsColorBlindMode.checked, false);
+};
+settingsAccessibleReadingMode.onchange = () => {
+  accessibilitySettingsDirty = true;
+  applyAccessibleReadingMode(settingsAccessibleReadingMode.checked, false);
+};
+btnSaveSettings.onclick = async () => {
+  settingsError.textContent = "";
+  btnSaveSettings.disabled = true;
+  const result = await window.pywebview.api.set_accessibility_preferences(
+    settingsColorBlindMode.checked,
+    settingsAccessibleReadingMode.checked,
+  );
+  btnSaveSettings.disabled = false;
+  if(!result || !result.ok){
+    settingsError.textContent = result?.msg || "No se pudo guardar la preferencia";
+    btnSaveSettings.disabled = false;
+    return;
+  }
+  accessibilitySettingsDirty = false;
+  applyAccessibilityPreferences(result.color_blind_mode, result.accessible_reading_mode);
+  btnSaveSettings.disabled = false;
+  setView("menu");
 };
 
 $("btnOpenInteraction").onclick = () => setView("interaction");

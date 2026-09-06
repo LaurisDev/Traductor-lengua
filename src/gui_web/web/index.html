@@ -59,10 +59,38 @@
             <input id="regPass2" type="password" placeholder="Confirmar" />
           </div>
           <div class="row">
-            <button class="btn primary" id="btnRegister">Registrarse</button>
-            <button class="btn" id="btnGoLogin">Volver</button>
+            <button class="btn primary" id="btnContinueRegister" type="button">Continuar</button>
+            <button class="btn" id="btnGoLogin" type="button">Volver</button>
           </div>
           <div class="error" id="regError"></div>
+        </section>
+
+        <!-- REGISTRO: PREFERENCIAS DE ACCESIBILIDAD -->
+        <section class="card auth register-accessibility hidden" id="viewRegisterAccessibility">
+          <div class="register-step">Paso 2 de 2</div>
+          <h2 id="accessibilityTitle">Preferencias de accesibilidad</h2>
+          <p class="muted">Selecciona las opciones que te ayuden a utilizar la aplicación de una manera más cómoda. Puedes modificarlas después desde tu perfil.</p>
+          <section class="accessibility-preferences" aria-labelledby="accessibilityTitle">
+            <label class="accessibility-option">
+              <input id="regColorBlindMode" type="checkbox" />
+              <span class="accessibility-option-content">
+                <strong>Modo daltónico</strong>
+                <span>Utiliza una paleta de colores alternativa para facilitar la identificación de los elementos de la interfaz.</span>
+              </span>
+            </label>
+            <label class="accessibility-option">
+              <input id="regAccessibleReadingMode" type="checkbox" />
+              <span class="accessibility-option-content">
+                <strong>Modo de lectura accesible</strong>
+                <span>Ajusta el tamaño del texto y el espaciado para facilitar la lectura.</span>
+              </span>
+            </label>
+          </section>
+          <div class="row register-actions">
+            <button class="btn primary" id="btnRegister" type="button">Registrarse</button>
+            <button class="btn" id="btnBackRegister" type="button">Volver</button>
+          </div>
+          <div class="error" id="regAccessibilityError"></div>
         </section>
 
         <!-- MENÚ PRINCIPAL -->
@@ -77,7 +105,38 @@
             <button class="btn secondary wide" id="btnOpenEvaluacionHistorial">Historial de evaluaciones</button>
             <button class="btn secondary wide" id="btnOpenRepaso">Repaso</button>
             <button class="btn secondary wide" id="btnOpenReto">Reto: Deletrea tu nombre</button>
+            <button class="btn secondary wide" id="btnOpenSettings">Configuración</button>
             <button class="btn ghost wide" id="btnLogoutMenu">Cerrar sesión</button>
+          </div>
+        </section>
+
+        <!-- CONFIGURACIÓN WEB -->
+        <section class="card settings hidden" id="viewSettings">
+          <div class="view-bar settings-bar">
+            <button class="btn ghost back-btn" id="btnBackSettings">← Volver al menú</button>
+            <div class="view-title">Configuración</div>
+          </div>
+          <div class="settings-content">
+            <h2>Preferencias de accesibilidad</h2>
+            <p class="muted">Activa o desactiva las preferencias que te ayuden a utilizar la aplicación con mayor comodidad.</p>
+            <label class="settings-toggle">
+              <input id="settingsColorBlindMode" type="checkbox" />
+              <span>
+                <strong>Modo daltónico</strong>
+                <small>Utiliza una paleta de colores alternativa para diferenciar mejor los elementos y estados.</small>
+              </span>
+            </label>
+            <label class="settings-toggle">
+              <input id="settingsAccessibleReadingMode" type="checkbox" />
+              <span>
+                <strong>Modo de lectura accesible</strong>
+                <small>Ajusta el tamaño del texto y el espaciado para facilitar la lectura.</small>
+              </span>
+            </label>
+            <div class="error" id="settingsError"></div>
+            <div class="row settings-actions">
+              <button class="btn primary" id="btnSaveSettings">Guardar cambios</button>
+            </div>
           </div>
         </section>
 

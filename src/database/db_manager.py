@@ -57,7 +57,13 @@ class DatabaseManager:
         """Genera hash SHA-256 de la contrasena."""
         return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
-    def register_user(self, username: str, password: str) -> Tuple[bool, str]:
+    def register_user(
+        self,
+        username: str,
+        password: str,
+        color_blind_mode: bool = False,
+        accessible_reading_mode: bool = False,
+    ) -> Tuple[bool, str]:
         """
         Registra un nuevo usuario.
         Retorna (exito, mensaje).
@@ -72,6 +78,10 @@ class DatabaseManager:
                 {
                     "username": username_clean,
                     "password_hash": password_hash,
+                    "accessibility": {
+                        "color_blind_mode": bool(color_blind_mode),
+                        "accessible_reading_mode": bool(accessible_reading_mode),
+                    },
                 }
             )
             return True, "Registro exitoso"
@@ -100,6 +110,62 @@ class DatabaseManager:
         """Comprueba si existe un usuario con el nombre dado."""
         users = self._users_collection()
         return users.count_documents({"username": username.strip()}, limit=1) > 0
+
+    def get_color_blind_mode(self, username: str) -> bool:
+        """Obtiene el modo daltónico guardado para un usuario."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return False
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"accessibility.color_blind_mode": 1}) or {}
+        accessibility = doc.get("accessibility", {})
+        return bool(accessibility.get("color_blind_mode", False))
+
+    def set_color_blind_mode(self, username: str, enabled: bool) -> bool:
+        """Actualiza únicamente el modo daltónico del usuario."""
+        return self.set_accessibility_preferences(username, color_blind_mode=enabled)["color_blind_mode"]
+
+    def get_accessible_reading_mode(self, username: str) -> bool:
+        """Obtiene el modo de lectura accesible guardado para un usuario."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return False
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"accessibility.accessible_reading_mode": 1}) or {}
+        accessibility = doc.get("accessibility", {})
+        return bool(accessibility.get("accessible_reading_mode", False))
+
+    def set_accessibility_preferences(
+        self,
+        username: str,
+        color_blind_mode: Optional[bool] = None,
+        accessible_reading_mode: Optional[bool] = None,
+    ) -> dict:
+        """Actualiza solo las preferencias de accesibilidad indicadas."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            raise ValueError("El usuario es obligatorio")
+        updates = {}
+        if color_blind_mode is not None:
+            updates["accessibility.color_blind_mode"] = bool(color_blind_mode)
+        if accessible_reading_mode is not None:
+            updates["accessibility.accessible_reading_mode"] = bool(accessible_reading_mode)
+        if not updates:
+            return {
+                "color_blind_mode": self.get_color_blind_mode(username_clean),
+                "accessible_reading_mode": self.get_accessible_reading_mode(username_clean),
+            }
+        users = self._users_collection()
+        result = users.update_one(
+            {"username": username_clean},
+            {"$set": updates},
+        )
+        if result.matched_count != 1:
+            raise ValueError("El usuario autenticado no existe")
+        return {
+            "color_blind_mode": self.get_color_blind_mode(username_clean),
+            "accessible_reading_mode": self.get_accessible_reading_mode(username_clean),
+        }
 
     def record_learning_attempt(self, username: str, letter: str, is_correct: bool) -> dict:
         """Registra un intento confirmado de aprendizaje para un usuario y letra."""

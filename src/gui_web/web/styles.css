@@ -239,8 +239,20 @@ input:focus{border-color:var(--lagoon); background:#fff; box-shadow:0 0 0 4px rg
 }
 
 .menu{
-  width:min(420px, 92vw);
+  width:min(700px, 92vw);
   padding:28px 26px 22px;
+}
+.menu .stack{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}
+.menu .stack #btnOpenInteraction,
+.menu .stack #btnLogoutMenu{
+  grid-column:1 / -1;
+}
+.menu .stack .btn{
+  min-height:58px;
 }
 
 .grid{
@@ -970,6 +982,9 @@ body.night-mode{background:var(--color-fondo); color:var(--text)}
 @media (max-width:700px){
   .content{padding:10px 9px 18px}
   .auth,.menu{width:min(100%, 440px)}
+  .menu .stack{grid-template-columns:1fr}
+  .menu .stack #btnOpenInteraction,
+  .menu .stack #btnLogoutMenu{grid-column:auto}
   .evaluation-config,.evaluation-results{width:100%; padding-left:18px; padding-right:18px}
   .view-title{font-size:14px}
   .view-bar .back-btn{padding:9px 11px}

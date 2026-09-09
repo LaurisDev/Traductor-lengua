@@ -93,6 +93,8 @@ class MainController:
         self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
         self._web_color_blind_mode = False
         self._web_accessible_reading_mode = False
+        self._web_dyslexia_spacing_mode = False
+        self._web_reading_font_size = "medium"
         self._web_night_mode = False
         self._learning_performance = LearningPerformanceAnalyzer()
         self._review_ai = ReviewAI()
@@ -256,6 +258,8 @@ class MainController:
         self._study_streak = self._db.get_study_streak(user.username)
         self._web_color_blind_mode = self._db.get_color_blind_mode(user.username)
         self._web_accessible_reading_mode = self._db.get_accessible_reading_mode(user.username)
+        self._web_dyslexia_spacing_mode = self._db.get_dyslexia_spacing_mode(user.username)
+        self._web_reading_font_size = self._db.get_reading_font_size(user.username)
         self._web_night_mode = self._db.get_night_mode(user.username)
         self._ensure_translation_running()
         return True, "OK"
@@ -267,6 +271,8 @@ class MainController:
         confirm_password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        dyslexia_spacing_mode: bool = False,
+        reading_font_size: str = "medium",
     ):
         return self._auth.register(
             username,
@@ -274,12 +280,16 @@ class MainController:
             confirm_password,
             color_blind_mode,
             accessible_reading_mode,
+            dyslexia_spacing_mode,
+            reading_font_size,
         )
 
     def web_logout(self) -> None:
         self._current_user = None
         self._web_color_blind_mode = False
         self._web_accessible_reading_mode = False
+        self._web_dyslexia_spacing_mode = False
+        self._web_reading_font_size = "medium"
         self._web_night_mode = False
         self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
         self._review_attempts.clear()
@@ -307,6 +317,8 @@ class MainController:
             enabled,
             self._web_accessible_reading_mode,
             self._web_night_mode,
+            self._web_dyslexia_spacing_mode,
+            self._web_reading_font_size,
         )
         if not result.get("ok"):
             return {"ok": False, "msg": result.get("msg", "Error"), "enabled": False}
@@ -316,7 +328,9 @@ class MainController:
         self,
         color_blind_mode: bool,
         accessible_reading_mode: bool,
-        night_mode: bool,
+        night_mode: bool = False,
+        dyslexia_spacing_mode: bool = False,
+        reading_font_size: str = "medium",
     ) -> dict:
         if self._current_user is None:
             return {
@@ -332,11 +346,15 @@ class MainController:
                 color_blind_mode=bool(color_blind_mode),
                 accessible_reading_mode=bool(accessible_reading_mode),
                 night_mode=bool(night_mode),
+                dyslexia_spacing_mode=bool(dyslexia_spacing_mode),
+                reading_font_size=reading_font_size,
             )
         except ValueError as exc:
             return {"ok": False, "msg": str(exc)}
         self._web_color_blind_mode = preferences["color_blind_mode"]
         self._web_accessible_reading_mode = preferences["accessible_reading_mode"]
+        self._web_dyslexia_spacing_mode = preferences["dyslexia_spacing_mode"]
+        self._web_reading_font_size = preferences["reading_font_size"]
         self._web_night_mode = preferences["night_mode"]
         return {"ok": True, **preferences}
 
@@ -576,6 +594,8 @@ class MainController:
             "username": self._current_user.username if self._current_user else None,
             "color_blind_mode": self._web_color_blind_mode if self._current_user else False,
             "accessible_reading_mode": self._web_accessible_reading_mode if self._current_user else False,
+            "dyslexia_spacing_mode": self._web_dyslexia_spacing_mode if self._current_user else False,
+            "reading_font_size": self._web_reading_font_size if self._current_user else "medium",
             "night_mode": self._web_night_mode if self._current_user else False,
             "frame_jpeg_b64": self._web_frame_b64,
             "letter": self._web_letter,

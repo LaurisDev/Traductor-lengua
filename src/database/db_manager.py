@@ -63,6 +63,8 @@ class DatabaseManager:
         password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        dyslexia_spacing_mode: bool = False,
+        reading_font_size: str = "medium",
     ) -> Tuple[bool, str]:
         """
         Registra un nuevo usuario.
@@ -81,6 +83,8 @@ class DatabaseManager:
                     "accessibility": {
                         "color_blind_mode": bool(color_blind_mode),
                         "accessible_reading_mode": bool(accessible_reading_mode),
+                        "dyslexia_spacing_mode": bool(dyslexia_spacing_mode),
+                        "reading_font_size": self._normalize_reading_font_size(reading_font_size),
                     },
                 }
             )
@@ -135,12 +139,38 @@ class DatabaseManager:
         accessibility = doc.get("accessibility", {})
         return bool(accessibility.get("accessible_reading_mode", False))
 
+    def get_dyslexia_spacing_mode(self, username: str) -> bool:
+        """Obtiene el espaciado adicional para lectura guardado."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return False
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"accessibility.dyslexia_spacing_mode": 1}) or {}
+        accessibility = doc.get("accessibility", {})
+        return bool(accessibility.get("dyslexia_spacing_mode", False))
+
+    @staticmethod
+    def _normalize_reading_font_size(value: str) -> str:
+        return value if value in {"small", "medium", "large"} else "medium"
+
+    def get_reading_font_size(self, username: str) -> str:
+        """Obtiene el nivel de tamaño de texto guardado."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return "medium"
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"accessibility.reading_font_size": 1}) or {}
+        accessibility = doc.get("accessibility", {})
+        return self._normalize_reading_font_size(accessibility.get("reading_font_size", "medium"))
+
     def set_accessibility_preferences(
         self,
         username: str,
         color_blind_mode: Optional[bool] = None,
         accessible_reading_mode: Optional[bool] = None,
         night_mode: Optional[bool] = None,
+        dyslexia_spacing_mode: Optional[bool] = None,
+        reading_font_size: Optional[str] = None,
     ) -> dict:
         """Actualiza solo las preferencias de accesibilidad indicadas."""
         username_clean = (username or "").strip()
@@ -153,11 +183,17 @@ class DatabaseManager:
             updates["accessibility.accessible_reading_mode"] = bool(accessible_reading_mode)
         if night_mode is not None:
             updates["accessibility.night_mode"] = bool(night_mode)
+        if dyslexia_spacing_mode is not None:
+            updates["accessibility.dyslexia_spacing_mode"] = bool(dyslexia_spacing_mode)
+        if reading_font_size is not None:
+            updates["accessibility.reading_font_size"] = self._normalize_reading_font_size(reading_font_size)
         if not updates:
             return {
                 "color_blind_mode": self.get_color_blind_mode(username_clean),
                 "accessible_reading_mode": self.get_accessible_reading_mode(username_clean),
                 "night_mode": self.get_night_mode(username_clean),
+                "dyslexia_spacing_mode": self.get_dyslexia_spacing_mode(username_clean),
+                "reading_font_size": self.get_reading_font_size(username_clean),
             }
         users = self._users_collection()
         result = users.update_one(
@@ -170,6 +206,8 @@ class DatabaseManager:
             "color_blind_mode": self.get_color_blind_mode(username_clean),
             "accessible_reading_mode": self.get_accessible_reading_mode(username_clean),
             "night_mode": self.get_night_mode(username_clean),
+            "dyslexia_spacing_mode": self.get_dyslexia_spacing_mode(username_clean),
+            "reading_font_size": self.get_reading_font_size(username_clean),
         }
 
     def get_night_mode(self, username: str) -> bool:

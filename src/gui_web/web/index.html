@@ -85,6 +85,24 @@
                 <span>Ajusta el tamaño del texto y el espaciado para facilitar la lectura.</span>
               </span>
             </label>
+            <label class="accessibility-size-option">
+              <span class="accessibility-option-content">
+                <strong>Tamaño del texto</strong>
+                <span>Elige el nivel de aumento para el modo de lectura accesible.</span>
+              </span>
+              <select id="regReadingFontSize">
+                <option value="small">Pequeño</option>
+                <option value="medium" selected>Mediano</option>
+                <option value="large">Grande</option>
+              </select>
+            </label>
+            <label class="accessibility-option">
+              <input id="regDyslexiaSpacingMode" type="checkbox" />
+              <span class="accessibility-option-content">
+                <strong>Espaciado para lectura</strong>
+                <span>Aumenta ligeramente el espacio entre las letras para facilitar la lectura.</span>
+              </span>
+            </label>
           </section>
           <div class="row register-actions">
             <button class="btn primary" id="btnRegister" type="button">Registrarse</button>
@@ -131,6 +149,24 @@
               <span>
                 <strong>Modo de lectura accesible</strong>
                 <small>Ajusta el tamaño del texto y el espaciado para facilitar la lectura.</small>
+              </span>
+            </label>
+            <label class="settings-size-option">
+              <span>
+                <strong>Tamaño del texto</strong>
+                <small>Elige el nivel de aumento para el modo de lectura accesible.</small>
+              </span>
+              <select id="settingsReadingFontSize">
+                <option value="small">Pequeño</option>
+                <option value="medium">Mediano</option>
+                <option value="large">Grande</option>
+              </select>
+            </label>
+            <label class="settings-toggle">
+              <input id="settingsDyslexiaSpacingMode" type="checkbox" />
+              <span>
+                <strong>Espaciado para lectura</strong>
+                <small>Aumenta ligeramente el espacio entre las letras para facilitar la lectura.</small>
               </span>
             </label>
             <label class="settings-toggle">
@@ -194,6 +230,10 @@
             <div class="video-wrap">
               <img id="videoInteraction" alt="video" />
               <div class="video-fallback" id="videoFallbackInteraction">Iniciando cámara…</div>
+              <div class="camera-status camera-status-active" aria-live="polite">
+                <strong>Cámara activa</strong>
+                <span>Coloca tu mano frente a la cámara.</span>
+              </div>
             </div>
             <div class="field">
               <label>Texto (señas)</label>
@@ -232,6 +272,16 @@
           <div class="learning-grid">
             <div class="panel card learning-panel left-panel">
               <div class="learning-progress" id="learningProgress">A — 1/27</div>
+              <div class="how-it-works" aria-labelledby="howItWorksTitle">
+                <h3 id="howItWorksTitle">¿Cómo funciona?</h3>
+                <ol>
+                  <li>Selecciona una letra.</li>
+                  <li>Coloca tu mano frente a la cámara.</li>
+                  <li>Realiza la seña.</li>
+                  <li>Observa la letra detectada.</li>
+                  <li>Continúa para formar una palabra.</li>
+                </ol>
+              </div>
               <div class="reference-box">
                 <div class="reference-figure" id="learningReferenceArt" aria-label="Referencia de la seña">
                   <img id="learningReferenceImage" alt="Imagen de referencia de la seña" />
@@ -257,6 +307,10 @@
                 <div class="video-wrap learning-video-wrap" id="learningVideoWrap">
                   <img id="videoAprendizaje" alt="camara de aprendizaje" />
                   <div class="video-fallback" id="videoFallbackAprendizaje">Iniciando cámara…</div>
+                  <div class="camera-status camera-status-active" aria-live="polite">
+                    <strong>Cámara activa</strong>
+                    <span>Coloca tu mano frente a la cámara.</span>
+                  </div>
                   <div class="learning-overlay" id="learningOverlay"></div>
                 </div>
                 <div class="learning-caption" id="learningCaption">Repite la seña</div>
@@ -346,6 +400,10 @@
                   <div class="video-wrap learning-video-wrap" id="evalVideoWrap" style="width:100%; max-height:360px;">
                     <img id="videoEvaluacion" alt="video evaluacion" />
                     <div class="video-fallback" id="videoFallbackEvaluacion">Iniciando cámara…</div>
+                        <div class="camera-status camera-status-active" aria-live="polite">
+                          <strong>Cámara activa</strong>
+                          <span>Coloca tu mano frente a la cámara.</span>
+                        </div>
                     <div class="learning-overlay" id="evalOverlay"></div>
                   </div>
                 </div>
@@ -366,6 +424,17 @@
           </div>
           </div>
         </section>
+
+        <div class="eval-confirm hidden" id="evalExitConfirm" role="dialog" aria-modal="true" aria-labelledby="evalExitTitle">
+          <div class="eval-confirm-card">
+            <h2 id="evalExitTitle">¿Quieres salir de la evaluación?</h2>
+            <p class="muted">Si sales ahora, perderás el progreso de esta sesión.</p>
+            <div class="row eval-confirm-actions">
+              <button class="btn primary" id="btnContinueEvaluation" type="button">Continuar evaluación</button>
+              <button class="btn danger" id="btnExitEvaluation" type="button">Salir</button>
+            </div>
+          </div>
+        </div>
 
         <!-- EVALUACIÓN: RESULTADOS -->
         <section class="card evaluation-results hidden" id="viewEvaluacionResultados">
@@ -432,6 +501,10 @@
                 <div class="video-wrap learning-video-wrap" id="repasoVideoWrap">
                   <img id="videoRepaso" alt="camara de repaso" />
                   <div class="video-fallback" id="videoFallbackRepaso">Iniciando cámara…</div>
+                  <div class="camera-status camera-status-active" aria-live="polite">
+                    <strong>Cámara activa</strong>
+                    <span>Coloca tu mano frente a la cámara.</span>
+                  </div>
                   <div class="learning-overlay" id="repasoOverlay"></div>
                 </div>
                 <div class="learning-caption" id="repasoCaption">Repite la seña</div>
@@ -487,6 +560,10 @@
                 <div class="video-wrap learning-video-wrap">
                   <img id="videoReto" alt="camara del reto" />
                   <div class="video-fallback" id="videoFallbackReto">Iniciando cámara…</div>
+                  <div class="camera-status camera-status-active" aria-live="polite">
+                    <strong>Cámara activa</strong>
+                    <span>Coloca tu mano frente a la cámara.</span>
+                  </div>
                 </div>
                 <div class="learning-caption" id="retoCaption">Haz la seña de la letra</div>
                 <div class="reto-progress-track">

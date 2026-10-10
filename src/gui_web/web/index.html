@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Interacción</title>
+    <title>Enseñando</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -11,14 +11,14 @@
     <div class="app">
       <header class="topbar">
         <div class="brand">
-          <div class="logo">TS</div>
+          <div class="logo">E</div>
           <div>
-            <div class="title">Traductor de Lenguaje de Señas</div>
-            <div class="subtitle">Interacción (Voz + Señas)</div>
+            <div class="title">Enseñando</div>
+            <div class="subtitle" data-i18n="subtitle">Interacción (Voz + Señas)</div>
           </div>
         </div>
         <div class="top-actions">
-          <button class="btn ghost hidden" id="btnLogout">Cerrar sesión</button>
+          <button class="btn ghost hidden" id="btnLogout" data-i18n="logout">Cerrar sesión</button>
         </div>
       </header>
 
@@ -44,6 +44,7 @@
 
         <!-- REGISTER -->
         <section class="card auth hidden" id="viewRegister">
+          <div class="register-step">Paso 1 de 3</div>
           <h2>Crear cuenta</h2>
           <p class="muted">Regístrate para usar la aplicación.</p>
           <div class="field">
@@ -65,9 +66,34 @@
           <div class="error" id="regError"></div>
         </section>
 
+        <!-- REGISTRO: IDIOMA DE APRENDIZAJE -->
+        <section class="card auth register-language hidden" id="viewRegisterLanguage">
+          <div class="register-step">Paso 2 de 3</div>
+          <h2 id="languageTitle">Idioma de aprendizaje</h2>
+          <p class="muted">¿En qué idioma deseas aprender lenguaje de señas?</p>
+          <div class="evaluation-options register-language-options" role="radiogroup" aria-labelledby="languageTitle">
+            <label class="evaluation-option">
+              <input type="radio" name="regLearningLanguage" value="es" checked/>
+              <span class="evaluation-option-content"><strong>ES</strong><span>Español</span></span>
+            </label>
+            <label class="evaluation-option">
+              <input type="radio" name="regLearningLanguage" value="en"/>
+              <span class="evaluation-option-content"><strong>EN</strong><span>Inglés</span></span>
+            </label>
+            <label class="evaluation-option">
+              <input type="radio" name="regLearningLanguage" value="pt"/>
+              <span class="evaluation-option-content"><strong>PT</strong><span>Portugués</span></span>
+            </label>
+          </div>
+          <div class="row register-actions">
+            <button class="btn primary" id="btnContinueLanguage" type="button">Continuar</button>
+            <button class="btn" id="btnBackLanguage" type="button">Volver</button>
+          </div>
+        </section>
+
         <!-- REGISTRO: PREFERENCIAS DE ACCESIBILIDAD -->
         <section class="card auth register-accessibility hidden" id="viewRegisterAccessibility">
-          <div class="register-step">Paso 2 de 2</div>
+          <div class="register-step">Paso 3 de 3</div>
           <h2 id="accessibilityTitle">Preferencias de accesibilidad</h2>
           <p class="muted">Selecciona las opciones que te ayuden a utilizar la aplicación de una manera más cómoda. Puedes modificarlas después desde tu perfil.</p>
           <section class="accessibility-preferences" aria-labelledby="accessibilityTitle">
@@ -95,18 +121,74 @@
 
         <!-- MENÚ PRINCIPAL -->
         <section class="card menu hidden" id="viewMenu">
-          <h2>Menú principal</h2>
-          <p class="muted">Elige cómo quieres continuar.</p>
-          <div class="streak-indicator" id="studyStreak" aria-live="polite">Racha: 0 días 🔥</div>
-          <div class="stack">
-            <button class="btn primary wide" id="btnOpenInteraction">Iniciar interacción</button>
-            <button class="btn secondary wide" id="btnOpenAprendizaje">Aprendizaje</button>
-            <button class="btn secondary wide" id="btnOpenEvaluacion">Modo evaluación</button>
-            <button class="btn secondary wide" id="btnOpenEvaluacionHistorial">Historial de evaluaciones</button>
-            <button class="btn secondary wide" id="btnOpenRepaso">Repaso</button>
-            <button class="btn secondary wide" id="btnOpenReto">Reto: Deletrea tu nombre</button>
-            <button class="btn secondary wide" id="btnOpenSettings">Configuración</button>
-            <button class="btn ghost wide" id="btnLogoutMenu">Cerrar sesión</button>
+          <div class="menu-top">
+            <div class="menu-greeting">
+              <span id="menuGreeting">¡Hola!</span>
+              <div class="streak-indicator" id="studyStreak" aria-live="polite">Racha: 0 días 🔥</div>
+            </div>
+            <div class="lang-switch" role="radiogroup" aria-labelledby="langSwitchLabel">
+              <span class="lang-switch-label" id="langSwitchLabel" data-i18n="learningIn">Aprendiendo en</span>
+              <div class="lang-switch-options">
+                <label class="lang-switch-option" title="Español" data-i18n-title="langEs">
+                  <input type="radio" name="menuLearningLanguage" value="es" checked/>
+                  <span>ES</span>
+                </label>
+                <label class="lang-switch-option" title="Inglés" data-i18n-title="langEn">
+                  <input type="radio" name="menuLearningLanguage" value="en"/>
+                  <span>EN</span>
+                </label>
+                <label class="lang-switch-option" title="Portugués" data-i18n-title="langPt">
+                  <input type="radio" name="menuLearningLanguage" value="pt"/>
+                  <span>PT</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="menu-layout">
+            <div class="menu-hero">
+              <h2 data-i18n="heroTitle">Tus manos también hablan</h2>
+              <p class="menu-hero-text" data-i18n="heroText1">El lenguaje de señas es una lengua completa, con su propia gramática y cultura. Aprenderlo te acerca a millones de personas discapacitadas y hace que la comunicación sea para todos.</p>
+              <p class="menu-hero-text" data-i18n="heroText2">Practica cada letra con la cámara, a tu ritmo, y convierte cada seña en un paso hacia una comunicación sin barreras.</p>
+              <figure class="menu-word" aria-label="La palabra HOLA deletreada en señas" data-i18n-aria="wordAria">
+                <div class="menu-word-letters">
+                  <span class="menu-word-tile"><img src="./assets/letras/h.png" alt="" /><b>H</b></span>
+                  <span class="menu-word-tile"><img src="./assets/letras/o.png" alt="" /><b>O</b></span>
+                  <span class="menu-word-tile"><img src="./assets/letras/l.png" alt="" /><b>L</b></span>
+                  <span class="menu-word-tile"><img src="./assets/letras/a.png" alt="" /><b>A</b></span>
+                </div>
+                <figcaption class="muted" id="menuLanguageCaption">Estás aprendiendo lenguaje de señas en español.</figcaption>
+              </figure>
+            </div>
+
+            <nav class="menu-options" aria-label="Opciones del menú principal" data-i18n-aria="menuAria">
+              <button class="btn primary menu-main-action" id="btnOpenInteraction">
+                <strong data-i18n="interaction">Iniciar interacción</strong>
+                <small data-i18n="interactionDesc">Conversa con voz y señas en tiempo real</small>
+              </button>
+
+              <div class="menu-group">
+                <h3 class="menu-group-title" data-i18n="groupLearn">Aprende</h3>
+                <div class="menu-group-grid">
+                  <button class="btn secondary menu-option" id="btnOpenAprendizaje"><strong data-i18n="learning">Aprendizaje</strong><small data-i18n="learningDesc">Letra por letra</small></button>
+                  <button class="btn secondary menu-option" id="btnOpenRepaso"><strong data-i18n="review">Repaso</strong><small data-i18n="reviewDesc">Refuerza lo aprendido</small></button>
+                  <button class="btn secondary menu-option" id="btnOpenReto"><strong data-i18n="challenge">Reto</strong><small data-i18n="challengeDesc">Deletrea tu nombre</small></button>
+                </div>
+              </div>
+
+              <div class="menu-group">
+                <h3 class="menu-group-title" data-i18n="groupTest">Ponte a prueba</h3>
+                <div class="menu-group-grid two">
+                  <button class="btn secondary menu-option" id="btnOpenEvaluacion"><strong data-i18n="evaluation">Modo evaluación</strong><small data-i18n="evaluationDesc">Mide tu velocidad</small></button>
+                  <button class="btn secondary menu-option" id="btnOpenEvaluacionHistorial"><strong data-i18n="history">Historial</strong><small data-i18n="historyDesc">Revisa tu progreso</small></button>
+                </div>
+              </div>
+
+              <div class="menu-footer">
+                <button class="btn ghost" id="btnOpenSettings" data-i18n="settings">⚙ Configuración</button>
+                <button class="btn ghost" id="btnLogoutMenu" data-i18n="logout">Cerrar sesión</button>
+              </div>
+            </nav>
           </div>
         </section>
 
@@ -524,7 +606,9 @@
             var indicator = document.getElementById("studyStreak");
             if(!indicator || !state || !state.logged_in || !state.study_streak) return;
             var current = Number(state.study_streak.current_streak) || 0;
-            indicator.textContent = "Racha: " + current + " " + (current === 1 ? "día" : "días") + " 🔥";
+            indicator.textContent = window.formatStudyStreak
+              ? window.formatStudyStreak(current)
+              : "Racha: " + current + " " + (current === 1 ? "día" : "días") + " 🔥";
           }).catch(function(){});
         }
         window.setInterval(refreshStudyStreak, 300);

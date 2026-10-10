@@ -1,4 +1,4 @@
-# Traductor de Lenguaje de Senas (A-Z)
+# Enseñando
 
 Proyecto academico para la asignatura **Lenguajes y Paradigmas**. Aplicacion en Python que traduce letras del alfabeto espanol (A-Z) del lenguaje de senas a texto usando vision por computador con camara web.
 
@@ -48,7 +48,7 @@ En la misma carpeta (raiz del proyecto):
 python run.py
 ```
 
-Se abrira una ventana con el titulo "Traductor de Lenguaje de Senas".
+Se abrira una ventana con el titulo "Enseñando".
 
 ### Interfaz (UI)
 

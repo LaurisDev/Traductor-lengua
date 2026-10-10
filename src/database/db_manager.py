@@ -11,7 +11,14 @@ from typing import Optional, Tuple
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
-from src.config import MAX_ATTEMPTS, MONGO_DB_NAME, MONGO_URI, MONGO_USERS_COLLECTION
+from src.config import (
+    DEFAULT_LEARNING_LANGUAGE,
+    LEARNING_LANGUAGES,
+    MAX_ATTEMPTS,
+    MONGO_DB_NAME,
+    MONGO_URI,
+    MONGO_USERS_COLLECTION,
+)
 from .models import User
 
 
@@ -63,6 +70,7 @@ class DatabaseManager:
         password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        learning_language: str = "es",
     ) -> Tuple[bool, str]:
         """
         Registra un nuevo usuario.
@@ -78,6 +86,7 @@ class DatabaseManager:
                 {
                     "username": username_clean,
                     "password_hash": password_hash,
+                    "learning_language": learning_language,
                     "accessibility": {
                         "color_blind_mode": bool(color_blind_mode),
                         "accessible_reading_mode": bool(accessible_reading_mode),
@@ -181,6 +190,32 @@ class DatabaseManager:
         doc = users.find_one({"username": username_clean}, {"accessibility.night_mode": 1}) or {}
         accessibility = doc.get("accessibility", {})
         return bool(accessibility.get("night_mode", False))
+
+    def get_learning_language(self, username: str) -> str:
+        """Obtiene el idioma en el que el usuario aprende lenguaje de señas."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return DEFAULT_LEARNING_LANGUAGE
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"learning_language": 1}) or {}
+        language = doc.get("learning_language")
+        return language if language in LEARNING_LANGUAGES else DEFAULT_LEARNING_LANGUAGE
+
+    def set_learning_language(self, username: str, language: str) -> str:
+        """Actualiza el idioma de aprendizaje del usuario."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            raise ValueError("El usuario es obligatorio")
+        if language not in LEARNING_LANGUAGES:
+            raise ValueError("Selecciona un idioma de aprendizaje valido")
+        users = self._users_collection()
+        result = users.update_one(
+            {"username": username_clean},
+            {"$set": {"learning_language": language}},
+        )
+        if result.matched_count != 1:
+            raise ValueError("El usuario autenticado no existe")
+        return language
 
     def record_learning_attempt(self, username: str, letter: str, is_correct: bool) -> dict:
         """Registra un intento confirmado de aprendizaje para un usuario y letra."""

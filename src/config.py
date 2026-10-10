@@ -59,10 +59,14 @@ WEB_VIDEO_JPEG_QUALITY = 55        # 40-70 recomendado
 WEB_VIDEO_INTERVAL_MS = 45         # cada cuántos ms se envía un frame (45ms ≈ 22 FPS)
 
 # Interfaz
-APP_TITLE = "Traductor de Lenguaje de Senas"
+APP_TITLE = "Enseñando"
 WINDOW_MIN_WIDTH = 800
 WINDOW_MIN_HEIGHT = 600
 MAX_ATTEMPTS = 5
+
+# Idiomas disponibles para aprender lenguaje de señas: español, inglés, portugués.
+LEARNING_LANGUAGES = ("es", "en", "pt")
+DEFAULT_LEARNING_LANGUAGE = "es"
 
 # UI
 # True = interfaz web moderna (HTML/CSS) embebida con PyWebView

@@ -31,7 +31,7 @@ from src.sign_language import (
     SignClassifier,
     letters_for_challenge,
 )
-from src.config import USE_WEB_UI
+from src.config import DEFAULT_LEARNING_LANGUAGE, USE_WEB_UI
 
 
 class MainController:
@@ -94,6 +94,7 @@ class MainController:
         self._web_color_blind_mode = False
         self._web_accessible_reading_mode = False
         self._web_night_mode = False
+        self._web_learning_language = DEFAULT_LEARNING_LANGUAGE
         self._learning_performance = LearningPerformanceAnalyzer()
         self._review_ai = ReviewAI()
         # Historial efimero: solo conserva los intentos confirmados de la
@@ -257,6 +258,7 @@ class MainController:
         self._web_color_blind_mode = self._db.get_color_blind_mode(user.username)
         self._web_accessible_reading_mode = self._db.get_accessible_reading_mode(user.username)
         self._web_night_mode = self._db.get_night_mode(user.username)
+        self._web_learning_language = self._db.get_learning_language(user.username)
         self._ensure_translation_running()
         return True, "OK"
 
@@ -267,6 +269,7 @@ class MainController:
         confirm_password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        learning_language: str = "es",
     ):
         return self._auth.register(
             username,
@@ -274,6 +277,7 @@ class MainController:
             confirm_password,
             color_blind_mode,
             accessible_reading_mode,
+            learning_language,
         )
 
     def web_logout(self) -> None:
@@ -281,6 +285,7 @@ class MainController:
         self._web_color_blind_mode = False
         self._web_accessible_reading_mode = False
         self._web_night_mode = False
+        self._web_learning_language = DEFAULT_LEARNING_LANGUAGE
         self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
         self._review_attempts.clear()
         self._stop_translation_loop()
@@ -339,6 +344,16 @@ class MainController:
         self._web_accessible_reading_mode = preferences["accessible_reading_mode"]
         self._web_night_mode = preferences["night_mode"]
         return {"ok": True, **preferences}
+
+    def web_set_learning_language(self, language: str) -> dict:
+        if self._current_user is None:
+            return {"ok": False, "msg": "Debes iniciar sesión"}
+        try:
+            language = self._db.set_learning_language(self._current_user.username, language)
+        except ValueError as exc:
+            return {"ok": False, "msg": str(exc)}
+        self._web_learning_language = language
+        return {"ok": True, "learning_language": language}
 
     def _random_evaluation_letter(self) -> str:
         return random.choice(list("ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"))
@@ -577,6 +592,7 @@ class MainController:
             "color_blind_mode": self._web_color_blind_mode if self._current_user else False,
             "accessible_reading_mode": self._web_accessible_reading_mode if self._current_user else False,
             "night_mode": self._web_night_mode if self._current_user else False,
+            "learning_language": self._web_learning_language if self._current_user else DEFAULT_LEARNING_LANGUAGE,
             "frame_jpeg_b64": self._web_frame_b64,
             "letter": self._web_letter,
             "sign_text": self._sign_buffer,

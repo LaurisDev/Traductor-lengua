@@ -22,6 +22,7 @@ class WebAPI:
         confirm_password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        learning_language: str = "es",
     ) -> Dict[str, Any]:
         ok, msg = self._c.web_register(
             username,
@@ -29,6 +30,7 @@ class WebAPI:
             confirm_password,
             color_blind_mode,
             accessible_reading_mode,
+            learning_language,
         )
         return {"ok": ok, "msg": msg}
 
@@ -51,6 +53,9 @@ class WebAPI:
             accessible_reading_mode,
             night_mode,
         )
+
+    def set_learning_language(self, language: str) -> Dict[str, Any]:
+        return self._c.web_set_learning_language(language)
 
     # ===== Voice =====
     def voice_start(self) -> Dict[str, Any]:

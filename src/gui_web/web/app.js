@@ -2,6 +2,7 @@ const $ = (id) => document.getElementById(id);
 
 const viewLogin = $("viewLogin");
 const viewRegister = $("viewRegister");
+const viewRegisterLanguage = $("viewRegisterLanguage");
 const viewRegisterAccessibility = $("viewRegisterAccessibility");
 const viewMenu = $("viewMenu");
 const viewInteraction = $("viewInteraction");
@@ -350,6 +351,7 @@ const LEARNING_STREAK_TO_CONFIRM = 3;
 function setView(name){
   viewLogin.classList.toggle("hidden", name !== "login");
   viewRegister.classList.toggle("hidden", name !== "register");
+  viewRegisterLanguage.classList.toggle("hidden", name !== "register_language");
   viewRegisterAccessibility.classList.toggle("hidden", name !== "register_accessibility");
   viewMenu.classList.toggle("hidden", name !== "menu");
   viewInteraction.classList.toggle("hidden", name !== "interaction");
@@ -365,6 +367,7 @@ function setView(name){
 
 function currentView(){
   if(!viewRegisterAccessibility.classList.contains("hidden")) return "register_accessibility";
+  if(!viewRegisterLanguage.classList.contains("hidden")) return "register_language";
   if(typeof viewRepaso !== 'undefined' && !viewRepaso.classList.contains("hidden")) return "repaso";
   if(!viewEvaluacionRun.classList.contains("hidden")) return "evaluacion_run";
   if(!viewEvaluacionConfig.classList.contains("hidden")) return "evaluacion_config";
@@ -665,6 +668,9 @@ async function poll(){
       if(!accessibilitySettingsDirty){
         applyAccessibilityPreferences(st.color_blind_mode, st.accessible_reading_mode, st.night_mode);
       }
+      menuUsername = st.username || "";
+      $("menuGreeting").textContent = menuGreetingText();
+      if(!learningLanguageSaving) renderLearningLanguage(st.learning_language);
       if(st.username && favoriteUsername !== st.username){
         favoriteUsername = st.username;
         refreshFavoriteLetters();
@@ -719,6 +725,8 @@ async function poll(){
       voiceError.textContent = st.voice_error || "";
     }else{
       btnLogout.classList.add("hidden");
+      menuUsername = "";
+      if(currentLearningLanguage !== "es") renderLearningLanguage("es");
       // No interrumpir el registro mientras todavía no existe una sesión.
       if(["interaction", "menu", "aprendizaje", "reto", "evaluacion_run", "evaluacion_config", "evaluacion_resultados", "settings"].includes(currentView())){
         setView("login");
@@ -779,6 +787,139 @@ $("btnLogin").onclick = async () => {
     );
   }
 };
+// ===== Idioma de aprendizaje (menú principal) =====
+// El menú principal se muestra en el idioma que el usuario está aprendiendo.
+const MENU_TEXTS = {
+  es: {
+    subtitle: "Interacción (Voz + Señas)",
+    greeting: "¡Hola!",
+    greetingName: (name) => `¡Hola, ${name}!`,
+    streak: (n) => `Racha: ${n} ${n === 1 ? "día" : "días"} 🔥`,
+    learningIn: "Aprendiendo en",
+    langEs: "Español", langEn: "Inglés", langPt: "Portugués",
+    heroTitle: "Tus manos también hablan",
+    heroText1: "El lenguaje de señas es una lengua completa, con su propia gramática y cultura. Aprenderlo te acerca a millones de personas discapacitadas y hace que la comunicación sea para todos.",
+    heroText2: "Practica cada letra con la cámara, a tu ritmo, y convierte cada seña en un paso hacia una comunicación sin barreras.",
+    wordAria: "La palabra HOLA deletreada en señas",
+    caption: "Estás aprendiendo lenguaje de señas en español.",
+    menuAria: "Opciones del menú principal",
+    interaction: "Iniciar interacción", interactionDesc: "Conversa con voz y señas en tiempo real",
+    groupLearn: "Aprende",
+    learning: "Aprendizaje", learningDesc: "Letra por letra",
+    review: "Repaso", reviewDesc: "Refuerza lo aprendido",
+    challenge: "Reto", challengeDesc: "Deletrea tu nombre",
+    groupTest: "Ponte a prueba",
+    evaluation: "Modo evaluación", evaluationDesc: "Mide tu velocidad",
+    history: "Historial", historyDesc: "Revisa tu progreso",
+    settings: "⚙ Configuración",
+    logout: "Cerrar sesión",
+  },
+  en: {
+    subtitle: "Interaction (Voice + Signs)",
+    greeting: "Hi!",
+    greetingName: (name) => `Hi, ${name}!`,
+    streak: (n) => `Streak: ${n} ${n === 1 ? "day" : "days"} 🔥`,
+    learningIn: "Learning in",
+    langEs: "Spanish", langEn: "English", langPt: "Portuguese",
+    heroTitle: "Your hands speak too",
+    heroText1: "Sign language is a complete language, with its own grammar and culture. Learning it brings you closer to millions of disabled people and makes communication possible for everyone.",
+    heroText2: "Practice each letter with the camera, at your own pace, and turn every sign into a step toward barrier-free communication.",
+    wordAria: "The word HOLA fingerspelled in sign language",
+    caption: "You are learning sign language in English.",
+    menuAria: "Main menu options",
+    interaction: "Start interaction", interactionDesc: "Talk with voice and signs in real time",
+    groupLearn: "Learn",
+    learning: "Learning", learningDesc: "Letter by letter",
+    review: "Review", reviewDesc: "Reinforce what you learned",
+    challenge: "Challenge", challengeDesc: "Spell your name",
+    groupTest: "Test yourself",
+    evaluation: "Evaluation mode", evaluationDesc: "Measure your speed",
+    history: "History", historyDesc: "Check your progress",
+    settings: "⚙ Settings",
+    logout: "Log out",
+  },
+  pt: {
+    subtitle: "Interação (Voz + Sinais)",
+    greeting: "Olá!",
+    greetingName: (name) => `Olá, ${name}!`,
+    streak: (n) => `Sequência: ${n} ${n === 1 ? "dia" : "dias"} 🔥`,
+    learningIn: "Aprendendo em",
+    langEs: "Espanhol", langEn: "Inglês", langPt: "Português",
+    heroTitle: "Suas mãos também falam",
+    heroText1: "A língua de sinais é uma língua completa, com sua própria gramática e cultura. Aprendê-la aproxima você de milhões de pessoas com deficiência e torna a comunicação possível para todos.",
+    heroText2: "Pratique cada letra com a câmera, no seu ritmo, e transforme cada sinal em um passo rumo a uma comunicação sem barreiras.",
+    wordAria: "A palavra HOLA soletrada em sinais",
+    caption: "Você está aprendendo língua de sinais em português.",
+    menuAria: "Opções do menu principal",
+    interaction: "Iniciar interação", interactionDesc: "Converse com voz e sinais em tempo real",
+    groupLearn: "Aprenda",
+    learning: "Aprendizado", learningDesc: "Letra por letra",
+    review: "Revisão", reviewDesc: "Reforce o que aprendeu",
+    challenge: "Desafio", challengeDesc: "Soletre seu nome",
+    groupTest: "Teste-se",
+    evaluation: "Modo avaliação", evaluationDesc: "Meça sua velocidade",
+    history: "Histórico", historyDesc: "Veja seu progresso",
+    settings: "⚙ Configurações",
+    logout: "Sair",
+  },
+};
+let learningLanguageSaving = false;
+let currentLearningLanguage = "es";
+let menuUsername = "";
+
+function menuTexts(){
+  return MENU_TEXTS[currentLearningLanguage] || MENU_TEXTS.es;
+}
+
+function menuGreetingText(){
+  const t = menuTexts();
+  return menuUsername ? t.greetingName(menuUsername) : t.greeting;
+}
+
+// Usado por el indicador de racha (script en index.html).
+window.formatStudyStreak = (n) => menuTexts().streak(n);
+
+function applyMenuLanguage(){
+  const t = menuTexts();
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t[el.dataset.i18n]; });
+  viewMenu.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t[el.dataset.i18nTitle]; });
+  viewMenu.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", t[el.dataset.i18nAria]); });
+  $("menuLanguageCaption").textContent = t.caption;
+  $("menuGreeting").textContent = menuGreetingText();
+  const streak = $("studyStreak");
+  const days = parseInt(streak.textContent.replace(/\D+/g, ""), 10) || 0;
+  streak.textContent = t.streak(days);
+}
+
+function renderLearningLanguage(language){
+  const code = MENU_TEXTS[language] ? language : "es";
+  const input = document.querySelector(`input[name="menuLearningLanguage"][value="${code}"]`);
+  if(input && !input.checked) input.checked = true;
+  if(code === currentLearningLanguage && viewMenu.dataset.lang === code) return;
+  currentLearningLanguage = code;
+  viewMenu.dataset.lang = code;
+  viewMenu.lang = code;
+  applyMenuLanguage();
+}
+
+document.querySelectorAll('input[name="menuLearningLanguage"]').forEach((input) => {
+  input.addEventListener("change", async () => {
+    if(!input.checked) return;
+    const switcher = document.querySelector(".lang-switch");
+    learningLanguageSaving = true;
+    switcher.classList.add("saving");
+    try{
+      const res = await window.pywebview.api.set_learning_language(input.value);
+      renderLearningLanguage(res && res.ok ? res.learning_language : currentLearningLanguage);
+    }catch(e){
+      renderLearningLanguage(currentLearningLanguage);
+    }finally{
+      learningLanguageSaving = false;
+      switcher.classList.remove("saving");
+    }
+  });
+});
+
 $("btnGoRegister").onclick = () => { loginError.textContent=""; setView("register"); };
 $("btnGoLogin").onclick = () => { regError.textContent=""; setView("login"); };
 $("btnContinueRegister").onclick = () => {
@@ -790,11 +931,13 @@ $("btnContinueRegister").onclick = () => {
     regError.textContent = "Completa todos los campos para continuar";
     return;
   }
-  setView("register_accessibility");
+  setView("register_language");
 };
+$("btnBackLanguage").onclick = () => setView("register");
+$("btnContinueLanguage").onclick = () => setView("register_accessibility");
 $("btnBackRegister").onclick = () => {
   $("regAccessibilityError").textContent = "";
-  setView("register");
+  setView("register_language");
 };
 $("btnRegister").onclick = async () => {
   regError.textContent = "";
@@ -804,7 +947,8 @@ $("btnRegister").onclick = async () => {
   const p2 = $("regPass2").value;
   const colorBlindMode = $("regColorBlindMode").checked;
   const accessibleReadingMode = $("regAccessibleReadingMode").checked;
-  const res = await window.pywebview.api.register(u, p, p2, colorBlindMode, accessibleReadingMode);
+  const learningLanguage = document.querySelector('input[name="regLearningLanguage"]:checked')?.value || "es";
+  const res = await window.pywebview.api.register(u, p, p2, colorBlindMode, accessibleReadingMode, learningLanguage);
   if(!res.ok) {
     $("regAccessibilityError").textContent = res.msg || "Error";
   }
@@ -814,6 +958,7 @@ $("btnRegister").onclick = async () => {
     $("regPass2").value = "";
     $("regColorBlindMode").checked = false;
     $("regAccessibleReadingMode").checked = false;
+    document.querySelector('input[name="regLearningLanguage"][value="es"]').checked = true;
     setView("login");
   }
 };

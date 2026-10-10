@@ -5,6 +5,7 @@
 
 from typing import Optional, Tuple
 
+from src.config import LEARNING_LANGUAGES
 from src.database import DatabaseManager, User
 
 
@@ -24,6 +25,7 @@ class AuthService:
         confirm_password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        learning_language: str = "es",
     ) -> Tuple[bool, str]:
         """
         Registra un usuario tras validar formato y coincidencia de contrasenas.
@@ -34,11 +36,14 @@ class AuthService:
             return False, msg
         if password != confirm_password:
             return False, "Las contrasenas no coinciden"
+        if learning_language not in LEARNING_LANGUAGES:
+            return False, "Selecciona un idioma de aprendizaje valido"
         return self._db.register_user(
             username,
             password,
             color_blind_mode=color_blind_mode,
             accessible_reading_mode=accessible_reading_mode,
+            learning_language=learning_language,
         )
 
     def _validate_credentials(self, username: str, password: str) -> str:

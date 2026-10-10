@@ -37,6 +37,9 @@ const videoEvaluacion = $("videoEvaluacion");
 const videoFallbackEvaluacion = $("videoFallbackEvaluacion");
 const evalVideoWrap = $("evalVideoWrap");
 const evalOverlay = $("evalOverlay");
+const evalExitConfirm = $("evalExitConfirm");
+const btnContinueEvaluation = $("btnContinueEvaluation");
+const btnExitEvaluation = $("btnExitEvaluation");
 const viewReto = $("viewReto");
 
 const loginError = $("loginError");
@@ -75,6 +78,9 @@ const btnPracticeNow = $("btnPracticeNow");
 const btnLogout = $("btnLogout");
 const settingsColorBlindMode = $("settingsColorBlindMode");
 const settingsAccessibleReadingMode = $("settingsAccessibleReadingMode");
+const settingsReadingFontSize = $("settingsReadingFontSize");
+const regReadingFontSize = $("regReadingFontSize");
+const settingsDyslexiaSpacingMode = $("settingsDyslexiaSpacingMode");
 const settingsNightMode = $("settingsNightMode");
 const btnSaveSettings = $("btnSaveSettings");
 const settingsError = $("settingsError");
@@ -308,7 +314,7 @@ function updateRepasoFeedback(detectedLetterRaw){
     }
     if(repasoStatusPill){
       repasoStatusPill.className = "learning-status-pill learning-status-correct";
-      repasoStatusPill.textContent = "¡Correcto!";
+      repasoStatusPill.textContent = "✓ Correcto";
     }
     if(repasoCaption){
       repasoCaption.textContent = "¡Bien hecho! Presiona Siguiente para continuar";
@@ -322,11 +328,11 @@ function updateRepasoFeedback(detectedLetterRaw){
     if(repasoOverlay){
       repasoOverlay.classList.add("learning-overlay-incorrect");
       repasoOverlay.classList.remove("learning-overlay-correct");
-      repasoOverlay.textContent = "✗ Intenta de nuevo";
+      repasoOverlay.textContent = "✗ Incorrecto";
     }
     if(repasoStatusPill){
       repasoStatusPill.className = "learning-status-pill learning-status-incorrect";
-      repasoStatusPill.textContent = `Se detectó: ${detected}`;
+      repasoStatusPill.textContent = `✗ Incorrecto: se detectó ${detected}`;
     }
     if(repasoCaption){
       repasoCaption.textContent = `Busca la seña de la letra ${repasoTargetLetter}`;
@@ -389,10 +395,22 @@ function applyColorBlindMode(enabled, syncControl = true){
   }
 }
 
-function applyAccessibleReadingMode(enabled, syncControl = true){
+function applyAccessibleReadingMode(enabled, fontSize = "medium", syncControl = true){
   document.body.classList.toggle("accessible-reading-mode", !!enabled);
+  document.body.classList.remove("reading-size-small", "reading-size-medium", "reading-size-large");
+  document.body.classList.add(`reading-size-${["small", "medium", "large"].includes(fontSize) ? fontSize : "medium"}`);
   if(syncControl && settingsAccessibleReadingMode){
     settingsAccessibleReadingMode.checked = !!enabled;
+  }
+  if(syncControl && settingsReadingFontSize){
+    settingsReadingFontSize.value = ["small", "medium", "large"].includes(fontSize) ? fontSize : "medium";
+  }
+}
+
+function applyDyslexiaSpacingMode(enabled, syncControl = true){
+  document.body.classList.toggle("dyslexia-spacing-mode", !!enabled);
+  if(syncControl && settingsDyslexiaSpacingMode){
+    settingsDyslexiaSpacingMode.checked = !!enabled;
   }
 }
 
@@ -404,10 +422,11 @@ function applyNightMode(enabled, syncControl = true){
   }
 }
 
-function applyAccessibilityPreferences(colorBlindMode, accessibleReadingMode, nightMode, syncControls = true){
+function applyAccessibilityPreferences(colorBlindMode, accessibleReadingMode, nightMode, dyslexiaSpacingMode, readingFontSize = "medium", syncControls = true){
   applyColorBlindMode(colorBlindMode, syncControls);
-  applyAccessibleReadingMode(accessibleReadingMode, syncControls);
+  applyAccessibleReadingMode(accessibleReadingMode, readingFontSize, syncControls);
   applyNightMode(nightMode, syncControls);
+  applyDyslexiaSpacingMode(dyslexiaSpacingMode, syncControls);
 }
 
 function renderReto(st){
@@ -460,14 +479,26 @@ function renderReto(st){
 }
 
 function renderFrame(frameB64, videoEl, fallbackEl, errorMsg){
+  const statusEl = videoEl?.parentElement?.querySelector(".camera-status");
   if(frameB64){
     videoEl.src = "data:image/jpeg;base64," + frameB64;
     videoEl.style.display = "block";
     fallbackEl.style.display = "none";
+    if(statusEl){
+      statusEl.className = "camera-status camera-status-active";
+      statusEl.innerHTML = "<strong>Cámara activa</strong><span>Coloca tu mano frente a la cámara.</span>";
+    }
   }else{
     videoEl.style.display = "none";
     fallbackEl.style.display = "grid";
+    const hasCameraError = !!errorMsg;
     fallbackEl.textContent = errorMsg || "Iniciando cámara…";
+    if(statusEl){
+      statusEl.className = `camera-status ${hasCameraError ? "camera-status-error" : "camera-status-loading"}`;
+      statusEl.innerHTML = hasCameraError
+        ? "<strong>No se pudo acceder a la cámara</strong><span>Verifica los permisos de tu navegador.</span>"
+        : "<strong>Iniciando cámara…</strong><span>Preparando la imagen.</span>";
+    }
   }
 }
 
@@ -615,7 +646,7 @@ function updateLearningFeedback(detectedLetterRaw){
     }
     if(learningStatusPill){
       learningStatusPill.className = "learning-status-pill learning-status-correct";
-      learningStatusPill.textContent = "¡Correcto!";
+      learningStatusPill.textContent = "✓ Correcto";
     }
     if(learningCaption){
       learningCaption.textContent = "¡Bien hecho! Presiona Siguiente para continuar";
@@ -630,11 +661,11 @@ function updateLearningFeedback(detectedLetterRaw){
     if(learningOverlay){
       learningOverlay.classList.add("learning-overlay-incorrect");
       learningOverlay.classList.remove("learning-overlay-correct");
-      learningOverlay.textContent = "✗ Intenta de nuevo";
+      learningOverlay.textContent = "✗ Incorrecto";
     }
     if(learningStatusPill){
       learningStatusPill.className = "learning-status-pill learning-status-incorrect";
-      learningStatusPill.textContent = `Se detectó: ${detected}`;
+      learningStatusPill.textContent = `✗ Incorrecto: se detectó ${detected}`;
     }
     if(learningCaption){
       learningCaption.textContent = `Busca la seña de la letra ${learningTargetLetter}`;
@@ -666,7 +697,7 @@ async function poll(){
     if(st && st.logged_in){
       btnLogout.classList.remove("hidden");
       if(!accessibilitySettingsDirty){
-        applyAccessibilityPreferences(st.color_blind_mode, st.accessible_reading_mode, st.night_mode);
+        applyAccessibilityPreferences(st.color_blind_mode, st.accessible_reading_mode, st.night_mode, st.dyslexia_spacing_mode, st.reading_font_size);
       }
       menuUsername = st.username || "";
       $("menuGreeting").textContent = menuGreetingText();
@@ -701,8 +732,17 @@ async function poll(){
           evalRequestedLetter.textContent = st.evaluation_target || "-";
           evalTime.textContent = "Tiempo: " + formatTimeSec(st.evaluation_remaining || 0);
           evalScore.textContent = "Puntaje: " + (st.evaluation_score || 0);
-          evalHits.textContent = "Aciertos: " + (st.evaluation_hits || 0);
-          evalErrors.textContent = "Errores: " + (st.evaluation_errors || 0);
+          const currentHits = st.evaluation_hits || 0;
+          const currentErrors = st.evaluation_errors || 0;
+          if(currentHits > evalLastHits){
+            showEvalFeedback(true);
+          }else if(currentErrors > evalLastErrors){
+            showEvalFeedback(false);
+          }
+          evalLastHits = currentHits;
+          evalLastErrors = currentErrors;
+          evalHits.textContent = "Aciertos: " + currentHits;
+          evalErrors.textContent = "Errores: " + currentErrors;
           if(currentView() === "evaluacion_run" && !st.evaluation_active && st.evaluation_duration){
             stopEvaluation();
           }
@@ -744,8 +784,9 @@ async function poll(){
       favoriteUsername = null;
       accessibilitySettingsDirty = false;
       applyColorBlindMode(false);
-      applyAccessibleReadingMode(false);
+      applyAccessibleReadingMode(false, "medium");
       applyNightMode(false);
+      applyDyslexiaSpacingMode(false);
       updateDifficultCount();
     }
     lastLoggedIn = !!(st && st.logged_in);
@@ -784,6 +825,8 @@ $("btnLogin").onclick = async () => {
       state.color_blind_mode,
       state.accessible_reading_mode,
       state.night_mode,
+      state.dyslexia_spacing_mode,
+      state.reading_font_size,
     );
   }
 };
@@ -947,8 +990,10 @@ $("btnRegister").onclick = async () => {
   const p2 = $("regPass2").value;
   const colorBlindMode = $("regColorBlindMode").checked;
   const accessibleReadingMode = $("regAccessibleReadingMode").checked;
+  const dyslexiaSpacingMode = $("regDyslexiaSpacingMode").checked;
+  const readingFontSize = regReadingFontSize.value;
   const learningLanguage = document.querySelector('input[name="regLearningLanguage"]:checked')?.value || "es";
-  const res = await window.pywebview.api.register(u, p, p2, colorBlindMode, accessibleReadingMode, learningLanguage);
+  const res = await window.pywebview.api.register(u, p, p2, colorBlindMode, accessibleReadingMode, dyslexiaSpacingMode, readingFontSize, learningLanguage);
   if(!res.ok) {
     $("regAccessibilityError").textContent = res.msg || "Error";
   }
@@ -958,6 +1003,8 @@ $("btnRegister").onclick = async () => {
     $("regPass2").value = "";
     $("regColorBlindMode").checked = false;
     $("regAccessibleReadingMode").checked = false;
+    $("regDyslexiaSpacingMode").checked = false;
+    regReadingFontSize.value = "medium";
     document.querySelector('input[name="regLearningLanguage"][value="es"]').checked = true;
     setView("login");
   }
@@ -995,7 +1042,15 @@ settingsColorBlindMode.onchange = () => {
 };
 settingsAccessibleReadingMode.onchange = () => {
   accessibilitySettingsDirty = true;
-  applyAccessibleReadingMode(settingsAccessibleReadingMode.checked, false);
+  applyAccessibleReadingMode(settingsAccessibleReadingMode.checked, settingsReadingFontSize.value, false);
+};
+settingsReadingFontSize.onchange = () => {
+  accessibilitySettingsDirty = true;
+  applyAccessibleReadingMode(settingsAccessibleReadingMode.checked, settingsReadingFontSize.value, false);
+};
+settingsDyslexiaSpacingMode.onchange = () => {
+  accessibilitySettingsDirty = true;
+  applyDyslexiaSpacingMode(settingsDyslexiaSpacingMode.checked, false);
 };
 settingsNightMode.onchange = () => {
   accessibilitySettingsDirty = true;
@@ -1008,6 +1063,8 @@ btnSaveSettings.onclick = async () => {
     settingsColorBlindMode.checked,
     settingsAccessibleReadingMode.checked,
     settingsNightMode.checked,
+    settingsDyslexiaSpacingMode.checked,
+    settingsReadingFontSize.value,
   );
   btnSaveSettings.disabled = false;
   if(!result || !result.ok){
@@ -1016,7 +1073,7 @@ btnSaveSettings.onclick = async () => {
     return;
   }
   accessibilitySettingsDirty = false;
-  applyAccessibilityPreferences(result.color_blind_mode, result.accessible_reading_mode, result.night_mode);
+  applyAccessibilityPreferences(result.color_blind_mode, result.accessible_reading_mode, result.night_mode, result.dyslexia_spacing_mode, result.reading_font_size);
   btnSaveSettings.disabled = false;
   setView("menu");
 };
@@ -1090,13 +1147,15 @@ $("btnBackInteraction").onclick = () => {
 };
 $("btnBackAprendizaje").onclick = () => setView("menu");
 $("btnBackEvaluacionRun").onclick = () => {
-  stopEvaluation(false);
+  requestEvaluationExit();
 };
 
 // Evaluación state
 let evalTimerId = null;
 let evalFeedbackTimeoutId = null;
 let evaluationStopPending = false;
+let evalLastHits = 0;
+let evalLastErrors = 0;
 const EVAL_FEEDBACK_DURATION_MS = 1200; // cuánto dura el borde/overlay verde o rojo // frames seguidos iguales para confirmar
 
 function formatTimeSec(s){
@@ -1134,7 +1193,7 @@ function showEvalFeedback(isCorrect){
   if(evalOverlay){
     evalOverlay.classList.toggle("learning-overlay-correct", isCorrect);
     evalOverlay.classList.toggle("learning-overlay-incorrect", !isCorrect);
-    evalOverlay.textContent = isCorrect ? "✓ Correcto" : "✗ Incorrecto";
+    evalOverlay.textContent = isCorrect ? "✓ ¡Correcto! +5 puntos" : "✗ Incorrecto -2 puntos";
   }
   evalFeedbackTimeoutId = setTimeout(clearEvalFeedback, EVAL_FEEDBACK_DURATION_MS);
 }
@@ -1150,7 +1209,17 @@ async function startEvaluationWithDuration(seconds){
   evalScore.textContent = "Puntaje: 0";
   evalHits.textContent = "Aciertos: 0";
   evalErrors.textContent = "Errores: 0";
+  evalLastHits = 0;
+  evalLastErrors = 0;
   setView("evaluacion_run");
+}
+
+function requestEvaluationExit(){
+  if(evalExitConfirm) evalExitConfirm.classList.remove("hidden");
+}
+
+function closeEvaluationExitConfirm(){
+  if(evalExitConfirm) evalExitConfirm.classList.add("hidden");
 }
 
 async function stopEvaluation(showResults = true){
@@ -1304,7 +1373,12 @@ function renderEvaluationHistory(){
 
 // Handlers for evaluation controls
 $("btnCancelEvaluation").onclick = () => setView('menu');
-$("btnStopEvaluation").onclick = () => stopEvaluation();
+$("btnStopEvaluation").onclick = requestEvaluationExit;
+btnContinueEvaluation.onclick = closeEvaluationExitConfirm;
+btnExitEvaluation.onclick = () => {
+  closeEvaluationExitConfirm();
+  stopEvaluation(false);
+};
 $("btnRetryEvaluation").onclick = () => setView("evaluacion_config");
 $("btnResultsMenu").onclick = () => setView("menu");
 $("btnOpenEvaluacionHistorial").onclick = () => {

@@ -25,6 +25,8 @@ class AuthService:
         confirm_password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        dyslexia_spacing_mode: bool = False,
+        reading_font_size: str = "medium",
         learning_language: str = "es",
     ) -> Tuple[bool, str]:
         """
@@ -43,6 +45,8 @@ class AuthService:
             password,
             color_blind_mode=color_blind_mode,
             accessible_reading_mode=accessible_reading_mode,
+            dyslexia_spacing_mode=dyslexia_spacing_mode,
+            reading_font_size=reading_font_size,
             learning_language=learning_language,
         )
 

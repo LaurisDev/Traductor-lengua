@@ -22,6 +22,8 @@ class WebAPI:
         confirm_password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        dyslexia_spacing_mode: bool = False,
+        reading_font_size: str = "medium",
         learning_language: str = "es",
     ) -> Dict[str, Any]:
         ok, msg = self._c.web_register(
@@ -30,6 +32,8 @@ class WebAPI:
             confirm_password,
             color_blind_mode,
             accessible_reading_mode,
+            dyslexia_spacing_mode,
+            reading_font_size,
             learning_language,
         )
         return {"ok": ok, "msg": msg}
@@ -47,11 +51,15 @@ class WebAPI:
         color_blind_mode: bool,
         accessible_reading_mode: bool,
         night_mode: bool = False,
+        dyslexia_spacing_mode: bool = False,
+        reading_font_size: str = "medium",
     ) -> Dict[str, Any]:
         return self._c.web_set_accessibility_preferences(
             color_blind_mode,
             accessible_reading_mode,
             night_mode,
+            dyslexia_spacing_mode,
+            reading_font_size,
         )
 
     def set_learning_language(self, language: str) -> Dict[str, Any]:

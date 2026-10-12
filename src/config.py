@@ -68,6 +68,28 @@ MAX_ATTEMPTS = 5
 LEARNING_LANGUAGES = ("es", "en", "pt")
 DEFAULT_LEARNING_LANGUAGE = "es"
 
+# Alfabeto dactilologico y modelo ML por idioma de aprendizaje.
+# es/en comparten el modelo original; pt usa LIBRAS (Lingua Brasileira de Sinais),
+# con su propio dataset y modelo (se entrenan con: python collect_sign_samples.py --lang pt).
+_SIGN_DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data",
+    "sign_language",
+)
+SIGN_ALPHABETS = {
+    "es": tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+    "en": tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+    "pt": tuple("ABCÇDEFGHIJKLMNOPQRSTUVWXYZ"),
+}
+SIGN_MODEL_FILES = {
+    "es": (SIGN_SAMPLES_CSV, SIGN_MODEL_PATH),
+    "en": (SIGN_SAMPLES_CSV, SIGN_MODEL_PATH),
+    "pt": (
+        os.path.join(_SIGN_DATA_DIR, "libras", "sign_samples.csv"),
+        os.path.join(_SIGN_DATA_DIR, "libras", "sign_classifier.joblib"),
+    ),
+}
+
 # UI
 # True = interfaz web moderna (HTML/CSS) embebida con PyWebView
 # False = interfaz Tkinter/ttkbootstrap

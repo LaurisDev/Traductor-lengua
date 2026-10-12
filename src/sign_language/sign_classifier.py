@@ -29,6 +29,12 @@ except ImportError as e:
     ) from e
 
 
+# Puntos crudos de MediaPipe (21 x [x, y, z]) guardados junto a cada muestra.
+# Van antes de las features para que su posicion en el CSV no cambie aunque se
+# agreguen o corrijan features: al entrenar, las features se recalculan desde aqui.
+LANDMARK_COLUMNS: List[str] = [f"lm{i}_{axis}" for i in range(21) for axis in ("x", "y", "z")]
+
+
 class SignClassifier:
     """
     Recolecta muestras, entrena y predice letras A-Z con umbral de confianza.
@@ -51,10 +57,15 @@ class SignClassifier:
         confidence_threshold: float = 0.85,
         samples_per_letter: int = 60,
         n_estimators: int = 200,
+        language: Optional[str] = None,
     ) -> None:
+        self.language = language or "es"
+        self.letters: List[str] = list(self.LETTERS)
         try:
             from src.config import (
+                SIGN_ALPHABETS,
                 SIGN_CLASSIFIER_TYPE,
+                SIGN_MODEL_FILES,
                 SIGN_CONFIDENCE_THRESHOLD,
                 SIGN_MODEL_PATH,
                 SIGN_SAMPLES_CSV,
@@ -67,6 +78,10 @@ class SignClassifier:
             default_conf = SIGN_CONFIDENCE_THRESHOLD
             default_per = SIGN_SAMPLES_PER_LETTER
             default_tiebreak = SIGN_USE_ML_TIEBREAKERS
+            # Cada idioma tiene su propio alfabeto, dataset y modelo (pt = LIBRAS).
+            if self.language in SIGN_MODEL_FILES:
+                default_csv, default_model = SIGN_MODEL_FILES[self.language]
+                self.letters = list(SIGN_ALPHABETS[self.language])
         except Exception:
             root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             data_dir = os.path.join(root, "data", "sign_language")
@@ -83,7 +98,8 @@ class SignClassifier:
         self.confidence_threshold = confidence_threshold if confidence_threshold else default_conf
         self.samples_per_letter = samples_per_letter or default_per
         self.n_estimators = n_estimators
-        self.use_tiebreakers = default_tiebreak
+        # Los desempates describen formas del alfabeto original; no aplican a LIBRAS.
+        self.use_tiebreakers = default_tiebreak and self.language != "pt"
 
         self._model = None
         self._label_encoder: Optional[LabelEncoder] = None
@@ -101,26 +117,49 @@ class SignClassifier:
         if os.path.isfile(self.model_path):
             self.load_model()
 
-    def _ensure_csv_header(self) -> None:
+    def _ensure_csv_header(self) -> bool:
+        """Crea el CSV si no existe. Retorna True si el CSV guarda landmarks crudos."""
         os.makedirs(os.path.dirname(self.samples_csv) or ".", exist_ok=True)
         if os.path.isfile(self.samples_csv):
-            return
+            with open(self.samples_csv, "r", encoding="utf-8", newline="") as f:
+                header = next(csv.reader(f), [])
+            return len(header) > 1 and header[1] == LANDMARK_COLUMNS[0]
         with open(self.samples_csv, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
-            w.writerow(["letter"] + FEATURE_NAMES)
+            w.writerow(["letter"] + LANDMARK_COLUMNS + FEATURE_NAMES)
+        return True
+
+    @staticmethod
+    def _landmarks_row(hand_landmarks) -> List[float]:
+        row: List[float] = []
+        for lm in hand_landmarks[:21]:
+            if isinstance(lm, dict):
+                row += [float(lm["x"]), float(lm["y"]), float(lm.get("z", 0.0))]
+            else:
+                row += [float(lm[0]), float(lm[1]), float(lm[2]) if len(lm) > 2 else 0.0]
+        return row
 
     def collect_sample(self, letter: str, hand_landmarks) -> bool:
         """Guarda una fila en el CSV. Retorna False si no hay landmarks validos."""
         letter = letter.upper().strip()
-        if letter not in self.LETTERS:
+        if letter not in self.letters:
             return False
         feat = extract_features(hand_landmarks)
         if feat is None:
             return False
-        self._ensure_csv_header()
+        with_landmarks = self._ensure_csv_header()
+        if not with_landmarks and not getattr(self, "_warned_old_csv", False):
+            self._warned_old_csv = True
+            print(
+                f"[Senas] {self.samples_csv} tiene el formato antiguo (sin landmarks). "
+                "Renombrelo para empezar un CSV nuevo que guarde los puntos de la mano."
+            )
+        row = [letter]
+        if with_landmarks:
+            row += self._landmarks_row(hand_landmarks)
+        row += feat.tolist()
         with open(self.samples_csv, "a", newline="", encoding="utf-8") as f:
-            w = csv.writer(f)
-            w.writerow([letter] + feat.tolist())
+            csv.writer(f).writerow(row)
         return True
 
     def load_samples(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -130,15 +169,33 @@ class SignClassifier:
             )
         rows_x: List[List[float]] = []
         rows_y: List[str] = []
+        n_lm = len(LANDMARK_COLUMNS)
         with open(self.samples_csv, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
+            reader = csv.reader(f)
+            header = next(reader, [])
+            with_landmarks = len(header) > 1 and header[1] == LANDMARK_COLUMNS[0]
             for row in reader:
-                label = row.get("letter", "").strip().upper()
-                if label not in self.LETTERS:
+                if not row:
+                    continue
+                label = row[0].strip().upper()
+                if label not in self.letters:
                     continue
                 try:
-                    vec = [float(row[name]) for name in FEATURE_NAMES]
-                except (KeyError, ValueError):
+                    if with_landmarks:
+                        # Features recalculadas con el extractor actual.
+                        coords = [float(v) for v in row[1 : 1 + n_lm]]
+                        lms = [
+                            {"x": coords[i], "y": coords[i + 1], "z": coords[i + 2]}
+                            for i in range(0, n_lm, 3)
+                        ]
+                        feat = extract_features(lms)
+                        if feat is None:
+                            continue
+                        vec = feat.tolist()
+                    else:
+                        # CSV antiguo: solo tiene las features ya calculadas.
+                        vec = [float(row[header.index(name)]) for name in FEATURE_NAMES]
+                except (IndexError, ValueError):
                     continue
                 if len(vec) != N_FEATURES:
                     continue
@@ -397,7 +454,7 @@ class SignClassifier:
     def remove_samples_for_letter(self, letter: str) -> int:
         """Elimina del CSV todas las filas de una letra. Retorna cuantas borro."""
         letter = letter.upper().strip()
-        if letter not in self.LETTERS or not os.path.isfile(self.samples_csv):
+        if letter not in self.letters or not os.path.isfile(self.samples_csv):
             return 0
         kept: List[List[str]] = []
         removed = 0
@@ -420,7 +477,7 @@ class SignClassifier:
         return removed
 
     def count_samples_per_letter(self) -> Dict[str, int]:
-        counts = {L: 0 for L in self.LETTERS}
+        counts = {L: 0 for L in self.letters}
         if not os.path.isfile(self.samples_csv):
             return counts
         with open(self.samples_csv, "r", encoding="utf-8") as f:

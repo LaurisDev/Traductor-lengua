@@ -215,7 +215,16 @@ class ReviewAI:
     Analiza un intento confirmado del modo Repaso y devuelve retroalimentacion
     estructurada y accionable, sin depender de la interfaz ni de la base de
     datos (igual que LearningPerformanceAnalyzer).
+
+    Las pistas, patrones de dedos y confusiones conocidas describen el
+    alfabeto original. Con language="pt" (LIBRAS) esas reglas no aplican y
+    solo se da retroalimentacion general (comparar con la imagen de referencia).
     """
+
+    def __init__(self, language: str = "es") -> None:
+        self.language = language
+        self._letter_rules = language != "pt"
+        self._hints: Dict[str, str] = LETTER_HINTS if self._letter_rules else {}
 
     def analyze(
         self,
@@ -377,14 +386,14 @@ class ReviewAI:
             ),
         )
 
-    @staticmethod
     def _comparative_generic_feedback(
+        self,
         target: str,
         detected: Optional[str],
         confidence: Optional[float],
         attempts_analyzed: int,
     ) -> ReviewFeedback:
-        hint = LETTER_HINTS.get(target)
+        hint = self._hints.get(target)
         message = (
             "Los intentos no muestran un mismo problema con suficiente "
             "claridad para señalar una causa específica."
@@ -464,6 +473,8 @@ class ReviewAI:
         finger_state: Any = None,
         features: Optional[Mapping[str, float]] = None,
     ) -> Optional[ReviewFeedback]:
+        if not self._letter_rules:
+            return None
         for group in CONFUSABLE_GROUPS:
             if target in group and detected in group:
                 explanation = self._known_confusion_explanation(
@@ -615,6 +626,8 @@ class ReviewAI:
         confidence: Optional[float],
         finger_state: Any,
     ) -> Optional[ReviewFeedback]:
+        if not self._letter_rules:
+            return None
         expected = LETTER_EXPECTED_FINGERS.get(target)
         current = _finger_pattern(finger_state)
         if expected is None or current is None:
@@ -677,7 +690,7 @@ class ReviewAI:
         finger_state: Any,
     ) -> Optional[ReviewFeedback]:
         palm_orientation = _get(finger_state, "palm_orientation")
-        if palm_orientation is None:
+        if palm_orientation is None or not self._letter_rules:
             return None
 
         expects_lateral = target in LATERAL_LETTERS
@@ -799,11 +812,10 @@ class ReviewAI:
     # Fallback
     # ------------------------------------------------------------------
 
-    @staticmethod
     def _generic_feedback(
-        target: str, detected: str, confidence: Optional[float]
+        self, target: str, detected: str, confidence: Optional[float]
     ) -> ReviewFeedback:
-        hint = LETTER_HINTS.get(target)
+        hint = self._hints.get(target)
         message = f"Formaste una {detected} en lugar de la {target}."
         tip = hint or f"Compara tu mano con la imagen de referencia de la letra {target} y ajusta la forma."
         return ReviewFeedback(

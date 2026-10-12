@@ -116,7 +116,35 @@ const retoProgressFill = $("retoProgressFill");
 const retoEmpty = $("retoEmpty");
 const retoComplete = $("retoComplete");
 
-const LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
+// Abecedario dactilológico por idioma de aprendizaje. Portugués usa LIBRAS
+// (Língua Brasileira de Sinais): incluye Ç y no tiene Ñ.
+const ALPHABETS = {
+  es: ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"],
+  en: ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"],
+  pt: ["A","B","C","Ç","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"],
+};
+let LETTERS = ALPHABETS.es;
+
+// Las imágenes de LIBRAS viven en assets/letras/libras/ (a.png, ç.png, ...).
+function letterImageSrc(letter){
+  const folder = currentLearningLanguage === "pt" ? "./assets/letras/libras" : "./assets/letras";
+  return `${folder}/${letter.toLowerCase()}.png`;
+}
+
+function showReferenceImage(img, art, letter){
+  const placeholder = art.querySelector(".reference-placeholder-text");
+  img.onerror = () => {
+    img.style.display = "none";
+    if(placeholder){
+      placeholder.textContent = `Falta la imagen de la seña ${letter}`;
+      placeholder.style.display = "";
+    }
+  };
+  img.src = letterImageSrc(letter);
+  img.alt = `Seña de la letra ${letter}`;
+  img.style.display = "block";
+  if(placeholder) placeholder.style.display = "none";
+}
 
 // --- Favoritos del usuario autenticado ---
 let favoriteLetters = new Set();
@@ -244,12 +272,7 @@ function syncRepasoView(){
   if(repasoProgress) repasoProgress.textContent = `${letterValue} — ${repasoIndex + 1}/${repasoList.length}`;
 
   if(repasoReferenceImage && repasoReferenceArt){
-    const placeholder = repasoReferenceArt.querySelector(".reference-placeholder-text");
-    const imageName = letterValue.toLowerCase();
-    repasoReferenceImage.src = `./assets/letras/${imageName}.png`;
-    repasoReferenceImage.alt = `Seña de la letra ${letterValue}`;
-    repasoReferenceImage.style.display = "block";
-    if(placeholder) placeholder.style.display = "none";
+    showReferenceImage(repasoReferenceImage, repasoReferenceArt, letterValue);
   }
 
   resetRepasoFeedback();
@@ -467,10 +490,7 @@ function renderReto(st){
 
   const target = letters[idx];
   retoLetter.textContent = target;
-  retoReferenceImage.src = `./assets/letras/${target.toLowerCase()}.png`;
-  retoReferenceImage.alt = `Seña de la letra ${target}`;
-  retoReferenceImage.style.display = "block";
-  retoReferenceArt.querySelector(".reference-placeholder-text").style.display = "none";
+  showReferenceImage(retoReferenceImage, retoReferenceArt, target);
   retoCaption.textContent = `Haz la seña de la letra "${target}"`;
   retoSubtitle.textContent = `Letra ${idx + 1} de ${letters.length}`;
 
@@ -570,17 +590,12 @@ function syncLearningView(letter, progressText){
   const idx = LETTERS.indexOf(letterValue);
   const finalIndex = idx >= 0 ? idx : 0;
   const progressValue = progressText || `${finalIndex + 1}/${LETTERS.length}`;
-  const placeholder = learningReferenceArt.querySelector(".reference-placeholder-text");
 
   learningTargetLetter = letterValue;
   learningLetter.textContent = letterValue;
   learningProgress.textContent = `${letterValue} — ${progressValue}`;
 
-  const imageName = letterValue.toLowerCase();
-  learningReferenceImage.src = `./assets/letras/${imageName}.png`;
-  learningReferenceImage.alt = `Seña de la letra ${letterValue}`;
-  learningReferenceImage.style.display = "block";
-  placeholder.style.display = "none";
+  showReferenceImage(learningReferenceImage, learningReferenceArt, letterValue);
 
   updateStarButton(letterValue);
   updateAssistantFavoriteButton(letterValue);
@@ -943,6 +958,25 @@ function renderLearningLanguage(language){
   viewMenu.dataset.lang = code;
   viewMenu.lang = code;
   applyMenuLanguage();
+  applySignAlphabet();
+}
+
+// Cambia el abecedario y las imágenes de referencia al del idioma elegido.
+function applySignAlphabet(){
+  LETTERS = ALPHABETS[currentLearningLanguage] || ALPHABETS.es;
+  viewMenu.querySelectorAll(".menu-word-tile").forEach((tile) => {
+    const img = tile.querySelector("img");
+    const letter = tile.querySelector("b").textContent.trim();
+    if(!img) return;
+    img.style.visibility = "";
+    img.onerror = () => { img.style.visibility = "hidden"; };
+    img.src = letterImageSrc(letter);
+  });
+  if(learningIndex >= LETTERS.length) learningIndex = 0;
+  const idx = LETTERS.indexOf(learningTargetLetter);
+  if(idx >= 0) learningIndex = idx;
+  syncLearningView(LETTERS[learningIndex], `${learningIndex + 1}/${LETTERS.length}`);
+  if(currentView() === "repaso") syncRepasoView();
 }
 
 document.querySelectorAll('input[name="menuLearningLanguage"]').forEach((input) => {

@@ -11,8 +11,8 @@ class WebAPI:
         self._last_msg_idx = 0
 
     # ===== Auth =====
-    def login(self, username: str, password: str) -> Dict[str, Any]:
-        ok, msg = self._c.web_login(username, password)
+    def login(self, username: str, password: str, ui_language: Optional[str] = None) -> Dict[str, Any]:
+        ok, msg = self._c.web_login(username, password, ui_language)
         return {"ok": ok, "msg": msg}
 
     def register(
@@ -22,6 +22,9 @@ class WebAPI:
         confirm_password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        dyslexia_spacing_mode: bool = False,
+        reading_font_size: str = "medium",
+        learning_language: str = "es",
     ) -> Dict[str, Any]:
         ok, msg = self._c.web_register(
             username,
@@ -29,6 +32,9 @@ class WebAPI:
             confirm_password,
             color_blind_mode,
             accessible_reading_mode,
+            dyslexia_spacing_mode,
+            reading_font_size,
+            learning_language,
         )
         return {"ok": ok, "msg": msg}
 
@@ -45,12 +51,22 @@ class WebAPI:
         color_blind_mode: bool,
         accessible_reading_mode: bool,
         night_mode: bool = False,
+        dyslexia_spacing_mode: bool = False,
+        reading_font_size: str = "medium",
     ) -> Dict[str, Any]:
         return self._c.web_set_accessibility_preferences(
             color_blind_mode,
             accessible_reading_mode,
             night_mode,
+            dyslexia_spacing_mode,
+            reading_font_size,
         )
+
+    def set_learning_language(self, language: str) -> Dict[str, Any]:
+        return self._c.web_set_learning_language(language)
+
+    def get_language_pack(self, language: Optional[str] = None) -> Dict[str, Any]:
+        return self._c.web_get_language_pack(language)
 
     # ===== Voice =====
     def voice_start(self) -> Dict[str, Any]:
@@ -60,6 +76,13 @@ class WebAPI:
     def voice_stop(self) -> Dict[str, Any]:
         self._c.on_voice_stop_capture()
         return {"ok": True}
+
+    # ===== Texto a voz (respaldo con voces SAPI de Windows) =====
+    def speak(self, text: str, locale: Optional[str] = None) -> Dict[str, Any]:
+        return self._c.web_speak(text, locale)
+
+    def stop_speaking(self) -> Dict[str, Any]:
+        return self._c.web_stop_speaking()
 
     # ===== Signs buffer =====
     def sign_space(self) -> Dict[str, Any]:
@@ -83,8 +106,8 @@ class WebAPI:
         return {"ok": True}
 
     # ===== Reto: deletrear nombre =====
-    def challenge_start(self) -> Dict[str, Any]:
-        self._c.on_challenge_start()
+    def challenge_start(self, mode: str = "name") -> Dict[str, Any]:
+        self._c.on_challenge_start(mode)
         return {"ok": True}
 
     def challenge_stop(self) -> Dict[str, Any]:

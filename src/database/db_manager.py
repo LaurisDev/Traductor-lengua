@@ -11,8 +11,16 @@ from typing import Optional, Tuple
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
-from src.config import MAX_ATTEMPTS, MONGO_DB_NAME, MONGO_URI, MONGO_USERS_COLLECTION
+from src.config import (
+    DEFAULT_LEARNING_LANGUAGE,
+    LEARNING_LANGUAGES,
+    MAX_ATTEMPTS,
+    MONGO_DB_NAME,
+    MONGO_URI,
+    MONGO_USERS_COLLECTION,
+)
 from .models import User
+from src.languages import normalize_language, t
 
 
 class DatabaseManager:
@@ -63,13 +71,17 @@ class DatabaseManager:
         password: str,
         color_blind_mode: bool = False,
         accessible_reading_mode: bool = False,
+        dyslexia_spacing_mode: bool = False,
+        reading_font_size: str = "medium",
+        learning_language: str = "es",
     ) -> Tuple[bool, str]:
         """
         Registra un nuevo usuario.
         Retorna (exito, mensaje).
         """
+        lang = normalize_language(learning_language)
         if not username or not password:
-            return False, "Usuario y contrasena son obligatorios"
+            return False, t(lang, "register_required")
         username_clean = username.strip()
         try:
             password_hash = self.hash_password(password)
@@ -78,17 +90,20 @@ class DatabaseManager:
                 {
                     "username": username_clean,
                     "password_hash": password_hash,
+                    "learning_language": learning_language,
                     "accessibility": {
                         "color_blind_mode": bool(color_blind_mode),
                         "accessible_reading_mode": bool(accessible_reading_mode),
+                        "dyslexia_spacing_mode": bool(dyslexia_spacing_mode),
+                        "reading_font_size": self._normalize_reading_font_size(reading_font_size),
                     },
                 }
             )
-            return True, "Registro exitoso"
+            return True, t(lang, "register_ok")
         except DuplicateKeyError:
-            return False, "El nombre de usuario ya existe"
+            return False, t(lang, "username_taken")
         except PyMongoError as e:
-            return False, f"Error al registrar: {str(e)}"
+            return False, t(lang, "register_error", error=str(e))
 
     def authenticate(self, username: str, password: str) -> Optional[User]:
         """
@@ -135,12 +150,38 @@ class DatabaseManager:
         accessibility = doc.get("accessibility", {})
         return bool(accessibility.get("accessible_reading_mode", False))
 
+    def get_dyslexia_spacing_mode(self, username: str) -> bool:
+        """Obtiene el espaciado adicional para lectura guardado."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return False
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"accessibility.dyslexia_spacing_mode": 1}) or {}
+        accessibility = doc.get("accessibility", {})
+        return bool(accessibility.get("dyslexia_spacing_mode", False))
+
+    @staticmethod
+    def _normalize_reading_font_size(value: str) -> str:
+        return value if value in {"small", "medium", "large"} else "medium"
+
+    def get_reading_font_size(self, username: str) -> str:
+        """Obtiene el nivel de tamaño de texto guardado."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return "medium"
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"accessibility.reading_font_size": 1}) or {}
+        accessibility = doc.get("accessibility", {})
+        return self._normalize_reading_font_size(accessibility.get("reading_font_size", "medium"))
+
     def set_accessibility_preferences(
         self,
         username: str,
         color_blind_mode: Optional[bool] = None,
         accessible_reading_mode: Optional[bool] = None,
         night_mode: Optional[bool] = None,
+        dyslexia_spacing_mode: Optional[bool] = None,
+        reading_font_size: Optional[str] = None,
     ) -> dict:
         """Actualiza solo las preferencias de accesibilidad indicadas."""
         username_clean = (username or "").strip()
@@ -153,11 +194,17 @@ class DatabaseManager:
             updates["accessibility.accessible_reading_mode"] = bool(accessible_reading_mode)
         if night_mode is not None:
             updates["accessibility.night_mode"] = bool(night_mode)
+        if dyslexia_spacing_mode is not None:
+            updates["accessibility.dyslexia_spacing_mode"] = bool(dyslexia_spacing_mode)
+        if reading_font_size is not None:
+            updates["accessibility.reading_font_size"] = self._normalize_reading_font_size(reading_font_size)
         if not updates:
             return {
                 "color_blind_mode": self.get_color_blind_mode(username_clean),
                 "accessible_reading_mode": self.get_accessible_reading_mode(username_clean),
                 "night_mode": self.get_night_mode(username_clean),
+                "dyslexia_spacing_mode": self.get_dyslexia_spacing_mode(username_clean),
+                "reading_font_size": self.get_reading_font_size(username_clean),
             }
         users = self._users_collection()
         result = users.update_one(
@@ -170,6 +217,8 @@ class DatabaseManager:
             "color_blind_mode": self.get_color_blind_mode(username_clean),
             "accessible_reading_mode": self.get_accessible_reading_mode(username_clean),
             "night_mode": self.get_night_mode(username_clean),
+            "dyslexia_spacing_mode": self.get_dyslexia_spacing_mode(username_clean),
+            "reading_font_size": self.get_reading_font_size(username_clean),
         }
 
     def get_night_mode(self, username: str) -> bool:
@@ -182,14 +231,51 @@ class DatabaseManager:
         accessibility = doc.get("accessibility", {})
         return bool(accessibility.get("night_mode", False))
 
-    def record_learning_attempt(self, username: str, letter: str, is_correct: bool) -> dict:
-        """Registra un intento confirmado de aprendizaje para un usuario y letra."""
+    def get_learning_language(self, username: str) -> str:
+        """Obtiene el idioma en el que el usuario aprende lenguaje de señas."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return DEFAULT_LEARNING_LANGUAGE
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"learning_language": 1}) or {}
+        language = doc.get("learning_language")
+        return language if language in LEARNING_LANGUAGES else DEFAULT_LEARNING_LANGUAGE
+
+    def set_learning_language(self, username: str, language: str) -> str:
+        """Actualiza el idioma de aprendizaje del usuario."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            raise ValueError("El usuario es obligatorio")
+        if language not in LEARNING_LANGUAGES:
+            raise ValueError("Selecciona un idioma de aprendizaje valido")
+        users = self._users_collection()
+        result = users.update_one(
+            {"username": username_clean},
+            {"$set": {"learning_language": language}},
+        )
+        if result.matched_count != 1:
+            raise ValueError("El usuario autenticado no existe")
+        return language
+
+    @staticmethod
+    def _language_field(base: str, language: Optional[str]) -> str:
+        """
+        Campo por idioma de aprendizaje. Espanol (LSC) conserva los campos
+        originales (learning_performance, favorite_letters) para no perder datos
+        existentes; ASL y LIBRAS usan campos propios (p. ej. favorite_letters_en),
+        asi una letra de un alfabeto nunca aparece en otro.
+        """
+        lang = language if language in LEARNING_LANGUAGES else DEFAULT_LEARNING_LANGUAGE
+        return base if lang == DEFAULT_LEARNING_LANGUAGE else f"{base}_{lang}"
+
+    def record_learning_attempt(self, username: str, letter: str, is_correct: bool, language: Optional[str] = None) -> dict:
+        """Registra un intento confirmado de aprendizaje para un usuario, idioma y letra."""
         username_clean = (username or "").strip()
         letter_clean = (letter or "").strip().upper()
         if not username_clean or not letter_clean:
             raise ValueError("El usuario y la letra son obligatorios")
 
-        performance_path = f"learning_performance.{letter_clean}"
+        performance_path = f"{self._language_field('learning_performance', language)}.{letter_clean}"
         field = f"{performance_path}.{'correct' if is_correct else 'incorrect'}"
         users = self._users_collection()
         result = users.update_one(
@@ -205,7 +291,7 @@ class DatabaseManager:
         if result.matched_count != 1 and not users.find_one({"username": username_clean}, {"_id": 1}):
             raise ValueError("El usuario autenticado no existe")
         self._record_study_day(username_clean)
-        return self.get_learning_performance(username_clean, letter_clean)
+        return self.get_learning_performance(username_clean, letter_clean, language)
 
     def _record_study_day(self, username: str) -> dict:
         """Actualiza la racha una sola vez por dia para el usuario."""
@@ -258,19 +344,20 @@ class DatabaseManager:
             "last_study_date": doc.get("last_study_date"),
         }
 
-    def get_learning_performance(self, username: str, letter: str) -> dict:
-        """Obtiene los conteos persistidos de una letra, sin crear datos."""
+    def get_learning_performance(self, username: str, letter: str, language: Optional[str] = None) -> dict:
+        """Obtiene los conteos persistidos de una letra en un idioma, sin crear datos."""
         username_clean = (username or "").strip()
         letter_clean = (letter or "").strip().upper()
         if not username_clean or not letter_clean:
             return {"attempts": 0, "correct": 0, "incorrect": 0}
 
+        field = self._language_field("learning_performance", language)
         users = self._users_collection()
         doc = users.find_one(
             {"username": username_clean},
-            {f"learning_performance.{letter_clean}": 1},
+            {f"{field}.{letter_clean}": 1},
         )
-        stats = (doc or {}).get("learning_performance", {}).get(letter_clean, {})
+        stats = (doc or {}).get(field, {}).get(letter_clean, {})
         correct = int(stats.get("correct", 0))
         incorrect = int(stats.get("incorrect", 0))
         return {
@@ -279,34 +366,36 @@ class DatabaseManager:
             "incorrect": incorrect,
         }
 
-    def add_favorite_letter(self, username: str, letter: str) -> list:
-        """Guarda una letra favorita en la cuenta del usuario autenticado."""
-        return self._update_favorite_letters(username, letter, add=True)
+    def add_favorite_letter(self, username: str, letter: str, language: Optional[str] = None) -> list:
+        """Guarda una letra favorita del idioma indicado en la cuenta del usuario."""
+        return self._update_favorite_letters(username, letter, add=True, language=language)
 
-    def remove_favorite_letter(self, username: str, letter: str) -> list:
-        """Elimina una letra favorita de la cuenta del usuario autenticado."""
-        return self._update_favorite_letters(username, letter, add=False)
+    def remove_favorite_letter(self, username: str, letter: str, language: Optional[str] = None) -> list:
+        """Elimina una letra favorita del idioma indicado de la cuenta del usuario."""
+        return self._update_favorite_letters(username, letter, add=False, language=language)
 
-    def get_favorite_letters(self, username: str) -> list:
-        """Obtiene las letras favoritas persistidas del usuario, ordenadas y sin duplicados."""
+    def get_favorite_letters(self, username: str, language: Optional[str] = None) -> list:
+        """Obtiene las letras favoritas del idioma, ordenadas y sin duplicados."""
         username_clean = (username or "").strip()
         if not username_clean:
             return []
+        field = self._language_field("favorite_letters", language)
         users = self._users_collection()
-        doc = users.find_one({"username": username_clean}, {"favorite_letters": 1})
-        return sorted(set((doc or {}).get("favorite_letters", [])))
+        doc = users.find_one({"username": username_clean}, {field: 1})
+        return sorted(set((doc or {}).get(field, [])))
 
-    def _update_favorite_letters(self, username: str, letter: str, add: bool) -> list:
+    def _update_favorite_letters(self, username: str, letter: str, add: bool, language: Optional[str] = None) -> list:
         username_clean = (username or "").strip()
         letter_clean = (letter or "").strip().upper()
         if not username_clean or not letter_clean:
             raise ValueError("El usuario y la letra son obligatorios")
 
+        field = self._language_field("favorite_letters", language)
         users = self._users_collection()
-        operation = {"$addToSet": {"favorite_letters": letter_clean}}
+        operation = {"$addToSet": {field: letter_clean}}
         if not add:
-            operation = {"$pull": {"favorite_letters": letter_clean}}
+            operation = {"$pull": {field: letter_clean}}
         result = users.update_one({"username": username_clean}, operation)
         if result.matched_count != 1:
             raise ValueError("El usuario autenticado no existe")
-        return self.get_favorite_letters(username_clean)
+        return self.get_favorite_letters(username_clean, language)

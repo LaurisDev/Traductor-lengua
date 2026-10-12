@@ -4,6 +4,7 @@
 # letras del alfabeto dactilologico se definen por el MOVIMIENTO, no por la forma de la mano
 # en un instante. Este modulo guarda un historial corto de posiciones de la punta del dedo
 # y calcula si el trazo reciente coincide con el patron de J o de Z.
+# En LIBRAS tambien detecta el movimiento de la Ç (forma de C + movimiento de la mano).
 #
 # Reutiliza los mismos umbrales que ya se validaron en gesture_classifier.py (clasificador
 # legacy por reglas), pero de forma independiente para poder usarse junto al modelo ML.
@@ -43,6 +44,11 @@ class MotionDetector:
         self._confirm_frames = confirm_frames
         self._j_streak = 0
         self._z_streak = 0
+        # Trayectoria de la mano completa (no se reinicia al cambiar la postura de
+        # los dedos, porque en la forma de C los dedos curvos oscilan entre frames).
+        self._hand_trail: deque = deque(maxlen=trail_len)
+        self._move_streak = 0
+        self.cedilla_motion = False
 
     def reset(self) -> None:
         self._key = None
@@ -50,6 +56,9 @@ class MotionDetector:
         self._pinky_trail.clear()
         self._j_streak = 0
         self._z_streak = 0
+        self._hand_trail.clear()
+        self._move_streak = 0
+        self.cedilla_motion = False
 
     def update(self, finger_state: Optional[FingerState]) -> Tuple[bool, bool]:
         """
@@ -72,6 +81,9 @@ class MotionDetector:
 
         self._index_trail.append(finger_state.index_tip)
         self._pinky_trail.append(finger_state.pinky_tip)
+        self._hand_trail.append(finger_state.index_tip)
+        self._move_streak = self._move_streak + 1 if self._hand_moving(finger_state) else 0
+        self.cedilla_motion = self._move_streak >= self._confirm_frames
 
         self._j_streak = self._j_streak + 1 if self._is_j(finger_state) else 0
         self._z_streak = self._z_streak + 1 if self._is_z(finger_state) else 0
@@ -111,6 +123,15 @@ class MotionDetector:
         # si el trazo es puro jitter (va y vuelve sin avanzar), el rango queda chico aunque
         # la distancia acumulada crezca.
         return (xr > pw * 0.20 or yr > pw * 0.20) and max(xr, yr) > total * 0.45
+
+    def _hand_moving(self, f: FingerState) -> bool:
+        """Ç (LIBRAS): la mano se desplaza de forma clara, no solo tiembla.
+        La forma de C la decide el clasificador ML; aqui solo se mide el movimiento."""
+        pw = f.palm_width
+        xr, yr, total, _ = self._path_stats(self._hand_trail, pw)
+        if len(self._hand_trail) < 6 or total < pw * 0.30:
+            return False
+        return max(xr, yr) > pw * 0.20 and max(xr, yr) > total * 0.45
 
     def _is_z(self, f: FingerState) -> bool:
         """Z: solo el indice extendido y hacia arriba, con un zigzag horizontal real

@@ -31,7 +31,7 @@ from src.sign_language import (
     SignClassifier,
     letters_for_challenge,
 )
-from src.config import DEFAULT_LEARNING_LANGUAGE, USE_WEB_UI
+from src.config import DEFAULT_LEARNING_LANGUAGE, SIGN_ALPHABETS, USE_WEB_UI
 
 
 class MainController:
@@ -262,7 +262,7 @@ class MainController:
         self._web_dyslexia_spacing_mode = self._db.get_dyslexia_spacing_mode(user.username)
         self._web_reading_font_size = self._db.get_reading_font_size(user.username)
         self._web_night_mode = self._db.get_night_mode(user.username)
-        self._web_learning_language = self._db.get_learning_language(user.username)
+        self._apply_learning_language(self._db.get_learning_language(user.username))
         self._ensure_translation_running()
         return True, "OK"
 
@@ -295,7 +295,7 @@ class MainController:
         self._web_dyslexia_spacing_mode = False
         self._web_reading_font_size = "medium"
         self._web_night_mode = False
-        self._web_learning_language = DEFAULT_LEARNING_LANGUAGE
+        self._apply_learning_language(DEFAULT_LEARNING_LANGUAGE)
         self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
         self._review_attempts.clear()
         self._stop_translation_loop()
@@ -370,10 +370,30 @@ class MainController:
             language = self._db.set_learning_language(self._current_user.username, language)
         except ValueError as exc:
             return {"ok": False, "msg": str(exc)}
-        self._web_learning_language = language
+        self._apply_learning_language(language)
         return {"ok": True, "learning_language": language}
 
+    def _apply_learning_language(self, language: str) -> None:
+        """
+        Cambia el alfabeto de señas activo. Portugues usa LIBRAS, que tiene su
+        propio modelo ML; si la camara ya esta corriendo se cambia el modelo en vivo.
+        """
+        changed = language != self._web_learning_language
+        self._web_learning_language = language
+        if not changed:
+            return
+        self._review_ai = ReviewAI(language)
+        self._review_attempts.clear()
+        if self._sign_classifier is not None:
+            self._sign_classifier = SignClassifier(language=language)
+            if self._motion_detector is not None:
+                self._motion_detector.reset()
+            if not self._sign_classifier.is_trained():
+                print(f"[Senas] Modelo '{language}' no entrenado. Ejecute: python collect_sign_samples.py --lang {language}")
+
     def _random_evaluation_letter(self) -> str:
+        if self._web_learning_language == "pt":
+            return random.choice(SIGN_ALPHABETS["pt"])
         return random.choice(list("ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"))
 
     def _reset_evaluation_state(self) -> None:
@@ -639,7 +659,7 @@ class MainController:
     def on_challenge_start(self) -> None:
         """Arranca (o reinicia) el reto de deletrear el nombre del usuario."""
         username = self._current_user.username if self._current_user else ""
-        self._challenge_letters = letters_for_challenge(username)
+        self._challenge_letters = letters_for_challenge(username, self._web_learning_language)
         self._challenge_index = 0
         self._challenge_done = False
         self._challenge_match_count = 0
@@ -811,12 +831,13 @@ class MainController:
         for _ in range(15):
             self._camera.read()
         self._hand_detector = HandDetector()
-        self._sign_classifier = SignClassifier()
+        self._sign_classifier = SignClassifier(language=self._web_learning_language)
         self._finger_analyzer = FingerAnalyzer()
         self._motion_detector = MotionDetector()
         if not self._sign_classifier.is_trained():
             print(
                 "[Senas] Modelo no entrenado. Ejecute: python collect_sign_samples.py"
+                f" --lang {self._web_learning_language}"
             )
         self._translation_running = True
         self._read_fail_count = 0
@@ -904,6 +925,14 @@ class MainController:
                         and not finger_state.pinky
                     ):
                         letter = "Z"
+                    elif (
+                        letter == "C"
+                        and self._web_learning_language == "pt"
+                        and self._motion_detector is not None
+                        and self._motion_detector.cedilla_motion
+                    ):
+                        # LIBRAS: la Ç es la forma de C con movimiento de la mano.
+                        letter = "Ç"
 
                 self._put_latest((frame_out, letter, "ok"))
 

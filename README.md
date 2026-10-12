@@ -82,6 +82,19 @@ Por defecto, la app usa una **interfaz moderna en HTML/CSS** embebida como escri
 7. En el panel de **Voz**, pulsa **Grabar**, habla y luego **Detener** para que el texto aparezca en la conversación como \"Yo (voz)\".
 7. Pulse **Volver** para regresar al menú (la cámara se apaga).
 
+### Alfabetos de señas (LSC, Libras y ASL)
+
+El idioma de aprendizaje elige el alfabeto y el modelo de reconocimiento, cada uno con sus propios datos:
+
+| Idioma | Alfabeto | Datos y modelo | Imágenes |
+|---|---|---|---|
+| Español | LSC (incluye Ñ) | `data/sign_language/` | `src/gui_web/web/assets/letras/` |
+| Portugués | Libras (incluye Ç) | `data/sign_language/libras/` | `src/gui_web/web/assets/letras/libras/` |
+| Inglés | ASL (26 letras) | `data/sign_language/asl/` | `src/gui_web/web/assets/letras/asl/` |
+
+ASL reutiliza las letras cuya seña es equivalente en LSC o Libras. Para rearmar su dataset, imágenes y modelo: `python build_asl_dataset.py`.
+Las letras propias de ASL (F, M, N, Q, T) se graban con `python collect_sign_samples.py --lang en --only F` (ver `src/gui_web/web/assets/letras/asl/README.md`).
+
 ### Mejorar nombres en voz (hotwords)
 
 Para ayudar con nombres propios (por ejemplo \"Xiomara\"), edite `data/hotwords_es.txt` y agregue nombres frecuentes (1 por línea). Whisper usará esa lista como sesgo leve al transcribir.

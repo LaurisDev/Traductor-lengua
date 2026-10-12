@@ -20,6 +20,7 @@ from src.config import (
     MONGO_USERS_COLLECTION,
 )
 from .models import User
+from src.languages import normalize_language, t
 
 
 class DatabaseManager:
@@ -78,8 +79,9 @@ class DatabaseManager:
         Registra un nuevo usuario.
         Retorna (exito, mensaje).
         """
+        lang = normalize_language(learning_language)
         if not username or not password:
-            return False, "Usuario y contrasena son obligatorios"
+            return False, t(lang, "register_required")
         username_clean = username.strip()
         try:
             password_hash = self.hash_password(password)
@@ -97,11 +99,11 @@ class DatabaseManager:
                     },
                 }
             )
-            return True, "Registro exitoso"
+            return True, t(lang, "register_ok")
         except DuplicateKeyError:
-            return False, "El nombre de usuario ya existe"
+            return False, t(lang, "username_taken")
         except PyMongoError as e:
-            return False, f"Error al registrar: {str(e)}"
+            return False, t(lang, "register_error", error=str(e))
 
     def authenticate(self, username: str, password: str) -> Optional[User]:
         """
@@ -255,14 +257,25 @@ class DatabaseManager:
             raise ValueError("El usuario autenticado no existe")
         return language
 
-    def record_learning_attempt(self, username: str, letter: str, is_correct: bool) -> dict:
-        """Registra un intento confirmado de aprendizaje para un usuario y letra."""
+    @staticmethod
+    def _language_field(base: str, language: Optional[str]) -> str:
+        """
+        Campo por idioma de aprendizaje. Espanol (LSC) conserva los campos
+        originales (learning_performance, favorite_letters) para no perder datos
+        existentes; ASL y LIBRAS usan campos propios (p. ej. favorite_letters_en),
+        asi una letra de un alfabeto nunca aparece en otro.
+        """
+        lang = language if language in LEARNING_LANGUAGES else DEFAULT_LEARNING_LANGUAGE
+        return base if lang == DEFAULT_LEARNING_LANGUAGE else f"{base}_{lang}"
+
+    def record_learning_attempt(self, username: str, letter: str, is_correct: bool, language: Optional[str] = None) -> dict:
+        """Registra un intento confirmado de aprendizaje para un usuario, idioma y letra."""
         username_clean = (username or "").strip()
         letter_clean = (letter or "").strip().upper()
         if not username_clean or not letter_clean:
             raise ValueError("El usuario y la letra son obligatorios")
 
-        performance_path = f"learning_performance.{letter_clean}"
+        performance_path = f"{self._language_field('learning_performance', language)}.{letter_clean}"
         field = f"{performance_path}.{'correct' if is_correct else 'incorrect'}"
         users = self._users_collection()
         result = users.update_one(
@@ -278,7 +291,7 @@ class DatabaseManager:
         if result.matched_count != 1 and not users.find_one({"username": username_clean}, {"_id": 1}):
             raise ValueError("El usuario autenticado no existe")
         self._record_study_day(username_clean)
-        return self.get_learning_performance(username_clean, letter_clean)
+        return self.get_learning_performance(username_clean, letter_clean, language)
 
     def _record_study_day(self, username: str) -> dict:
         """Actualiza la racha una sola vez por dia para el usuario."""
@@ -331,19 +344,20 @@ class DatabaseManager:
             "last_study_date": doc.get("last_study_date"),
         }
 
-    def get_learning_performance(self, username: str, letter: str) -> dict:
-        """Obtiene los conteos persistidos de una letra, sin crear datos."""
+    def get_learning_performance(self, username: str, letter: str, language: Optional[str] = None) -> dict:
+        """Obtiene los conteos persistidos de una letra en un idioma, sin crear datos."""
         username_clean = (username or "").strip()
         letter_clean = (letter or "").strip().upper()
         if not username_clean or not letter_clean:
             return {"attempts": 0, "correct": 0, "incorrect": 0}
 
+        field = self._language_field("learning_performance", language)
         users = self._users_collection()
         doc = users.find_one(
             {"username": username_clean},
-            {f"learning_performance.{letter_clean}": 1},
+            {f"{field}.{letter_clean}": 1},
         )
-        stats = (doc or {}).get("learning_performance", {}).get(letter_clean, {})
+        stats = (doc or {}).get(field, {}).get(letter_clean, {})
         correct = int(stats.get("correct", 0))
         incorrect = int(stats.get("incorrect", 0))
         return {
@@ -352,34 +366,36 @@ class DatabaseManager:
             "incorrect": incorrect,
         }
 
-    def add_favorite_letter(self, username: str, letter: str) -> list:
-        """Guarda una letra favorita en la cuenta del usuario autenticado."""
-        return self._update_favorite_letters(username, letter, add=True)
+    def add_favorite_letter(self, username: str, letter: str, language: Optional[str] = None) -> list:
+        """Guarda una letra favorita del idioma indicado en la cuenta del usuario."""
+        return self._update_favorite_letters(username, letter, add=True, language=language)
 
-    def remove_favorite_letter(self, username: str, letter: str) -> list:
-        """Elimina una letra favorita de la cuenta del usuario autenticado."""
-        return self._update_favorite_letters(username, letter, add=False)
+    def remove_favorite_letter(self, username: str, letter: str, language: Optional[str] = None) -> list:
+        """Elimina una letra favorita del idioma indicado de la cuenta del usuario."""
+        return self._update_favorite_letters(username, letter, add=False, language=language)
 
-    def get_favorite_letters(self, username: str) -> list:
-        """Obtiene las letras favoritas persistidas del usuario, ordenadas y sin duplicados."""
+    def get_favorite_letters(self, username: str, language: Optional[str] = None) -> list:
+        """Obtiene las letras favoritas del idioma, ordenadas y sin duplicados."""
         username_clean = (username or "").strip()
         if not username_clean:
             return []
+        field = self._language_field("favorite_letters", language)
         users = self._users_collection()
-        doc = users.find_one({"username": username_clean}, {"favorite_letters": 1})
-        return sorted(set((doc or {}).get("favorite_letters", [])))
+        doc = users.find_one({"username": username_clean}, {field: 1})
+        return sorted(set((doc or {}).get(field, [])))
 
-    def _update_favorite_letters(self, username: str, letter: str, add: bool) -> list:
+    def _update_favorite_letters(self, username: str, letter: str, add: bool, language: Optional[str] = None) -> list:
         username_clean = (username or "").strip()
         letter_clean = (letter or "").strip().upper()
         if not username_clean or not letter_clean:
             raise ValueError("El usuario y la letra son obligatorios")
 
+        field = self._language_field("favorite_letters", language)
         users = self._users_collection()
-        operation = {"$addToSet": {"favorite_letters": letter_clean}}
+        operation = {"$addToSet": {field: letter_clean}}
         if not add:
-            operation = {"$pull": {"favorite_letters": letter_clean}}
+            operation = {"$pull": {field: letter_clean}}
         result = users.update_one({"username": username_clean}, operation)
         if result.matched_count != 1:
             raise ValueError("El usuario autenticado no existe")
-        return self.get_favorite_letters(username_clean)
+        return self.get_favorite_letters(username_clean, language)

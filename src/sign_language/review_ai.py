@@ -1,4 +1,4 @@
-﻿# review_ai.py
+# review_ai.py
 # Asistente de retroalimentacion inteligente para el modo REPASO.
 #
 # Este modulo NO reimplementa MediaPipe ni el clasificador de senas: solo
@@ -8,11 +8,16 @@
 # para explicarle al usuario, en lenguaje natural, que esta fallando en su
 # seña y como corregirla.
 #
+# Es multilingue: recibe un AIContext (src/languages/ai_context.py) con el
+# idioma, la lengua de senas, el alfabeto, la letra, sus instrucciones y el
+# modulo. Responde en el idioma del perfil y evalua con las reglas del
+# alfabeto seleccionado (LSC, ASL o LIBRAS), nunca con las de otro.
+#
 # Uso tipico (dentro del backend, por ejemplo en main.py):
 #
 #   from src.sign_language.review_ai import ReviewAI
 #
-#   review_ai = ReviewAI()
+#   review_ai = ReviewAI("en")
 #   feedback = review_ai.analyze(
 #       target_letter="V",
 #       detected_letter="U",
@@ -22,22 +27,21 @@
 #       landmarks=landmarks,                # opcional, para revisar encuadre
 #   )
 #   feedback.as_dict()
-#   # {
-#   #   "correct": False,
-#   #   "category": "dedos",
-#   #   "title": "Confusion V / U",
-#   #   "message": "Estas formando una U. Separa un poco mas los dedos indice
-#   #                y medio para formar la V.",
-#   #   "tip": "...",
-#   #   "target_letter": "V",
-#   #   "detected_letter": "U",
-#   #   ...
-#   # }
+#   # {"correct": False, "title": "U / V confusion",
+#   #  "message": "You are signing a U: your index and middle fingers are too close together.", ...}
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+
+from src.languages import MODULE_REVIEW, AIContext, build_ai_context, t
+from src.languages.sign_alphabets import (
+    CHECK_BK_THUMB,
+    CHECK_MN_THUMB_COVER,
+    CHECK_TS_THUMB,
+    CHECK_UV_SEPARATION,
+)
 
 from .feature_extractor import features_to_dict
 
@@ -57,14 +61,6 @@ def _get(obj: Any, name: str, default: Any = None) -> Any:
 
 
 FINGER_KEYS: Tuple[str, ...] = ("thumb", "index", "middle", "ring", "pinky")
-
-FINGER_NAMES_ES: Dict[str, str] = {
-    "thumb": "pulgar",
-    "index": "índice",
-    "middle": "medio",
-    "ring": "anular",
-    "pinky": "meñique",
-}
 
 
 def _finger_pattern(finger_state: Any) -> Optional[Tuple[bool, bool, bool, bool, bool]]:
@@ -101,6 +97,10 @@ class ReviewFeedback:
     confidence: Optional[float] = None
     confusion_pair: bool = False
     details: Tuple[str, ...] = field(default_factory=tuple)
+    language: str = "es"
+    sign_language: str = "LSC"
+    module: str = MODULE_REVIEW
+    instructions: Optional[str] = None
 
     def as_dict(self) -> dict:
         return {
@@ -114,95 +114,11 @@ class ReviewFeedback:
             "confidence": self.confidence,
             "confusion_pair": self.confusion_pair,
             "details": list(self.details),
+            "language": self.language,
+            "sign_language": self.sign_language,
+            "module": self.module,
+            "instructions": self.instructions,
         }
-
-
-# ---------------------------------------------------------------------------
-# Base de conocimiento: confusiones frecuentes ya reflejadas en los
-# desempates de src/sign_language/sign_classifier.py (_apply_tiebreakers).
-# Se reutilizan los MISMOS grupos que el clasificador ya trata como
-# "letras parecidas" para no inventar reglas nuevas de reconocimiento.
-# ---------------------------------------------------------------------------
-
-CONFUSABLE_GROUPS: Tuple[frozenset, ...] = (
-    frozenset({"U", "V"}),
-    frozenset({"B", "K"}),
-    frozenset({"M", "N"}),
-    frozenset({"A", "S", "E", "T"}),
-    frozenset({"C", "D", "F", "G", "O"}),
-)
-
-# Como formar cada letra (breve), usado tanto para mensajes de confusion
-# como de tip general cuando no hay una confusion conocida.
-LETTER_HINTS: Dict[str, str] = {
-    "A": "Cierra el puño y apoya el pulgar en el costado, sin cruzarlo sobre los dedos.",
-    "B": "Estira los cuatro dedos juntos hacia arriba y dobla el pulgar cruzándolo por la palma.",
-    "C": "Curva todos los dedos y el pulgar juntos, formando una C abierta.",
-    "D": "Levanta solo el índice recto y une la punta del pulgar con el medio y el anular.",
-    "E": "Dobla los cuatro dedos hacia la palma dejando el pulgar apoyado por delante.",
-    "F": "Une la punta del pulgar con la del índice y estira medio, anular y meñique.",
-    "G": "Estira el índice y el pulgar en horizontal, apuntando hacia el costado.",
-    "H": "Estira índice y medio juntos y colócalos en horizontal, apuntando hacia el costado.",
-    "I": "Levanta solo el meñique y mantén los demás dedos doblados.",
-    "J": "Parte de la forma de la I y realiza el movimiento curvo de la J con el meñique.",
-    "K": "Levanta índice y medio separados en V, apoyando el pulgar entre ambos.",
-    "L": "Estira el pulgar y el índice formando una L, con los otros dedos doblados.",
-    "M": "Cierra el puño y mete el pulgar bajo los tres primeros dedos (índice, medio y anular).",
-    "N": "Cierra el puño y mete el pulgar bajo los dos primeros dedos (índice y medio).",
-    "O": "Une las puntas de todos los dedos con el pulgar formando un círculo cerrado.",
-    "P": "Coloca índice y medio con el pulgar entre ellos y orienta la mano hacia abajo.",
-    "Q": "Estira pulgar e índice y orienta la mano hacia abajo.",
-    "R": "Estira índice y medio y crúzalos entre sí.",
-    "S": "Cierra el puño y cruza el pulgar por delante, cubriendo los dedos.",
-    "T": "Cierra los dedos y mete el pulgar entre el índice y el medio.",
-    "U": "Levanta índice y medio juntos, bien pegados entre sí.",
-    "V": "Levanta índice y medio separados, formando una V clara.",
-    "W": "Levanta índice, medio y anular; deja el meñique doblado.",
-    "X": "Levanta solo el índice y dóblalo en forma de gancho.",
-    "Y": "Estira el pulgar y el meñique, manteniendo los otros dedos doblados.",
-    "Z": "Levanta el índice y realiza el movimiento de zigzag de la Z.",
-}
-
-GROUP_GENERIC_TIP = (
-    "Compara con calma la forma de tus dedos contra la imagen de referencia; "
-    "estas letras se confunden fácilmente si los dedos no quedan bien marcados."
-)
-
-# ---------------------------------------------------------------------------
-# Patron de dedos esperado (extendido/flexionado) por letra. Es un patron
-# heuristico -- se usa solo para explicar diferencias al usuario, nunca para
-# clasificar (eso lo sigue haciendo SignClassifier). Cubre las letras cuyo
-# patron de dedos es lo bastante inequivoco como para dar una explicacion
-# util; para el resto se recurre al analisis de orientacion/posicion o a un
-# mensaje generico.
-# ---------------------------------------------------------------------------
-
-LetterPattern = Tuple[bool, bool, bool, bool, bool]  # thumb,index,middle,ring,pinky
-
-LETTER_EXPECTED_FINGERS: Dict[str, LetterPattern] = {
-    "A": (False, False, False, False, False),
-    "B": (False, True, True, True, True),
-    "D": (False, True, False, False, False),
-    "F": (False, False, True, True, True),
-    "G": (True, True, False, False, False),
-    "I": (False, False, False, False, True),
-    "K": (True, True, True, False, False),
-    "L": (True, True, False, False, False),
-    "M": (False, False, False, False, False),
-    "N": (False, False, False, False, False),
-    "O": (False, False, False, False, False),
-    "S": (False, False, False, False, False),
-    "T": (False, False, False, False, False),
-    "U": (False, True, True, False, False),
-    "V": (False, True, True, False, False),
-    "W": (False, True, True, True, False),
-    "Y": (True, False, False, False, True),
-}
-
-# Letras cuya forma habitual requiere mostrar la palma de lado (no de frente
-# a la camara). Se usa unicamente para avisos de orientacion, sin bloquear
-# ninguna otra logica.
-LATERAL_LETTERS = {"G", "Q", "H"}
 
 
 # ---------------------------------------------------------------------------
@@ -216,15 +132,42 @@ class ReviewAI:
     estructurada y accionable, sin depender de la interfaz ni de la base de
     datos (igual que LearningPerformanceAnalyzer).
 
-    Las pistas, patrones de dedos y confusiones conocidas describen el
-    alfabeto original. Con language="pt" (LIBRAS) esas reglas no aplican y
-    solo se da retroalimentacion general (comparar con la imagen de referencia).
+    Las instrucciones de cada letra, los patrones de dedos, las confusiones
+    conocidas y las reglas de orientacion se toman del alfabeto del idioma
+    (src/languages/sign_alphabets.py): LSC para "es", ASL para "en" y LIBRAS
+    para "pt". Los textos se generan en el idioma del perfil.
     """
 
-    def __init__(self, language: str = "es") -> None:
-        self.language = language
-        self._letter_rules = language != "pt"
-        self._hints: Dict[str, str] = LETTER_HINTS if self._letter_rules else {}
+    def __init__(self, language: str = "es", module: str = MODULE_REVIEW) -> None:
+        self._context: AIContext = build_ai_context(language, module)
+        self.language = self._context.language
+        self._rules = self._context.rules
+
+    @property
+    def context(self) -> AIContext:
+        return self._context
+
+    # Atajos de texto ---------------------------------------------------
+    def _t(self, key: str, **kwargs) -> str:
+        return t(self.language, key, **kwargs)
+
+    def _finger_name(self, key: str) -> str:
+        return self._t(f"finger_{key}")
+
+    def _hint(self, letter: str) -> Optional[str]:
+        return self._rules.describe(letter)
+
+    def _feedback(self, **kwargs) -> ReviewFeedback:
+        target = kwargs.get("target_letter", "")
+        return ReviewFeedback(
+            language=self.language,
+            sign_language=self._context.sign_language,
+            module=self._context.module,
+            instructions=self._hint(target) if target else None,
+            **kwargs,
+        )
+
+    # -------------------------------------------------------------------
 
     def analyze(
         self,
@@ -248,29 +191,22 @@ class ReviewAI:
         if detected == target:
             return self._correct_feedback(target, confidence)
 
-        # 3) Confusion conocida entre letras (misma familia que el clasificador
-        #    ya trata como ambiguas en sus desempates).
+        # 3) Confusion conocida entre letras del alfabeto activo.
         confusion = self._match_known_confusion(target, detected, finger_state, feat)
         if confusion is not None:
             return confusion
 
-        # 4) Diferencia de patron de dedos (posicion/forma) contra la letra
-        #    objetivo, usando el FingerState ya calculado por FingerAnalyzer.
-        finger_feedback = self._finger_pattern_feedback(
-            target, detected, confidence, finger_state
-        )
+        # 4) Diferencia de patron de dedos contra la letra objetivo.
+        finger_feedback = self._finger_pattern_feedback(target, detected, confidence, finger_state)
         if finger_feedback is not None:
             return finger_feedback
 
         # 5) Orientacion de la mano/palma.
-        orientation_feedback = self._orientation_feedback(
-            target, detected, confidence, finger_state
-        )
+        orientation_feedback = self._orientation_feedback(target, detected, confidence, finger_state)
         if orientation_feedback is not None:
             return orientation_feedback
 
-        # 6) Posicion general de la mano en el encuadre (usa landmarks y/o
-        #    features de compacidad si estan disponibles).
+        # 6) Posicion general de la mano en el encuadre.
         position_feedback = self._general_position_feedback(
             target, detected, confidence, finger_state, feat, landmarks
         )
@@ -320,15 +256,11 @@ class ReviewAI:
             groups.setdefault(error_key, []).append(feedback)
 
         if groups:
-            repeated_key, repeated_feedback = max(
-                groups.items(), key=lambda item: len(item[1])
-            )
+            repeated_key, repeated_feedback = max(groups.items(), key=lambda item: len(item[1]))
             # Un solo caso no demuestra un patron: evita atribuir una causa
             # especifica cuando los cinco errores fueron distintos.
             if len(repeated_feedback) >= 2:
-                return self._with_comparison_details(
-                    repeated_feedback[-1], len(analyzed), repeated_key[1]
-                )
+                return self._with_comparison_details(repeated_feedback[-1], len(analyzed), repeated_key[1])
 
         last = incorrect[-1]
         return self._comparative_generic_feedback(
@@ -384,6 +316,20 @@ class ReviewAI:
                 f"attempts_analyzed={attempts_analyzed}",
                 f"repeated_error={repeated_error}",
             ),
+            language=feedback.language,
+            sign_language=feedback.sign_language,
+            module=feedback.module,
+            instructions=feedback.instructions,
+        )
+
+    def _reference_tip(self, target: str) -> Tuple[str, str]:
+        """(texto para anadir al mensaje, tip) usando las instrucciones del alfabeto."""
+        hint = self._hint(target)
+        if not hint:
+            return "", self._t("tip_compare_reference")
+        return (
+            self._t("reference_hint", letter=target, sign_language=self._context.sign_language, hint=hint),
+            self._t("tip_with_hint", letter=target, hint=hint),
         )
 
     def _comparative_generic_feedback(
@@ -393,21 +339,12 @@ class ReviewAI:
         confidence: Optional[float],
         attempts_analyzed: int,
     ) -> ReviewFeedback:
-        hint = self._hints.get(target)
-        message = (
-            "Los intentos no muestran un mismo problema con suficiente "
-            "claridad para señalar una causa específica."
-        )
-        tip = "Compara tu mano con la imagen de referencia y vuelve a intentarlo."
-        if hint:
-            message += f" Como referencia para la letra {target}: {hint}"
-            tip = f"Para la letra {target}, {hint}"
-
-        return ReviewFeedback(
+        extra, tip = self._reference_tip(target)
+        return self._feedback(
             correct=False,
             category=CATEGORY_FINGERS,
-            title="No encontré un error único que se repita",
-            message=message,
+            title=self._t("comparative_title"),
+            message=self._t("comparative_message") + extra,
             tip=tip,
             target_letter=target,
             detected_letter=detected,
@@ -433,37 +370,35 @@ class ReviewAI:
         except Exception:
             return {}
 
-    @staticmethod
-    def _no_detection_feedback(target: str, confidence: Optional[float]) -> ReviewFeedback:
-        return ReviewFeedback(
+    def _no_detection_feedback(self, target: str, confidence: Optional[float]) -> ReviewFeedback:
+        return self._feedback(
             correct=False,
             category=CATEGORY_POSITION,
-            title="No pude analizar completamente tu mano",
-            message="No pude analizar completamente tu mano. Intenta colocarla frente a la cámara.",
-            tip="Centra tu mano en el encuadre, con buena luz y sin objetos detrás.",
+            title=self._t("no_detection_title"),
+            message=self._t("no_detection_message"),
+            tip=self._t("no_detection_tip"),
             target_letter=target,
             detected_letter=None,
             confidence=confidence,
         )
 
-    @staticmethod
-    def _correct_feedback(target: str, confidence: Optional[float]) -> ReviewFeedback:
+    def _correct_feedback(self, target: str, confidence: Optional[float]) -> ReviewFeedback:
         extra = ""
         if confidence is not None and confidence < 0.7:
-            extra = " Aun asi, intenta mantener la seña un poco mas firme para que se reconozca con mayor seguridad."
-        return ReviewFeedback(
+            extra = self._t("correct_low_conf")
+        return self._feedback(
             correct=True,
             category=CATEGORY_CORRECT,
-            title="¡Buen trabajo!",
-            message=f"¡Buen trabajo! Formaste correctamente la letra {target}.{extra}",
-            tip="Sigue así. Puedes continuar con la siguiente letra.",
+            title=self._t("correct_title"),
+            message=self._t("correct_message", letter=target, sign_language=self._context.sign_language) + extra,
+            tip=self._t("correct_tip"),
             target_letter=target,
             detected_letter=target,
             confidence=confidence,
         )
 
     # ------------------------------------------------------------------
-    # Confusiones conocidas
+    # Confusiones conocidas (propias de cada alfabeto)
     # ------------------------------------------------------------------
 
     def _match_known_confusion(
@@ -473,34 +408,21 @@ class ReviewAI:
         finger_state: Any = None,
         features: Optional[Mapping[str, float]] = None,
     ) -> Optional[ReviewFeedback]:
-        if not self._letter_rules:
-            return None
-        for group in CONFUSABLE_GROUPS:
+        for group in self._rules.confusable_groups:
             if target in group and detected in group:
-                explanation = self._known_confusion_explanation(
-                    target, detected, finger_state, features or {}
-                )
+                explanation = self._known_confusion_explanation(target, detected, finger_state, features or {})
                 if explanation is not None:
                     message, tip, detail = explanation
                 else:
                     # La letra detectada por si sola no demuestra que rasgo
                     # geometrico esta fallando. No se inventa una causa.
-                    message = (
-                        f"Estás formando una {detected}, pero no tengo datos "
-                        "suficientes para confirmar qué diferencia exacta de "
-                        "la mano está causando la confusión."
-                    )
-                    target_hint = LETTER_HINTS.get(target)
-                    if target_hint:
-                        message += f" Como referencia para la {target}: {target_hint}"
-                        tip = f"Para la {target}, {target_hint}"
-                    else:
-                        tip = "Compara tu mano con la imagen de referencia y ajusta la forma."
+                    extra, tip = self._reference_tip(target)
+                    message = self._t("confusion_unknown", detected=detected) + extra
                     detail = "confusion_difference=not_available"
-                return ReviewFeedback(
+                return self._feedback(
                     correct=False,
                     category=CATEGORY_FINGERS,
-                    title=f"Confusión {detected} / {target}",
+                    title=self._t("confusion_title", detected=detected, target=target),
                     message=message,
                     tip=tip,
                     target_letter=target,
@@ -510,18 +432,16 @@ class ReviewAI:
                 )
         return None
 
-    @staticmethod
     def _known_confusion_explanation(
+        self,
         target: str,
         detected: str,
         finger_state: Any,
         features: Mapping[str, float],
     ) -> Optional[Tuple[str, str, str]]:
-        """Explica solo diferencias que los rasgos actuales pueden comprobar.
-
-        Estas condiciones reflejan los desempates de ``sign_classifier.py``;
-        no participan en la clasificacion ni introducen reglas nuevas.
-        """
+        """Explica solo diferencias que los rasgos actuales pueden comprobar
+        y que son validas en el alfabeto activo (confusion_checks)."""
+        checks = self._rules.confusion_checks
         two_finger_pose = _get(finger_state, "two_finger_pose")
         thumb_between = _get(finger_state, "thumb_between")
         four_fingers_up = _get(finger_state, "four_fingers_up")
@@ -535,83 +455,41 @@ class ReviewAI:
         except (TypeError, ValueError):
             separation = None
 
-        # U/V: el clasificador usa ``index_middle_sep`` y el analizador ya
-        # expone su equivalente discreto en ``two_finger_pose``.
-        fingers_together = two_finger_pose == "together_up" or (
-            separation is not None and separation < 0.22
-        )
-        fingers_apart = two_finger_pose == "apart_up" or (
-            separation is not None and separation > 0.32
-        )
-        if target == "V" and detected == "U" and fingers_together:
-            return (
-                "Estás formando una U: el índice y el medio están demasiado juntos.",
-                "Separa un poco más los dedos índice y medio para formar una V.",
-                "confusion_difference=index_middle_together",
-            )
-        if target == "U" and detected == "V" and fingers_apart:
-            return (
-                "Estás formando una V: el índice y el medio están demasiado separados.",
-                "Junta un poco más los dedos índice y medio para formar una U.",
-                "confusion_difference=index_middle_apart",
-            )
+        # U/V (ASL y LIBRAS: U = indice y medio juntos, V = separados).
+        if CHECK_UV_SEPARATION in checks:
+            fingers_together = two_finger_pose == "together_up" or (separation is not None and separation < 0.22)
+            fingers_apart = two_finger_pose == "apart_up" or (separation is not None and separation > 0.32)
+            if target == "V" and detected == "U" and fingers_together:
+                return self._t("uv_together_msg"), self._t("uv_together_tip"), "confusion_difference=index_middle_together"
+            if target == "U" and detected == "V" and fingers_apart:
+                return self._t("uv_apart_msg"), self._t("uv_apart_tip"), "confusion_difference=index_middle_apart"
 
-        # B/K: el desempate existente revisa cuatro dedos extendidos y la
-        # posicion del pulgar entre indice y medio.
-        if target == "B" and detected == "K":
-            if thumb_between is True:
-                return (
-                    "Estás formando una K: el pulgar está entre el índice y el medio.",
-                    "Para formar la B, coloca el pulgar cruzado sobre la palma.",
-                    "confusion_difference=thumb_between",
-                )
-            if ring is False or pinky is False:
-                return (
-                    "Para la B, el anular y el meñique también deben quedar extendidos.",
-                    "Estira los cuatro dedos y mantenlos juntos hacia arriba.",
-                    "confusion_difference=four_fingers_up",
-                )
-        if target == "K" and detected == "B":
-            if four_fingers_up is True:
-                return (
-                    "Estás formando una B: tienes los cuatro dedos extendidos.",
-                    "Para formar la K, dobla el anular y el meñique.",
-                    "confusion_difference=four_fingers_up",
-                )
-            if thumb_between is False:
-                return (
-                    "El pulgar no está en la posición que usa la K.",
-                    "Coloca el pulgar entre el índice y el medio.",
-                    "confusion_difference=thumb_not_between",
-                )
+        # B/K (ASL): cuatro dedos extendidos y pulgar entre indice y medio.
+        if CHECK_BK_THUMB in checks:
+            if target == "B" and detected == "K":
+                if thumb_between is True:
+                    return self._t("bk_thumb_between_msg"), self._t("bk_thumb_between_tip"), "confusion_difference=thumb_between"
+                if ring is False or pinky is False:
+                    return self._t("bk_four_up_msg"), self._t("bk_four_up_tip"), "confusion_difference=four_fingers_up"
+            if target == "K" and detected == "B":
+                if four_fingers_up is True:
+                    return self._t("kb_four_up_msg"), self._t("kb_four_up_tip"), "confusion_difference=four_fingers_up"
+                if thumb_between is False:
+                    return self._t("kb_thumb_msg"), self._t("kb_thumb_tip"), "confusion_difference=thumb_not_between"
 
-        # M/N: el clasificador compara cuántos dedos cubre el pulgar.
-        if target == "M" and detected == "N" and isinstance(thumb_cover_count, int) and thumb_cover_count < 3:
-            return (
-                "El pulgar no está cubriendo suficientes dedos para formar la M.",
-                "Mételo bajo índice, medio y anular.",
-                "confusion_difference=thumb_cover_count_low",
-            )
-        if target == "N" and detected == "M" and isinstance(thumb_cover_count, int) and thumb_cover_count >= 3:
-            return (
-                "El pulgar está cubriendo demasiados dedos para formar la N.",
-                "Déjalo bajo el índice y el medio, sin cubrir el anular.",
-                "confusion_difference=thumb_cover_count_high",
-            )
+        # M/N (ASL): cuantos dedos cubre el pulgar.
+        if CHECK_MN_THUMB_COVER in checks and isinstance(thumb_cover_count, int):
+            if target == "M" and detected == "N" and thumb_cover_count < 3:
+                return self._t("mn_low_msg"), self._t("mn_low_tip"), "confusion_difference=thumb_cover_count_low"
+            if target == "N" and detected == "M" and thumb_cover_count >= 3:
+                return self._t("nm_high_msg"), self._t("nm_high_tip"), "confusion_difference=thumb_cover_count_high"
 
-        # T/S: el clasificador distingue T por el pulgar entre los dedos.
-        if target == "T" and detected == "S" and thumb_between is False:
-            return (
-                "El pulgar no está entre el índice y el medio, como requiere la T.",
-                "Mete el pulgar entre el índice y el medio.",
-                "confusion_difference=thumb_not_between",
-            )
-        if target == "S" and detected == "T" and thumb_between is True:
-            return (
-                "El pulgar está entre el índice y el medio, una característica de la T.",
-                "Para la S, cruza el pulgar por delante de los dedos.",
-                "confusion_difference=thumb_between",
-            )
+        # T/S (ASL): la T lleva el pulgar entre indice y medio.
+        if CHECK_TS_THUMB in checks:
+            if target == "T" and detected == "S" and thumb_between is False:
+                return self._t("ts_msg"), self._t("ts_tip"), "confusion_difference=thumb_not_between"
+            if target == "S" and detected == "T" and thumb_between is True:
+                return self._t("st_msg"), self._t("st_tip"), "confusion_difference=thumb_between"
 
         return None
 
@@ -626,50 +504,44 @@ class ReviewAI:
         confidence: Optional[float],
         finger_state: Any,
     ) -> Optional[ReviewFeedback]:
-        if not self._letter_rules:
-            return None
-        expected = LETTER_EXPECTED_FINGERS.get(target)
+        expected = self._rules.expected_fingers.get(target)
         current = _finger_pattern(finger_state)
         if expected is None or current is None:
             return None
 
         mismatches: List[str] = []
         detail_list: List[str] = []
+        first_key: Optional[str] = None
         for key, expected_val, actual_val in zip(FINGER_KEYS, expected, current):
             if expected_val == actual_val:
                 continue
-            name_es = FINGER_NAMES_ES[key]
+            if first_key is None:
+                first_key = key
+            name = self._finger_name(key)
             if expected_val and not actual_val:
                 if key == "index" and _get(finger_state, "index_bent"):
-                    mismatches.append(f"Tu dedo {name_es} está demasiado doblado.")
+                    mismatches.append(self._t("finger_too_bent", finger=name))
                 else:
-                    mismatches.append(f"Tu dedo {name_es} no está lo suficientemente extendido.")
+                    mismatches.append(self._t("finger_not_extended", finger=name))
                 detail_list.append(f"{key}: deberia estar extendido")
             else:
-                mismatches.append(f"Tu dedo {name_es} debería estar doblado hacia la palma.")
+                mismatches.append(self._t("finger_should_bend", finger=name))
                 detail_list.append(f"{key}: deberia estar flexionado")
 
-        if not mismatches:
+        if not mismatches or first_key is None:
             return None
 
-        message = mismatches[0]
-        if len(mismatches) > 1:
-            message += " " + mismatches[1]
+        message = " ".join(mismatches[:2])
+        should_extend = expected[FINGER_KEYS.index(first_key)]
+        tip = self._t(
+            "tip_extend_finger" if should_extend else "tip_bend_finger",
+            finger=self._finger_name(first_key),
+        )
 
-        tip_finger_key = None
-        for key, expected_val, actual_val in zip(FINGER_KEYS, expected, current):
-            if expected_val != actual_val:
-                tip_finger_key = key
-                break
-        if tip_finger_key:
-            tip = f"Intenta {'estirarlo' if expected[FINGER_KEYS.index(tip_finger_key)] else 'doblarlo'} y mantenerlo más {'recto' if expected[FINGER_KEYS.index(tip_finger_key)] else 'cerrado'}."
-        else:
-            tip = "Ajusta la posición de los dedos comparando con la imagen de referencia."
-
-        return ReviewFeedback(
+        return self._feedback(
             correct=False,
             category=CATEGORY_FINGERS,
-            title="Revisa tus dedos",
+            title=self._t("fingers_title"),
             message=message,
             tip=tip,
             target_letter=target,
@@ -690,44 +562,33 @@ class ReviewAI:
         finger_state: Any,
     ) -> Optional[ReviewFeedback]:
         palm_orientation = _get(finger_state, "palm_orientation")
-        if palm_orientation is None or not self._letter_rules:
+        if not palm_orientation or target in self._rules.orientation_free_letters:
             return None
 
-        expects_lateral = target in LATERAL_LETTERS
+        expects_lateral = target in self._rules.lateral_letters
+        sign_language = self._context.sign_language
 
-        if palm_orientation == "down" and not expects_lateral:
-            return ReviewFeedback(
+        if palm_orientation in ("down", "lateral") and not expects_lateral:
+            prefix = "orient_down" if palm_orientation == "down" else "orient_lateral"
+            return self._feedback(
                 correct=False,
                 category=CATEGORY_ORIENTATION,
-                title="Orienta la palma hacia la cámara",
-                message="Tu palma está apuntando hacia abajo y esa letra se hace mostrando la palma de frente.",
-                tip="Gira la muñeca para que la cámara vea la palma de tu mano.",
+                title=self._t(f"{prefix}_title"),
+                message=self._t(f"{prefix}_msg", letter=target, sign_language=sign_language),
+                tip=self._t(f"{prefix}_tip"),
                 target_letter=target,
                 detected_letter=detected,
                 confidence=confidence,
-                details=("palm_orientation=down",),
-            )
-
-        if palm_orientation == "lateral" and not expects_lateral:
-            return ReviewFeedback(
-                correct=False,
-                category=CATEGORY_ORIENTATION,
-                title="Gira la mano hacia la cámara",
-                message="Tu mano está de lado y esa letra requiere mostrar la palma frontal.",
-                tip="Rota la muñeca hasta que la palma quede de frente a la cámara.",
-                target_letter=target,
-                detected_letter=detected,
-                confidence=confidence,
-                details=("palm_orientation=lateral",),
+                details=(f"palm_orientation={palm_orientation}",),
             )
 
         if palm_orientation == "frontal" and expects_lateral:
-            return ReviewFeedback(
+            return self._feedback(
                 correct=False,
                 category=CATEGORY_ORIENTATION,
-                title="Gira la mano de lado",
-                message="Esa letra se forma con la mano de perfil, no con la palma de frente.",
-                tip="Gira la muñeca para mostrar el canto de la mano hacia la cámara.",
+                title=self._t("orient_frontal_title"),
+                message=self._t("orient_frontal_msg", letter=target, sign_language=sign_language),
+                tip=self._t("orient_frontal_tip"),
                 target_letter=target,
                 detected_letter=detected,
                 confidence=confidence,
@@ -749,14 +610,13 @@ class ReviewAI:
         features: Dict[str, float],
         landmarks: Optional[Sequence[Any]],
     ) -> Optional[ReviewFeedback]:
-        bbox_warning = self._frame_edge_warning(landmarks)
-        if bbox_warning is not None:
-            return ReviewFeedback(
+        if self._hand_near_frame_edge(landmarks):
+            return self._feedback(
                 correct=False,
                 category=CATEGORY_POSITION,
-                title="Centra tu mano en la cámara",
-                message=bbox_warning,
-                tip="Ubica tu mano en el centro del cuadro, a una distancia similar a la de la imagen de referencia.",
+                title=self._t("edge_title"),
+                message=self._t("edge_msg"),
+                tip=self._t("edge_tip"),
                 target_letter=target,
                 detected_letter=detected,
                 confidence=confidence,
@@ -765,25 +625,14 @@ class ReviewAI:
 
         fist_compact = features.get("fist_compactness") if features else None
         if fist_compact is not None:
-            if fist_compact < 0.55:
-                return ReviewFeedback(
+            if fist_compact < 0.55 or fist_compact > 1.6:
+                prefix = "small" if fist_compact < 0.55 else "big"
+                return self._feedback(
                     correct=False,
                     category=CATEGORY_POSITION,
-                    title="Acerca un poco la mano",
-                    message="Tu mano se ve muy pequeña o muy cerrada para que se distinga bien la seña.",
-                    tip="Acércate un poco a la cámara o abre la mano lo necesario para la letra.",
-                    target_letter=target,
-                    detected_letter=detected,
-                    confidence=confidence,
-                    details=(f"fist_compactness={fist_compact:.2f}",),
-                )
-            if fist_compact > 1.6:
-                return ReviewFeedback(
-                    correct=False,
-                    category=CATEGORY_POSITION,
-                    title="Aléjate un poco de la cámara",
-                    message="Tu mano ocupa casi todo el encuadre, lo que dificulta reconocer la forma completa.",
-                    tip="Aléjate un poco de la cámara para que se vea toda la mano.",
+                    title=self._t(f"{prefix}_title"),
+                    message=self._t(f"{prefix}_msg"),
+                    tip=self._t(f"{prefix}_tip"),
                     target_letter=target,
                     detected_letter=detected,
                     confidence=confidence,
@@ -793,37 +642,31 @@ class ReviewAI:
         return None
 
     @staticmethod
-    def _frame_edge_warning(landmarks: Optional[Sequence[Any]]) -> Optional[str]:
+    def _hand_near_frame_edge(landmarks: Optional[Sequence[Any]]) -> bool:
         if not landmarks:
-            return None
+            return False
         try:
-            xs = [float(_get(lm, "x", lm.get("x") if isinstance(lm, Mapping) else None)) for lm in landmarks]
-            ys = [float(_get(lm, "y", lm.get("y") if isinstance(lm, Mapping) else None)) for lm in landmarks]
+            xs = [float(_get(lm, "x")) for lm in landmarks]
+            ys = [float(_get(lm, "y")) for lm in landmarks]
         except Exception:
-            return None
+            return False
         if not xs or not ys:
-            return None
+            return False
         margin = 0.04
-        if min(xs) < margin or max(xs) > 1.0 - margin or min(ys) < margin or max(ys) > 1.0 - margin:
-            return "Parte de tu mano está saliendo del cuadro de la cámara."
-        return None
+        return min(xs) < margin or max(xs) > 1.0 - margin or min(ys) < margin or max(ys) > 1.0 - margin
 
     # ------------------------------------------------------------------
     # Fallback
     # ------------------------------------------------------------------
 
-    def _generic_feedback(
-        self, target: str, detected: str, confidence: Optional[float]
-    ) -> ReviewFeedback:
-        hint = self._hints.get(target)
-        message = f"Formaste una {detected} en lugar de la {target}."
-        tip = hint or f"Compara tu mano con la imagen de referencia de la letra {target} y ajusta la forma."
-        return ReviewFeedback(
+    def _generic_feedback(self, target: str, detected: str, confidence: Optional[float]) -> ReviewFeedback:
+        hint = self._hint(target)
+        return self._feedback(
             correct=False,
             category=CATEGORY_FINGERS,
-            title="Revisa tu seña",
-            message=message,
-            tip=tip,
+            title=self._t("generic_title"),
+            message=self._t("generic_msg", detected=detected, target=target),
+            tip=self._t("tip_with_hint", letter=target, hint=hint) if hint else self._t("generic_tip", target=target),
             target_letter=target,
             detected_letter=detected,
             confidence=confidence,
@@ -835,8 +678,6 @@ class ReviewAI:
 # performance_analyzer.py, para poder usarla sin instanciar la clase).
 # ---------------------------------------------------------------------------
 
-_default_review_ai = ReviewAI()
-
 
 def analyze_review_attempt(
     target_letter: str,
@@ -845,9 +686,10 @@ def analyze_review_attempt(
     finger_state: Any = None,
     features: Any = None,
     landmarks: Optional[Sequence[Any]] = None,
+    language: str = "es",
 ) -> Dict[str, Any]:
     """Atajo funcional: analiza un intento y devuelve un dict listo para JSON."""
-    feedback = _default_review_ai.analyze(
+    feedback = ReviewAI(language).analyze(
         target_letter=target_letter,
         detected_letter=detected_letter,
         confidence=confidence,

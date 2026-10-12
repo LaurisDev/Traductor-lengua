@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # collect_sign_samples.py
 # Recoleccion interactiva de muestras (60 por letra) + entrenamiento del modelo.
-# Con --lang pt se graba el alfabeto de LIBRAS en su propio dataset y modelo.
+# Con --lang pt se graba el alfabeto de LIBRAS y con --lang en el de ASL,
+# cada uno en su propio dataset y modelo.
 #
 # Controles en la ventana:
 #   ENTER  = empezar a grabar la letra / pasar a la siguiente letra
@@ -14,6 +15,7 @@
 #   python collect_sign_samples.py --from B
 #   python collect_sign_samples.py --only B --redo
 #   python collect_sign_samples.py --lang pt
+#   python collect_sign_samples.py --lang en --only F
 
 from __future__ import annotations
 
@@ -114,7 +116,7 @@ def _parse_args() -> argparse.Namespace:
         "--lang",
         choices=("es", "en", "pt"),
         default="es",
-        help="Alfabeto a grabar: es/en = alfabeto original, pt = LIBRAS (modelo separado).",
+        help="Alfabeto a grabar: es = LSC, pt = LIBRAS, en = ASL (cada uno con su modelo).",
     )
     p.add_argument(
         "--from",
@@ -168,7 +170,8 @@ def main() -> None:
         removed = clf.remove_samples_for_letter(letters[0])
         print(f"Borradas {removed} muestras de la letra {letters[0]}.")
 
-    print(f"=== Recoleccion de muestras ({'LIBRAS' if args.lang == 'pt' else args.lang}) ===")
+    alphabet_name = {"es": "LSC", "pt": "LIBRAS", "en": "ASL"}[args.lang]
+    print(f"=== Recoleccion de muestras ({alphabet_name}) ===")
     print(f"CSV: {clf.samples_csv}")
     print(f"Muestras por letra: {per_letter}")
     print(f"Intervalo: {sample_interval}s entre muestras")

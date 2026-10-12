@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from src.config import MAX_ATTEMPTS
+from src.languages import normalize_language, t
 
 MIN_RECOMMENDATION_PERCENTAGE = 70.0
 GOOD_PERFORMANCE_PERCENTAGE = 85.0
@@ -30,9 +31,16 @@ class PerformanceAnalysis:
 
 
 class LearningPerformanceAnalyzer:
-    """Calcula el desempeno sin depender de la interfaz ni de la base de datos."""
+    """Calcula el desempeno sin depender de la interfaz ni de la base de datos.
 
-    def analyze(self, stats: Mapping[str, Any] | None, letter: str) -> PerformanceAnalysis:
+    Los mensajes se generan en el idioma de aprendizaje (es, en, pt).
+    """
+
+    def __init__(self, language: str = "es") -> None:
+        self.language = normalize_language(language)
+
+    def analyze(self, stats: Mapping[str, Any] | None, letter: str, language: str | None = None) -> PerformanceAnalysis:
+        lang = normalize_language(language) if language else self.language
         stats = stats or {}
         attempts = max(0, int(stats.get("attempts", 0)))
         correct = max(0, int(stats.get("correct", 0)))
@@ -51,24 +59,18 @@ class LearningPerformanceAnalyzer:
                 correct=correct,
                 incorrect=incorrect,
                 accuracy=accuracy,
-                message="🤖 Continúa practicando. Necesito algunos intentos más para analizar tu desempeño.",
+                message=t(lang, "perf_continue"),
                 recommendation="continue",
             )
 
         if accuracy < MIN_RECOMMENDATION_PERCENTAGE:  # cuando es menos del 70  muestra estos mensajes:
-            message = (
-                f"🤖 He notado que la letra {letter} necesita más práctica. "
-                f"Has acertado {correct} de {attempts} intentos. Te recomiendo practicarla nuevamente."
-            )
+            message = t(lang, "perf_practice", letter=letter, correct=correct, attempts=attempts)
             recommendation = "practice"
         elif accuracy < GOOD_PERFORMANCE_PERCENTAGE:
-            message = (
-                f"🤖 La letra {letter} va bien. Has acertado {correct} de {attempts} intentos. "
-                "Puedes practicarla nuevamente si lo deseas."
-            )
+            message = t(lang, "perf_optional", letter=letter, correct=correct, attempts=attempts)
             recommendation = "optional_practice"
         else:
-            message = f"🤖 Buen desempeño con la letra {letter}. Has acertado {correct} de {attempts} intentos."
+            message = t(lang, "perf_good", letter=letter, correct=correct, attempts=attempts)
             recommendation = "good"
 
         return PerformanceAnalysis(

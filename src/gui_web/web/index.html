@@ -25,114 +25,114 @@
       <main class="content">
         <!-- LOGIN -->
         <section class="card auth" id="viewLogin">
-          <h2>Iniciar sesión</h2>
-          <p class="muted">Accede para comenzar la interacción.</p>
+          <h2 data-i18n="loginTitle">Iniciar sesión</h2>
+          <p class="muted" data-i18n="loginSubtitle">Accede para comenzar la interacción.</p>
           <div class="field">
-            <label>Nombre</label>
-            <input id="loginUser" placeholder="Tu nombre" />
+            <label data-i18n="nameLabel">Nombre</label>
+            <input id="loginUser" placeholder="Tu nombre" data-i18n-placeholder="namePlaceholder" />
           </div>
           <div class="field">
-            <label>Contraseña</label>
-            <input id="loginPass" type="password" placeholder="Tu contraseña" />
+            <label data-i18n="passwordLabel">Contraseña</label>
+            <input id="loginPass" type="password" placeholder="Tu contraseña" data-i18n-placeholder="passwordPlaceholder" />
           </div>
           <div class="row">
-            <button class="btn primary" id="btnLogin">Entrar</button>
-            <button class="btn" id="btnGoRegister">Crear cuenta</button>
+            <button class="btn primary" id="btnLogin" data-i18n="loginBtn">Entrar</button>
+            <button class="btn" id="btnGoRegister" data-i18n="createAccount">Crear cuenta</button>
           </div>
           <div class="error" id="loginError"></div>
         </section>
 
         <!-- REGISTER -->
         <section class="card auth hidden" id="viewRegister">
-          <div class="register-step">Paso 1 de 3</div>
-          <h2>Crear cuenta</h2>
-          <p class="muted">Regístrate para usar la aplicación.</p>
+          <div class="register-step" data-i18n="step1">Paso 1 de 3</div>
+          <h2 data-i18n="createAccount">Crear cuenta</h2>
+          <p class="muted" data-i18n="registerSubtitle">Regístrate para usar la aplicación.</p>
           <div class="field">
-            <label>Nombre</label>
-            <input id="regUser" placeholder="Nombre" />
+            <label data-i18n="nameLabel">Nombre</label>
+            <input id="regUser" placeholder="Nombre" data-i18n-placeholder="nameLabel" />
           </div>
           <div class="field">
-            <label>Contraseña</label>
-            <input id="regPass" type="password" placeholder="Contraseña" />
+            <label data-i18n="passwordLabel">Contraseña</label>
+            <input id="regPass" type="password" placeholder="Contraseña" data-i18n-placeholder="regPassPlaceholder" />
           </div>
           <div class="field">
-            <label>Confirmar contraseña</label>
-            <input id="regPass2" type="password" placeholder="Confirmar" />
+            <label data-i18n="confirmLabel">Confirmar contraseña</label>
+            <input id="regPass2" type="password" placeholder="Confirmar" data-i18n-placeholder="confirmPlaceholder" />
           </div>
           <div class="row">
-            <button class="btn primary" id="btnContinueRegister" type="button">Continuar</button>
-            <button class="btn" id="btnGoLogin" type="button">Volver</button>
+            <button class="btn primary" id="btnContinueRegister" type="button" data-i18n="continue">Continuar</button>
+            <button class="btn" id="btnGoLogin" type="button" data-i18n="back">Volver</button>
           </div>
           <div class="error" id="regError"></div>
         </section>
 
         <!-- REGISTRO: IDIOMA DE APRENDIZAJE -->
         <section class="card auth register-language hidden" id="viewRegisterLanguage">
-          <div class="register-step">Paso 2 de 3</div>
-          <h2 id="languageTitle">Idioma de aprendizaje</h2>
-          <p class="muted">¿En qué idioma deseas aprender lenguaje de señas?</p>
+          <div class="register-step" data-i18n="step2">Paso 2 de 3</div>
+          <h2 id="languageTitle" data-i18n="languageTitle">Idioma de aprendizaje</h2>
+          <p class="muted" data-i18n="languageQuestion">¿En qué idioma deseas aprender lenguaje de señas?</p>
           <div class="evaluation-options register-language-options" role="radiogroup" aria-labelledby="languageTitle">
             <label class="evaluation-option">
               <input type="radio" name="regLearningLanguage" value="es" checked/>
-              <span class="evaluation-option-content"><strong>ES</strong><span>Español</span></span>
+              <span class="evaluation-option-content"><strong>ES</strong><span data-i18n="langEs">Español — LSC</span></span>
             </label>
             <label class="evaluation-option">
               <input type="radio" name="regLearningLanguage" value="en"/>
-              <span class="evaluation-option-content"><strong>EN</strong><span>Inglés</span></span>
+              <span class="evaluation-option-content"><strong>EN</strong><span data-i18n="langEn">Inglés — ASL</span></span>
             </label>
             <label class="evaluation-option">
               <input type="radio" name="regLearningLanguage" value="pt"/>
-              <span class="evaluation-option-content"><strong>PT</strong><span>Portugués</span></span>
+              <span class="evaluation-option-content"><strong>PT</strong><span data-i18n="langPt">Portugués — Libras</span></span>
             </label>
           </div>
           <div class="row register-actions">
-            <button class="btn primary" id="btnContinueLanguage" type="button">Continuar</button>
-            <button class="btn" id="btnBackLanguage" type="button">Volver</button>
+            <button class="btn primary" id="btnContinueLanguage" type="button" data-i18n="continue">Continuar</button>
+            <button class="btn" id="btnBackLanguage" type="button" data-i18n="back">Volver</button>
           </div>
         </section>
 
         <!-- REGISTRO: PREFERENCIAS DE ACCESIBILIDAD -->
         <section class="card auth register-accessibility hidden" id="viewRegisterAccessibility">
-          <div class="register-step">Paso 3 de 3</div>
-          <h2 id="accessibilityTitle">Preferencias de accesibilidad</h2>
-          <p class="muted">Selecciona las opciones que te ayuden a utilizar la aplicación de una manera más cómoda. Puedes modificarlas después desde tu perfil.</p>
+          <div class="register-step" data-i18n="step3">Paso 3 de 3</div>
+          <h2 id="accessibilityTitle" data-i18n="accessibilityTitle">Preferencias de accesibilidad</h2>
+          <p class="muted" data-i18n="accessibilityIntro">Selecciona las opciones que te ayuden a utilizar la aplicación de una manera más cómoda. Puedes modificarlas después desde tu perfil.</p>
           <section class="accessibility-preferences" aria-labelledby="accessibilityTitle">
             <label class="accessibility-option">
               <input id="regColorBlindMode" type="checkbox" />
               <span class="accessibility-option-content">
-                <strong>Modo daltónico</strong>
-                <span>Utiliza una paleta de colores alternativa para facilitar la identificación de los elementos de la interfaz.</span>
+                <strong data-i18n="colorBlindTitle">Visión adaptada al color</strong>
+                <span data-i18n="colorBlindDesc">Usa colores, iconos y patrones para diferenciar con claridad los elementos y estados de la interfaz.</span>
               </span>
             </label>
             <label class="accessibility-option">
               <input id="regAccessibleReadingMode" type="checkbox" />
               <span class="accessibility-option-content">
-                <strong>Modo de lectura accesible</strong>
-                <span>Ajusta el tamaño del texto y el espaciado para facilitar la lectura.</span>
+                <strong data-i18n="readingTitle">Modo de lectura accesible</strong>
+                <span data-i18n="readingDesc">Ajusta el tamaño del texto y el espaciado para facilitar la lectura.</span>
               </span>
             </label>
             <label class="accessibility-size-option">
               <span class="accessibility-option-content">
-                <strong>Tamaño del texto</strong>
-                <span>Elige el nivel de aumento para el modo de lectura accesible.</span>
+                <strong data-i18n="fontSizeTitle">Tamaño del texto</strong>
+                <span data-i18n="fontSizeDesc">Elige el nivel de aumento para el modo de lectura accesible.</span>
               </span>
               <select id="regReadingFontSize">
-                <option value="small">Pequeño</option>
-                <option value="medium" selected>Mediano</option>
-                <option value="large">Grande</option>
+                <option value="small" data-i18n="sizeSmall">Pequeño</option>
+                <option value="medium" selected data-i18n="sizeMedium">Mediano</option>
+                <option value="large" data-i18n="sizeLarge">Grande</option>
               </select>
             </label>
             <label class="accessibility-option">
               <input id="regDyslexiaSpacingMode" type="checkbox" />
               <span class="accessibility-option-content">
-                <strong>Espaciado para lectura</strong>
-                <span>Aumenta ligeramente el espacio entre las letras para facilitar la lectura.</span>
+                <strong data-i18n="spacingTitle">Espaciado para lectura</strong>
+                <span data-i18n="spacingDesc">Aumenta ligeramente el espacio entre las letras para facilitar la lectura.</span>
               </span>
             </label>
           </section>
           <div class="row register-actions">
-            <button class="btn primary" id="btnRegister" type="button">Registrarse</button>
-            <button class="btn" id="btnBackRegister" type="button">Volver</button>
+            <button class="btn primary" id="btnRegister" type="button" data-i18n="registerBtn">Registrarse</button>
+            <button class="btn" id="btnBackRegister" type="button" data-i18n="back">Volver</button>
           </div>
           <div class="error" id="regAccessibilityError"></div>
         </section>
@@ -147,15 +147,15 @@
             <div class="lang-switch" role="radiogroup" aria-labelledby="langSwitchLabel">
               <span class="lang-switch-label" id="langSwitchLabel" data-i18n="learningIn">Aprendiendo en</span>
               <div class="lang-switch-options">
-                <label class="lang-switch-option" title="Español" data-i18n-title="langEs">
+                <label class="lang-switch-option" title="Español — LSC" data-i18n-title="langEs">
                   <input type="radio" name="menuLearningLanguage" value="es" checked/>
                   <span>ES</span>
                 </label>
-                <label class="lang-switch-option" title="Inglés" data-i18n-title="langEn">
+                <label class="lang-switch-option" title="Inglés — ASL" data-i18n-title="langEn">
                   <input type="radio" name="menuLearningLanguage" value="en"/>
                   <span>EN</span>
                 </label>
-                <label class="lang-switch-option" title="Portugués" data-i18n-title="langPt">
+                <label class="lang-switch-option" title="Portugués — Libras" data-i18n-title="langPt">
                   <input type="radio" name="menuLearningLanguage" value="pt"/>
                   <span>PT</span>
                 </label>
@@ -213,54 +213,54 @@
         <!-- CONFIGURACIÓN WEB -->
         <section class="card settings hidden" id="viewSettings">
           <div class="view-bar settings-bar">
-            <button class="btn ghost back-btn" id="btnBackSettings">← Volver al menú</button>
-            <div class="view-title">Configuración</div>
+            <button class="btn ghost back-btn" id="btnBackSettings" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="settingsTitle">Configuración</div>
           </div>
           <div class="settings-content">
-            <h2>Preferencias de accesibilidad</h2>
-            <p class="muted">Activa o desactiva las preferencias que te ayuden a utilizar la aplicación con mayor comodidad.</p>
+            <h2 data-i18n="accessibilityTitle">Preferencias de accesibilidad</h2>
+            <p class="muted" data-i18n="settingsIntro">Activa o desactiva las preferencias que te ayuden a utilizar la aplicación con mayor comodidad.</p>
             <label class="settings-toggle">
               <input id="settingsColorBlindMode" type="checkbox" />
               <span>
-                <strong>Modo daltónico</strong>
-                <small>Utiliza una paleta de colores alternativa para diferenciar mejor los elementos y estados.</small>
+                <strong data-i18n="colorBlindTitle">Visión adaptada al color</strong>
+                <small data-i18n="colorBlindDescShort">Usa colores, iconos y patrones para diferenciar mejor los elementos y estados.</small>
               </span>
             </label>
             <label class="settings-toggle">
               <input id="settingsAccessibleReadingMode" type="checkbox" />
               <span>
-                <strong>Modo de lectura accesible</strong>
-                <small>Ajusta el tamaño del texto y el espaciado para facilitar la lectura.</small>
+                <strong data-i18n="readingTitle">Modo de lectura accesible</strong>
+                <small data-i18n="readingDesc">Ajusta el tamaño del texto y el espaciado para facilitar la lectura.</small>
               </span>
             </label>
             <label class="settings-size-option">
               <span>
-                <strong>Tamaño del texto</strong>
-                <small>Elige el nivel de aumento para el modo de lectura accesible.</small>
+                <strong data-i18n="fontSizeTitle">Tamaño del texto</strong>
+                <small data-i18n="fontSizeDesc">Elige el nivel de aumento para el modo de lectura accesible.</small>
               </span>
               <select id="settingsReadingFontSize">
-                <option value="small">Pequeño</option>
-                <option value="medium">Mediano</option>
-                <option value="large">Grande</option>
+                <option value="small" data-i18n="sizeSmall">Pequeño</option>
+                <option value="medium" data-i18n="sizeMedium">Mediano</option>
+                <option value="large" data-i18n="sizeLarge">Grande</option>
               </select>
             </label>
             <label class="settings-toggle">
               <input id="settingsDyslexiaSpacingMode" type="checkbox" />
               <span>
-                <strong>Espaciado para lectura</strong>
-                <small>Aumenta ligeramente el espacio entre las letras para facilitar la lectura.</small>
+                <strong data-i18n="spacingTitle">Espaciado para lectura</strong>
+                <small data-i18n="spacingDesc">Aumenta ligeramente el espacio entre las letras para facilitar la lectura.</small>
               </span>
             </label>
             <label class="settings-toggle">
               <input id="settingsNightMode" type="checkbox" />
               <span>
-                <strong>Modo noche</strong>
-                <small>Utiliza colores oscuros para reducir el brillo de la pantalla.</small>
+                <strong data-i18n="nightTitle">Modo noche</strong>
+                <small data-i18n="nightDesc">Utiliza colores oscuros para reducir el brillo de la pantalla.</small>
               </span>
             </label>
             <div class="error" id="settingsError"></div>
             <div class="row settings-actions">
-              <button class="btn primary" id="btnSaveSettings">Guardar cambios</button>
+              <button class="btn primary" id="btnSaveSettings" data-i18n="saveChanges">Guardar cambios</button>
             </div>
           </div>
         </section>
@@ -268,28 +268,28 @@
         <!-- HISTORIAL DE EVALUACIONES -->
         <section class="view-wrap hidden" id="viewEvaluacionHistorial">
           <div class="view-bar">
-            <button class="btn ghost back-btn" id="btnBackEvaluacionHistorial">← Volver al menú</button>
-            <div class="view-title">Historial de evaluaciones</div>
+            <button class="btn ghost back-btn" id="btnBackEvaluacionHistorial" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="historyTitle">Historial de evaluaciones</div>
           </div>
           <div class="evaluation-history-layout">
             <div class="panel card evaluation-history-list-panel">
-              <div class="panel-head"><h3>Sesiones guardadas</h3></div>
+              <div class="panel-head"><h3 data-i18n="savedSessions">Sesiones guardadas</h3></div>
               <div id="evaluationHistoryList" class="evaluation-history-list"></div>
             </div>
             <div class="panel card evaluation-history-detail" id="evaluationHistoryDetail">
-              <h3>Resumen de la sesión</h3>
-              <p class="muted" id="evaluationHistoryEmpty">Selecciona una sesión para ver sus letras.</p>
+              <h3 data-i18n="sessionSummary">Resumen de la sesión</h3>
+              <p class="muted" id="evaluationHistoryEmpty" data-i18n="selectSession">Selecciona una sesión para ver sus letras.</p>
               <div id="evaluationHistorySummary" class="hidden">
                 <div class="evaluation-history-meta" id="evaluationHistoryMeta"></div>
                 <div class="evaluation-result-lists">
-                  <div class="panel card"><h3>Letras acertadas</h3><div class="evaluation-letter-list hit-list" id="historyHitLetters"></div></div>
-                  <div class="panel card"><h3>Letras equivocadas</h3><div class="evaluation-letter-list error-list" id="historyErrorLetters"></div></div>
+                  <div class="panel card"><h3 data-i18n="hitLetters">Letras acertadas</h3><div class="evaluation-letter-list hit-list" id="historyHitLetters"></div></div>
+                  <div class="panel card"><h3 data-i18n="errorLetters">Letras equivocadas</h3><div class="evaluation-letter-list error-list" id="historyErrorLetters"></div></div>
                 </div>
               </div>
             </div>
           </div>
           <div class="panel card evaluation-progress-panel">
-            <div class="panel-head"><h3>Progreso de puntajes</h3></div>
+            <div class="panel-head"><h3 data-i18n="scoreProgress">Progreso de puntajes</h3></div>
             <div id="evaluationScoreProgress" class="evaluation-score-progress"></div>
           </div>
         </section>
@@ -297,49 +297,52 @@
         <!-- INTERACTION -->
         <section class="view-wrap hidden" id="viewInteraction">
           <div class="view-bar">
-            <button class="btn ghost back-btn" id="btnBackInteraction">← Volver al menú</button>
-            <div class="view-title">Interacción (Voz + Señas)</div>
+            <button class="btn ghost back-btn" id="btnBackInteraction" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="interactionTitle">Interacción (Voz + Señas)</div>
           </div>
           <div class="grid">
           <div class="panel card">
             <div class="panel-head">
-              <h3>Señas → Texto</h3>
+              <h3 data-i18n="signsToText">Señas → Texto</h3>
               <div class="letter-confirm">
                 <div class="pill" id="letterPill">Letra: -</div>
-                <button class="btn accent" id="btnAccept">✓ Aceptar</button>
+                <button class="btn accent" id="btnAccept" data-i18n="accept">✓ Aceptar</button>
               </div>
             </div>
             <div class="video-wrap">
               <img id="videoInteraction" alt="video" />
               <div class="video-fallback" id="videoFallbackInteraction">Iniciando cámara…</div>
               <div class="camera-status camera-status-active" aria-live="polite">
-                <strong>Cámara activa</strong>
-                <span>Coloca tu mano frente a la cámara.</span>
+                <strong data-i18n="cameraActive">Cámara activa</strong>
+                <span data-i18n="cameraActiveHint">Coloca tu mano frente a la cámara.</span>
               </div>
             </div>
             <div class="field">
-              <label>Texto (señas)</label>
+              <label data-i18n="signTextLabel">Texto (señas)</label>
               <input id="signText" readonly />
             </div>
             <div class="row">
-              <button class="btn" id="btnSpace">Espacio</button>
-              <button class="btn" id="btnBackspace">Borrar</button>
-              <button class="btn danger" id="btnClear">Limpiar</button>
+              <button class="btn" id="btnSpace" data-i18n="space">Espacio</button>
+              <button class="btn" id="btnBackspace" data-i18n="backspace">Borrar</button>
+              <button class="btn danger" id="btnClear" data-i18n="clear">Limpiar</button>
               <div class="spacer"></div>
-              <button class="btn success" id="btnSendSigns">Enviar señas</button>
+              <button class="btn" id="btnSpeakSignText" type="button" data-i18n="readSignText">🔊 Leer texto</button>
+              <button class="btn success" id="btnSendSigns" data-i18n="sendSigns">Enviar señas</button>
             </div>
           </div>
 
           <div class="panel card">
             <div class="panel-head">
-              <h3>Voz → Texto</h3>
+              <h3 data-i18n="voiceToText">Voz → Texto</h3>
               <div class="row tight">
-                <button class="btn primary" id="btnRec">Grabar</button>
+                <button class="btn primary" id="btnRec" data-i18n="record">Grabar</button>
               </div>
             </div>
             <div class="chat" id="chat"></div>
+            <div class="voice-language muted" id="voiceLanguage" aria-live="polite"></div>
             <div class="error" id="voiceError"></div>
-            <div class="hint muted">Tip: habla cerca del micrófono y con buena iluminación para cámara.</div>
+            <div class="error" id="ttsError" aria-live="polite"></div>
+            <div class="hint muted" data-i18n="voiceTip">Tip: habla cerca del micrófono y con buena iluminación para cámara.</div>
           </div>
           </div>
         </section>
@@ -347,32 +350,39 @@
         <!-- APRENDIZAJE -->
         <section class="view-wrap hidden" id="viewAprendizaje">
           <div class="view-bar">
-            <button class="btn ghost back-btn" id="btnBackAprendizaje">← Volver al menú</button>
-            <div class="view-title">Aprendizaje de señas</div>
+            <button class="btn ghost back-btn" id="btnBackAprendizaje" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="learningTitle">Aprendizaje de señas</div>
           </div>
           <div class="learning">
           <div class="learning-grid">
             <div class="panel card learning-panel left-panel">
               <div class="learning-progress" id="learningProgress">A — 1/27</div>
               <div class="how-it-works" aria-labelledby="howItWorksTitle">
-                <h3 id="howItWorksTitle">¿Cómo funciona?</h3>
+                <h3 id="howItWorksTitle" data-i18n="howItWorks">¿Cómo funciona?</h3>
                 <ol>
-                  <li>Selecciona una letra.</li>
-                  <li>Coloca tu mano frente a la cámara.</li>
-                  <li>Realiza la seña.</li>
-                  <li>Observa la letra detectada.</li>
-                  <li>Continúa para formar una palabra.</li>
+                  <li data-i18n="howStep1">Selecciona una letra.</li>
+                  <li data-i18n="howStep2">Coloca tu mano frente a la cámara.</li>
+                  <li data-i18n="howStep3">Realiza la seña.</li>
+                  <li data-i18n="howStep4">Observa la letra detectada.</li>
+                  <li data-i18n="howStep5">Continúa para formar una palabra.</li>
                 </ol>
               </div>
               <div class="reference-box">
-                <div class="reference-figure" id="learningReferenceArt" aria-label="Referencia de la seña">
+                <div class="reference-figure" id="learningReferenceArt" aria-label="Referencia de la seña" data-i18n-aria="referenceAria">
                   <img id="learningReferenceImage" alt="Imagen de referencia de la seña" />
-                  <span class="reference-placeholder-text">Imagen de referencia</span>
+                  <span class="reference-placeholder-text" data-i18n="referencePlaceholder">Imagen de referencia</span>
                 </div>
                 <div class="letter-reference" id="learningLetter">A</div>
                 <button class="btn star-btn" id="btnStarLetter" type="button" title="Marcar como difícil" aria-label="Marcar letra como difícil">
                   <span id="starIcon">☆</span>
                 </button>
+              </div>
+              <div class="sign-instructions" id="learningInstructionsBox">
+                <div class="sign-instructions-head">
+                  <strong class="sign-instructions-title"></strong>
+                  <button class="btn ghost speak-btn" type="button" data-speak-target="learningInstructions" data-i18n="speak" data-i18n-aria="speakAria">🔊 Escuchar</button>
+                </div>
+                <p class="sign-instructions-text" id="learningInstructions"></p>
               </div>
               <div class="learning-difficult-count muted" id="learningDifficultCount">Letras marcadas: 0</div>
             </div>
@@ -381,91 +391,92 @@
               <div class="camera-box">
                 <div class="learning-status-row">
                   <div class="learning-detected">
-                    <span class="muted" style="font-size:12px;">Letra detectada:</span>
+                    <span class="muted" style="font-size:12px;" data-i18n="detectedLetter">Letra detectada:</span>
                     <span class="pill learning-detected-pill" id="learningDetected">-</span>
                   </div>
-                  <div class="learning-status-pill" id="learningStatusPill">Esperando seña…</div>
+                  <div class="learning-status-pill" id="learningStatusPill" data-i18n="waitingSign">Esperando seña…</div>
                 </div>
                 <div class="video-wrap learning-video-wrap" id="learningVideoWrap">
                   <img id="videoAprendizaje" alt="camara de aprendizaje" />
                   <div class="video-fallback" id="videoFallbackAprendizaje">Iniciando cámara…</div>
                   <div class="camera-status camera-status-active" aria-live="polite">
-                    <strong>Cámara activa</strong>
-                    <span>Coloca tu mano frente a la cámara.</span>
+                    <strong data-i18n="cameraActive">Cámara activa</strong>
+                    <span data-i18n="cameraActiveHint">Coloca tu mano frente a la cámara.</span>
                   </div>
                   <div class="learning-overlay" id="learningOverlay"></div>
                 </div>
-                <div class="learning-caption" id="learningCaption">Repite la seña</div>
+                <div class="learning-caption" id="learningCaption" data-i18n="repeatSign">Repite la seña</div>
                 <div class="learning-counter" id="learningCounter">Correctas: 0</div>
                 <div class="learning-actions">
-                  <button class="btn" id="btnPrevAprendizaje">Anterior</button>
-                  <button class="btn primary" id="btnNextAprendizaje">Siguiente</button>
+                  <button class="btn" id="btnPrevAprendizaje" data-i18n="prev">Anterior</button>
+                  <button class="btn primary" id="btnNextAprendizaje" data-i18n="next">Siguiente</button>
                 </div>
               </div>
             </div>
           </div>
           <div class="learning-assistant" id="learningAssistant">
-            <div class="ai-card hidden" id="learningAssistantCard" role="dialog" aria-label="Asistente IA">
+            <div class="ai-card hidden" id="learningAssistantCard" role="dialog" aria-label="Asistente IA" data-i18n-aria="aiAssistant">
               <div class="ai-card-head">
-                <strong>🤖 Asistente IA</strong>
-                <button class="ai-close" id="btnCloseLearningAssistant" type="button" aria-label="Cerrar asistente">×</button>
+                <strong data-i18n="aiAssistant">🤖 Asistente IA</strong>
+                <button class="ai-close" id="btnCloseLearningAssistant" type="button" aria-label="Cerrar asistente" data-i18n-aria="closeAssistant">×</button>
               </div>
               <div class="ai-card-body">
-                <p class="ai-greeting">¡Hola! 👋</p>
+                <p class="ai-greeting" data-i18n="aiHello">¡Hola! 👋</p>
                 <p class="ai-message" id="learningAssistantMessage"></p>
                 <div class="ai-stats">
-                  <div>🔤 Letra: <strong id="learningAssistantLetter">-</strong></div>
-                  <div>🎯 Aciertos: <strong id="learningAssistantCorrect">0/5</strong></div>
-                  <div>📊 Desempeño: <strong id="learningAssistantAccuracy">0%</strong></div>
-                  <div>Intentos: <strong id="learningAssistantAttempts">0/5</strong></div>
+                  <div><span data-i18n="aiLetter">🔤 Letra:</span> <strong id="learningAssistantLetter">-</strong></div>
+                  <div><span data-i18n="aiHits">🎯 Aciertos:</span> <strong id="learningAssistantCorrect">0/5</strong></div>
+                  <div><span data-i18n="aiPerformance">📊 Desempeño:</span> <strong id="learningAssistantAccuracy">0%</strong></div>
+                  <div><span data-i18n="aiAttempts">Intentos:</span> <strong id="learningAssistantAttempts">0/5</strong></div>
                 </div>
                 <p class="ai-recommendation" id="learningAssistantRecommendation"></p>
-                <button class="btn ai-favorite-action" id="btnAssistantFavorite" type="button" aria-pressed="false">⭐ Guardar en favoritos</button>
-                <button class="btn primary ai-practice-action" id="btnPracticeNow" type="button">PRACTICAR AHORA</button>
+                <button class="btn ghost speak-btn" type="button" data-speak-target="learningAssistantMessage" data-i18n="speak" data-i18n-aria="speakAria">🔊 Escuchar</button>
+                <button class="btn ai-favorite-action" id="btnAssistantFavorite" type="button" aria-pressed="false" data-i18n="assistantFavSave">⭐ Guardar en favoritos</button>
+                <button class="btn primary ai-practice-action" id="btnPracticeNow" type="button" data-i18n="practiceNow">PRACTICAR AHORA</button>
               </div>
             </div>
-            <button class="ai-robot" id="btnOpenLearningAssistant" type="button" aria-label="Abrir asistente IA" title="Abrir asistente IA">🤖</button>
+            <button class="ai-robot" id="btnOpenLearningAssistant" type="button" aria-label="Abrir asistente IA" title="Abrir asistente IA" data-i18n-aria="openAssistant" data-i18n-title="openAssistant">🤖</button>
           </div>
           </div>
         </section>
 
         <!-- EVALUACIÓN: CONFIGURACIÓN -->
         <section class="card evaluation-config hidden" id="viewEvaluacionConfig">
-          <h2>Modo Evaluación</h2>
-          <p class="muted">Configura la evaluación antes de comenzar.</p>
+          <h2 data-i18n="evalTitle">Modo Evaluación</h2>
+          <p class="muted" data-i18n="evalIntro">Configura la evaluación antes de comenzar.</p>
           <div class="field evaluation-duration-field">
-            <label class="evaluation-label">Duración de la evaluación</label>
+            <label class="evaluation-label" data-i18n="evalDuration">Duración de la evaluación</label>
             <div class="evaluation-options">
               <label class="evaluation-option">
                 <input type="radio" name="evalDuration" value="30" checked/>
-                <span class="evaluation-option-content"><strong>30</strong><span>segundos</span></span>
+                <span class="evaluation-option-content"><strong>30</strong><span data-i18n="unitSeconds">segundos</span></span>
               </label>
               <label class="evaluation-option">
                 <input type="radio" name="evalDuration" value="60"/>
-                <span class="evaluation-option-content"><strong>1</strong><span>minuto</span></span>
+                <span class="evaluation-option-content"><strong>1</strong><span data-i18n="unitMinute">minuto</span></span>
               </label>
               <label class="evaluation-option">
                 <input type="radio" name="evalDuration" value="120"/>
-                <span class="evaluation-option-content"><strong>2</strong><span>minutos</span></span>
+                <span class="evaluation-option-content"><strong>2</strong><span data-i18n="unitMinutes">minutos</span></span>
               </label>
             </div>
           </div>
           <div class="row evaluation-actions">
-            <button class="btn primary" id="btnStartEvaluation">Iniciar evaluación</button>
-            <button class="btn" id="btnCancelEvaluation">Volver</button>
+            <button class="btn primary" id="btnStartEvaluation" data-i18n="startEval">Iniciar evaluación</button>
+            <button class="btn" id="btnCancelEvaluation" data-i18n="back">Volver</button>
           </div>
         </section>
 
         <!-- EVALUACIÓN: EN CURSO -->
         <section class="view-wrap hidden" id="viewEvaluacionRun">
           <div class="view-bar">
-            <button class="btn ghost back-btn" id="btnBackEvaluacionRun">← Volver al menú</button>
-            <div class="view-title">Modo Evaluación</div>
+            <button class="btn ghost back-btn" id="btnBackEvaluacionRun" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="evalTitle">Modo Evaluación</div>
           </div>
           <div class="card" style="width:100%; height:100%;">
           <div class="panel">
             <div class="panel-head">
-              <h3>Evaluación</h3>
+              <h3 data-i18n="evaluationPanel">Evaluación</h3>
               <div class="row tight">
                 <div class="pill" id="evalTime">Tiempo: --</div>
                 <div class="pill" id="evalScore">Puntaje: 0</div>
@@ -476,15 +487,15 @@
 
             <div class="grid" style="grid-template-columns: 1fr .6fr; gap:12px">
               <div class="panel card">
-                <div class="panel-head"><h3>Seña solicitada</h3></div>
+                <div class="panel-head"><h3 data-i18n="requestedSign">Seña solicitada</h3></div>
                 <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
                   <div class="letter-reference" id="evalRequestedLetter">-</div>
                   <div class="video-wrap learning-video-wrap" id="evalVideoWrap" style="width:100%; max-height:360px;">
                     <img id="videoEvaluacion" alt="video evaluacion" />
                     <div class="video-fallback" id="videoFallbackEvaluacion">Iniciando cámara…</div>
                         <div class="camera-status camera-status-active" aria-live="polite">
-                          <strong>Cámara activa</strong>
-                          <span>Coloca tu mano frente a la cámara.</span>
+                          <strong data-i18n="cameraActive">Cámara activa</strong>
+                          <span data-i18n="cameraActiveHint">Coloca tu mano frente a la cámara.</span>
                         </div>
                     <div class="learning-overlay" id="evalOverlay"></div>
                   </div>
@@ -492,13 +503,13 @@
               </div>
 
               <div class="panel card">
-                <div class="panel-head"><h3>Estado</h3></div>
+                <div class="panel-head"><h3 data-i18n="status">Estado</h3></div>
                 <div class="field">
-                  <label>Letra detectada</label>
+                  <label data-i18n="detectedLetter">Letra detectada</label>
                   <div class="pill" id="evalDetectedLetter">-</div>
                 </div>
                 <div class="row" style="margin-top:12px">
-                  <button class="btn ghost" id="btnStopEvaluation">Detener</button>
+                  <button class="btn ghost" id="btnStopEvaluation" data-i18n="stop">Detener</button>
                 </div>
               </div>
             </div>
@@ -509,50 +520,50 @@
 
         <div class="eval-confirm hidden" id="evalExitConfirm" role="dialog" aria-modal="true" aria-labelledby="evalExitTitle">
           <div class="eval-confirm-card">
-            <h2 id="evalExitTitle">¿Quieres salir de la evaluación?</h2>
-            <p class="muted">Si sales ahora, perderás el progreso de esta sesión.</p>
+            <h2 id="evalExitTitle" data-i18n="exitEvalTitle">¿Quieres salir de la evaluación?</h2>
+            <p class="muted" data-i18n="exitEvalText">Si sales ahora, perderás el progreso de esta sesión.</p>
             <div class="row eval-confirm-actions">
-              <button class="btn primary" id="btnContinueEvaluation" type="button">Continuar evaluación</button>
-              <button class="btn danger" id="btnExitEvaluation" type="button">Salir</button>
+              <button class="btn primary" id="btnContinueEvaluation" type="button" data-i18n="continueEval">Continuar evaluación</button>
+              <button class="btn danger" id="btnExitEvaluation" type="button" data-i18n="exit">Salir</button>
             </div>
           </div>
         </div>
 
         <!-- EVALUACIÓN: RESULTADOS -->
         <section class="card evaluation-results hidden" id="viewEvaluacionResultados">
-          <h2>Resultados de la evaluación</h2>
+          <h2 data-i18n="resultsTitle">Resultados de la evaluación</h2>
           <div class="evaluation-result-summary">
-            <div><span class="muted">Puntaje final</span><strong id="evalResultScore">0</strong></div>
-            <div><span class="muted">Aciertos</span><strong id="evalResultHits">0</strong></div>
-            <div><span class="muted">Errores</span><strong id="evalResultErrors">0</strong></div>
-            <div><span class="muted">Duración</span><strong id="evalResultDuration">00:00</strong></div>
+            <div><span class="muted" data-i18n="finalScore">Puntaje final</span><strong id="evalResultScore">0</strong></div>
+            <div><span class="muted" data-i18n="hitsWord">Aciertos</span><strong id="evalResultHits">0</strong></div>
+            <div><span class="muted" data-i18n="errorsWord">Errores</span><strong id="evalResultErrors">0</strong></div>
+            <div><span class="muted" data-i18n="durationWord">Duración</span><strong id="evalResultDuration">00:00</strong></div>
           </div>
           <div class="evaluation-result-lists">
             <div class="panel card">
-              <h3>Letras acertadas</h3>
-              <div class="evaluation-letter-list hit-list" id="evalResultHitLetters">Sin aciertos</div>
+              <h3 data-i18n="hitLetters">Letras acertadas</h3>
+              <div class="evaluation-letter-list hit-list" id="evalResultHitLetters" data-i18n="noHits">Sin aciertos</div>
             </div>
             <div class="panel card">
-              <h3>Letras equivocadas</h3>
-              <div class="evaluation-letter-list error-list" id="evalResultErrorLetters">Sin errores</div>
+              <h3 data-i18n="errorLetters">Letras equivocadas</h3>
+              <div class="evaluation-letter-list error-list" id="evalResultErrorLetters" data-i18n="noErrors">Sin errores</div>
             </div>
           </div>
           <div class="row evaluation-actions">
-            <button class="btn primary" id="btnRetryEvaluation">Nueva evaluación</button>
-            <button class="btn" id="btnResultsMenu">Volver al menú</button>
+            <button class="btn primary" id="btnRetryEvaluation" data-i18n="newEval">Nueva evaluación</button>
+            <button class="btn" id="btnResultsMenu" data-i18n="menuReturn">Volver al menú</button>
           </div>
         </section>
 
         <!-- REPASO: letras marcadas con estrella -->
         <section class="view-wrap hidden" id="viewRepaso">
           <div class="view-bar">
-            <button class="btn ghost back-btn" id="btnBackRepaso">← Volver al menú</button>
-            <div class="view-title">⭐ Mis letras para practicar</div>
+            <button class="btn ghost back-btn" id="btnBackRepaso" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="repasoTitle">⭐ Mis letras para practicar</div>
           </div>
 
           <div class="card" id="repasoEmptyState">
-            <h2>Aún no tienes letras favoritas</h2>
-            <p class="muted">Guarda letras desde Aprendizaje o desde el asistente IA para practicarlas aquí.</p>
+            <h2 data-i18n="repasoEmptyTitle">Aún no tienes letras favoritas</h2>
+            <p class="muted" data-i18n="repasoEmptyText">Guarda letras desde Aprendizaje o desde el asistente IA para practicarlas aquí.</p>
           </div>
 
           <div class="learning hidden" id="repasoPracticeWrap">
@@ -560,14 +571,21 @@
             <div class="panel card learning-panel left-panel">
               <div class="learning-progress" id="repasoProgress">- — 0/0</div>
               <div class="reference-box">
-                <div class="reference-figure" id="repasoReferenceArt" aria-label="Referencia de la seña">
+                <div class="reference-figure" id="repasoReferenceArt" aria-label="Referencia de la seña" data-i18n-aria="referenceAria">
                   <img id="repasoReferenceImage" alt="Imagen de referencia de la seña" />
-                  <span class="reference-placeholder-text">Imagen de referencia</span>
+                  <span class="reference-placeholder-text" data-i18n="referencePlaceholder">Imagen de referencia</span>
                 </div>
                 <div class="letter-reference" id="repasoLetter">-</div>
                 <button class="btn star-btn starred" id="btnUnstarRepaso" type="button" title="Quitar de favoritos" aria-label="Quitar letra de favoritos">
                   <span id="repasoStarIcon">★</span>
                 </button>
+              </div>
+              <div class="sign-instructions" id="repasoInstructionsBox">
+                <div class="sign-instructions-head">
+                  <strong class="sign-instructions-title"></strong>
+                  <button class="btn ghost speak-btn" type="button" data-speak-target="repasoInstructions" data-i18n="speak" data-i18n-aria="speakAria">🔊 Escuchar</button>
+                </div>
+                <p class="sign-instructions-text" id="repasoInstructions"></p>
               </div>
             </div>
 
@@ -575,41 +593,42 @@
               <div class="camera-box">
                 <div class="learning-status-row">
                   <div class="learning-detected">
-                    <span class="muted" style="font-size:12px;">Letra detectada:</span>
+                    <span class="muted" style="font-size:12px;" data-i18n="detectedLetter">Letra detectada:</span>
                     <span class="pill learning-detected-pill" id="repasoDetected">-</span>
                   </div>
-                  <div class="learning-status-pill" id="repasoStatusPill">Esperando seña…</div>
+                  <div class="learning-status-pill" id="repasoStatusPill" data-i18n="waitingSign">Esperando seña…</div>
                 </div>
                 <div class="video-wrap learning-video-wrap" id="repasoVideoWrap">
                   <img id="videoRepaso" alt="camara de repaso" />
                   <div class="video-fallback" id="videoFallbackRepaso">Iniciando cámara…</div>
                   <div class="camera-status camera-status-active" aria-live="polite">
-                    <strong>Cámara activa</strong>
-                    <span>Coloca tu mano frente a la cámara.</span>
+                    <strong data-i18n="cameraActive">Cámara activa</strong>
+                    <span data-i18n="cameraActiveHint">Coloca tu mano frente a la cámara.</span>
                   </div>
                   <div class="learning-overlay" id="repasoOverlay"></div>
                 </div>
-                <div class="learning-caption" id="repasoCaption">Repite la seña</div>
+                <div class="learning-caption" id="repasoCaption" data-i18n="repeatSign">Repite la seña</div>
                 <div class="learning-actions">
-                  <button class="btn" id="btnPrevRepaso">Anterior</button>
-                  <button class="btn primary" id="btnNextRepaso">Siguiente</button>
+                  <button class="btn" id="btnPrevRepaso" data-i18n="prev">Anterior</button>
+                  <button class="btn primary" id="btnNextRepaso" data-i18n="next">Siguiente</button>
                 </div>
               </div>
             </div>
           </div>
           <div class="learning-assistant" id="repasoAssistant">
-            <div class="ai-card hidden" id="repasoAssistantCard" role="dialog" aria-label="Asistente IA de Repaso">
+            <div class="ai-card hidden" id="repasoAssistantCard" role="dialog" aria-label="Asistente IA de Repaso" data-i18n-aria="repasoAssistantAria">
               <div class="ai-card-head">
-                <strong>🤖 Asistente IA</strong>
-                <button class="ai-close" id="btnCloseRepasoAssistant" type="button" aria-label="Cerrar asistente">×</button>
+                <strong data-i18n="aiAssistant">🤖 Asistente IA</strong>
+                <button class="ai-close" id="btnCloseRepasoAssistant" type="button" aria-label="Cerrar asistente" data-i18n-aria="closeAssistant">×</button>
               </div>
               <div class="ai-card-body">
-                <p class="ai-greeting" id="repasoAssistantTitle">¡Hola! 👋</p>
+                <p class="ai-greeting" id="repasoAssistantTitle" data-i18n="aiHello">¡Hola! 👋</p>
                 <p class="ai-message" id="repasoAssistantMessage"></p>
                 <p class="ai-recommendation" id="repasoAssistantTip"></p>
+                <button class="btn ghost speak-btn" type="button" data-speak-target="repasoAssistantMessage,repasoAssistantTip" data-i18n="speak" data-i18n-aria="speakAria">🔊 Escuchar</button>
               </div>
             </div>
-            <button class="ai-robot" id="btnOpenRepasoAssistant" type="button" aria-label="Abrir asistente IA" title="Abrir asistente IA">🤖</button>
+            <button class="ai-robot" id="btnOpenRepasoAssistant" type="button" aria-label="Abrir asistente IA" title="Abrir asistente IA" data-i18n-aria="openAssistant" data-i18n-title="openAssistant">🤖</button>
           </div>
           </div>
         </section>
@@ -617,23 +636,41 @@
         <!-- RETO: DELETREA TU NOMBRE -->
         <section class="view-wrap hidden" id="viewReto">
           <div class="reto-head">
-            <button class="btn ghost" id="btnRetoBack">← Menú</button>
+            <button class="btn ghost" id="btnRetoBack" data-i18n="retoMenu">← Menú</button>
             <div>
-              <h3 class="reto-title">Reto: deletrea tu nombre</h3>
+              <h3 class="reto-title" id="retoTitle">Reto: deletrea tu nombre</h3>
               <div class="muted" id="retoSubtitle">Haz la seña de cada letra en orden.</div>
             </div>
+            <div class="reto-mode-actions">
+              <button class="btn" id="btnRetoName" type="button" data-i18n="spellName">Deletrear mi nombre</button>
+              <button class="btn" id="btnRetoWord" type="button" data-i18n="otherWord">Otra palabra</button>
+            </div>
           </div>
+          <div class="reto-skipped muted hidden" id="retoSkipped" aria-live="polite"></div>
 
           <div class="reto-word" id="retoWord"></div>
 
           <div class="learning-grid" id="retoGrid">
             <div class="panel card learning-panel left-panel">
               <div class="reference-box">
-                <div class="reference-figure" id="retoReferenceArt" aria-label="Referencia de la seña">
+                <div class="reference-figure" id="retoReferenceArt" aria-label="Referencia de la seña" data-i18n-aria="referenceAria">
                   <img id="retoReferenceImage" alt="Imagen de referencia de la seña" />
-                  <span class="reference-placeholder-text">Imagen de referencia</span>
+                  <span class="reference-placeholder-text" data-i18n="referencePlaceholder">Imagen de referencia</span>
                 </div>
                 <div class="letter-reference" id="retoLetter">-</div>
+              </div>
+              <div class="sign-instructions" id="retoInstructionsBox">
+                <div class="sign-instructions-head">
+                  <strong class="sign-instructions-title"></strong>
+                  <button class="btn ghost speak-btn" type="button" data-speak-target="retoInstructions" data-i18n="speak" data-i18n-aria="speakAria">🔊 Escuchar</button>
+                </div>
+                <p class="sign-instructions-text" id="retoInstructions"></p>
+              </div>
+              <div class="reto-ai-hint hidden" id="retoAiHint" aria-live="polite">
+                <strong data-i18n="retoAiHint">🤖 Pista de la IA</strong>
+                <p id="retoAiHintTitle" class="reto-ai-hint-title"></p>
+                <p id="retoAiHintMessage"></p>
+                <p id="retoAiHintTip" class="muted"></p>
               </div>
             </div>
 
@@ -643,8 +680,8 @@
                   <img id="videoReto" alt="camara del reto" />
                   <div class="video-fallback" id="videoFallbackReto">Iniciando cámara…</div>
                   <div class="camera-status camera-status-active" aria-live="polite">
-                    <strong>Cámara activa</strong>
-                    <span>Coloca tu mano frente a la cámara.</span>
+                    <strong data-i18n="cameraActive">Cámara activa</strong>
+                    <span data-i18n="cameraActiveHint">Coloca tu mano frente a la cámara.</span>
                   </div>
                 </div>
                 <div class="learning-caption" id="retoCaption">Haz la seña de la letra</div>
@@ -662,11 +699,11 @@
           <div class="reto-complete hidden" id="retoComplete">
             <div class="reto-complete-card">
               <div class="reto-complete-emoji">🎉</div>
-              <h3>¡Completaste el reto!</h3>
-              <p class="muted">Deletreaste tu nombre correctamente en señas.</p>
+              <h3 data-i18n="retoCompleteTitle">¡Completaste el reto!</h3>
+              <p class="muted" id="retoCompleteText">Deletreaste tu nombre correctamente en señas.</p>
               <div class="row">
-                <button class="btn primary" id="btnRetoRetry">Reintentar</button>
-                <button class="btn" id="btnRetoMenu">Volver al menú</button>
+                <button class="btn primary" id="btnRetoRetry" data-i18n="retry">Reintentar</button>
+                <button class="btn" id="btnRetoMenu" data-i18n="menuReturn">Volver al menú</button>
               </div>
             </div>
           </div>
@@ -674,6 +711,7 @@
       </main>
     </div>
 
+    <script src="./i18n.js"></script>
     <script src="./app.js"></script>
     <script>
       (function(){

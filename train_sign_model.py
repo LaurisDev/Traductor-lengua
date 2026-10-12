@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # train_sign_model.py — Reentrena el modelo desde sign_samples.csv (sin recolectar).
 #
-#   python train_sign_model.py            # alfabeto original (es/en)
+#   python train_sign_model.py            # LSC (alfabeto original)
 #   python train_sign_model.py --lang pt  # LIBRAS
+#   python train_sign_model.py --lang en  # ASL
 
 import argparse
 import os
@@ -17,7 +18,7 @@ from src.sign_language.sign_classifier import SignClassifier
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Reentrenar el clasificador de señas.")
-    p.add_argument("--lang", choices=("es", "en", "pt"), default="es", help="pt = LIBRAS")
+    p.add_argument("--lang", choices=("es", "en", "pt"), default="es", help="es = LSC, pt = LIBRAS, en = ASL")
     args = p.parse_args()
 
     clf = SignClassifier(language=args.lang)

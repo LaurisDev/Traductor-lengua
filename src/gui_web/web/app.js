@@ -45,6 +45,8 @@ const viewReto = $("viewReto");
 const loginError = $("loginError");
 const regError = $("regError");
 const voiceError = $("voiceError");
+const voiceLanguage = $("voiceLanguage");
+const ttsError = $("ttsError");
 
 const chat = $("chat");
 const videoInteraction = $("videoInteraction");
@@ -101,10 +103,16 @@ const repasoOverlay = $("repasoOverlay");
 const videoRepaso = $("videoRepaso");
 const videoFallbackRepaso = $("videoFallbackRepaso");
 const btnUnstarRepaso = $("btnUnstarRepaso");
+// Asistente IA de Repaso
+const repasoAssistantCard = $("repasoAssistantCard");
+const repasoAssistantTitle = $("repasoAssistantTitle");
+const repasoAssistantMessage = $("repasoAssistantMessage");
+const repasoAssistantTip = $("repasoAssistantTip");
 
-// Reto (deletrea tu nombre)
+// Reto (deletrea tu nombre o una palabra)
 const videoReto = $("videoReto");
 const videoFallbackReto = $("videoFallbackReto");
+const retoTitle = $("retoTitle");
 const retoWord = $("retoWord");
 const retoGrid = $("retoGrid");
 const retoLetter = $("retoLetter");
@@ -115,19 +123,172 @@ const retoSubtitle = $("retoSubtitle");
 const retoProgressFill = $("retoProgressFill");
 const retoEmpty = $("retoEmpty");
 const retoComplete = $("retoComplete");
+const retoCompleteText = $("retoCompleteText");
+const retoSkipped = $("retoSkipped");
+const retoAiHint = $("retoAiHint");
+const retoAiHintTitle = $("retoAiHintTitle");
+const retoAiHintMessage = $("retoAiHintMessage");
+const retoAiHintTip = $("retoAiHintTip");
 
-// Abecedario dactilológico por idioma de aprendizaje. Portugués usa LIBRAS
-// (Língua Brasileira de Sinais): incluye Ç y no tiene Ñ.
-const ALPHABETS = {
-  es: ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"],
-  en: ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z"],
-  pt: ["A","B","C","Ç","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"],
+// ===== Idioma =====
+// El idioma de aprendizaje define TODO: textos (i18n.js), alfabeto, imágenes,
+// instrucciones de cada seña, voz y respuestas de la IA. El perfil completo lo
+// entrega el backend (src/languages/profiles.py) mediante get_language_pack.
+const UI_LANGUAGE_STORAGE_KEY = "traductor.uiLanguage";
+
+function loadStoredUiLanguage(){
+  try{
+    const value = localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
+    return I18N[value] ? value : "es";
+  }catch(e){
+    return "es";
+  }
+}
+
+function storeUiLanguage(code){
+  try{ localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, code); }catch(e){ /* preferencia opcional */ }
+}
+
+let currentLearningLanguage = loadStoredUiLanguage();
+const languagePacks = {};
+let languagePack = LANGUAGE_FALLBACK[currentLearningLanguage];
+let LETTERS = languagePack.learning_alphabet;
+
+function tr(key, ...args){
+  const texts = I18N[currentLearningLanguage] || I18N.es;
+  const value = (key in texts) ? texts[key] : I18N.es[key];
+  if(typeof value === "function") return value(...args);
+  return value === undefined ? key : value;
+}
+
+const languagePackRequests = {};
+
+async function ensureLanguagePack(code){
+  if(languagePacks[code]) return languagePacks[code];
+  if(!window.pywebview || !window.pywebview.api || !window.pywebview.api.get_language_pack) return null;
+  if(!languagePackRequests[code]){
+    languagePackRequests[code] = window.pywebview.api.get_language_pack(code).then((res) => {
+      if(res && res.ok && res.language_pack) languagePacks[code] = res.language_pack;
+      return languagePacks[code] || null;
+    }).catch(() => null).finally(() => { delete languagePackRequests[code]; });
+  }
+  // Mientras tanto se mantiene el respaldo local (LANGUAGE_FALLBACK).
+  return languagePackRequests[code];
+}
+
+function signLanguageName(){
+  return languagePack.sign_language === "LIBRAS" ? "Libras" : languagePack.sign_language;
+}
+
+function signDescription(letter){
+  const descriptions = languagePack.sign_descriptions || {};
+  return descriptions[letter] || "";
+}
+
+function renderSignInstructions(textEl, letter){
+  if(!textEl) return;
+  const box = textEl.closest(".sign-instructions");
+  const description = signDescription(letter);
+  if(box){
+    const title = box.querySelector(".sign-instructions-title");
+    if(title) title.textContent = tr("howToSign", signLanguageName());
+    box.classList.toggle("hidden", !description);
+  }
+  textEl.textContent = description;
+}
+
+// ===== Texto a voz (sin dependencias nuevas) =====
+// 1) Web Speech API de WebView2 (voces "OneCore" de Windows).
+// 2) Si WebView2 no tiene voz del idioma, el backend usa las voces SAPI de
+//    escritorio de Windows (src/speech/text_to_speech.py).
+// Si ninguna existe, se informa al usuario en lugar de leer el texto con una
+// voz de otro idioma.
+const TTS = {
+  supported: typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window,
+  voices: [],
+  init(){
+    if(!this.supported) return;
+    const load = () => { this.voices = window.speechSynthesis.getVoices() || []; };
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+  },
+  normalize(lang){ return String(lang || "").toLowerCase().replace("_", "-"); },
+  voiceFor(locale){
+    const wanted = this.normalize(locale);
+    const base = wanted.split("-")[0];
+    return this.voices.find((v) => this.normalize(v.lang) === wanted)
+      || this.voices.find((v) => this.normalize(v.lang).split("-")[0] === base)
+      || null;
+  },
+  cancel(){
+    if(this.supported) window.speechSynthesis.cancel();
+    if(window.pywebview && window.pywebview.api && window.pywebview.api.stop_speaking){
+      window.pywebview.api.stop_speaking().catch(() => {});
+    }
+  },
+  // Devuelve "" si se está leyendo, o el mensaje de error para el usuario.
+  async speak(text, locale){
+    const clean = String(text || "").trim();
+    if(!clean) return "";
+    this.cancel();
+    if(this.supported){
+      if(!this.voices.length) this.voices = window.speechSynthesis.getVoices() || [];
+      const voice = this.voiceFor(locale);
+      if(voice){
+        const utterance = new SpeechSynthesisUtterance(clean);
+        utterance.lang = voice.lang || locale;
+        utterance.voice = voice;
+        window.speechSynthesis.speak(utterance);
+        return "";
+      }
+    }
+    if(window.pywebview && window.pywebview.api && window.pywebview.api.speak){
+      try{
+        const res = await window.pywebview.api.speak(clean, locale);
+        if(res && res.ok) return "";
+        if(res && res.code !== "no_voice") return tr("ttsUnsupported");
+      }catch(e){
+        return tr("ttsUnsupported");
+      }
+    }
+    return tr("ttsNoVoice", locale);
+  },
 };
-let LETTERS = ALPHABETS.es;
+TTS.init();
 
-// Las imágenes de LIBRAS viven en assets/letras/libras/ (a.png, ç.png, ...).
+let ttsToastTimer = null;
+function showTtsMessage(message){
+  if(ttsError && currentView() === "interaction") ttsError.textContent = message;
+  let toast = $("ttsToast");
+  if(!toast){
+    toast = document.createElement("div");
+    toast.id = "ttsToast";
+    toast.className = "tts-toast hidden";
+    toast.setAttribute("role", "status");
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.toggle("hidden", !message);
+  if(ttsToastTimer) clearTimeout(ttsToastTimer);
+  if(message) ttsToastTimer = setTimeout(() => toast.classList.add("hidden"), 6000);
+}
+
+async function speakText(text, locale){
+  showTtsMessage(await TTS.speak(text, locale || languagePack.speech_locale));
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-speak-target]");
+  if(!button) return;
+  const text = button.dataset.speakTarget.split(",")
+    .map((id) => ($(id.trim())?.textContent || "").trim())
+    .filter(Boolean)
+    .join(". ");
+  speakText(text);
+});
+
 function letterImageSrc(letter){
-  const folder = currentLearningLanguage === "pt" ? "./assets/letras/libras" : "./assets/letras";
+  const folder = languagePack.image_folder || LANGUAGE_FALLBACK.es.image_folder;
   return `${folder}/${letter.toLowerCase()}.png`;
 }
 
@@ -136,23 +297,24 @@ function showReferenceImage(img, art, letter){
   img.onerror = () => {
     img.style.display = "none";
     if(placeholder){
-      placeholder.textContent = `Falta la imagen de la seña ${letter}`;
+      placeholder.textContent = tr("missingImage", letter);
       placeholder.style.display = "";
     }
   };
-  img.src = letterImageSrc(letter);
-  img.alt = `Seña de la letra ${letter}`;
+  const src = letterImageSrc(letter);
+  if(img.getAttribute("src") !== src) img.src = src;
+  img.alt = tr("signAlt", letter, signLanguageName());
   img.style.display = "block";
   if(placeholder) placeholder.style.display = "none";
 }
 
-// --- Favoritos del usuario autenticado ---
+// --- Favoritos del usuario autenticado (separados por idioma) ---
 let favoriteLetters = new Set();
 let favoriteUsername = null;
 
 function updateDifficultCount(){
   if(learningDifficultCount){
-    learningDifficultCount.textContent = `Letras favoritas: ${favoriteLetters.size}`;
+    learningDifficultCount.textContent = tr("favoritesCount", favoriteLetters.size);
   }
 }
 
@@ -161,8 +323,8 @@ function updateStarButton(letter){
   if(btnStarLetter){
     btnStarLetter.classList.toggle("starred", isStarred);
     btnStarLetter.setAttribute("aria-pressed", isStarred ? "true" : "false");
-    btnStarLetter.title = isStarred ? "Quitar de favoritos" : "Guardar en favoritos";
-    btnStarLetter.setAttribute("aria-label", isStarred ? "Quitar letra de favoritos" : "Guardar letra en favoritos");
+    btnStarLetter.title = isStarred ? tr("removeFavorite") : tr("saveFavorite");
+    btnStarLetter.setAttribute("aria-label", isStarred ? tr("removeFavoriteAria") : tr("saveFavoriteAria"));
   }
   if(starIcon){
     starIcon.textContent = isStarred ? "★" : "☆";
@@ -172,14 +334,22 @@ function updateStarButton(letter){
 function updateAssistantFavoriteButton(letter){
   if(!btnAssistantFavorite) return;
   const isFavorite = favoriteLetters.has(letter);
-  btnAssistantFavorite.textContent = isFavorite ? "★ Quitar de favoritos" : "⭐ Guardar en favoritos";
+  btnAssistantFavorite.textContent = isFavorite ? tr("assistantFavRemove") : tr("assistantFavSave");
   btnAssistantFavorite.setAttribute("aria-pressed", isFavorite ? "true" : "false");
+}
+
+function updateRepasoUnstarButton(){
+  if(!btnUnstarRepaso) return;
+  btnUnstarRepaso.title = tr("removeFavorite");
+  btnUnstarRepaso.setAttribute("aria-label", tr("removeFavoriteAria"));
 }
 
 async function refreshFavoriteLetters(){
   try{
     const result = await window.pywebview.api.get_favorite_letters();
     if(!result || !result.ok) return;
+    // Ignora respuestas de un idioma anterior (cambio de idioma en curso).
+    if(result.language && result.language !== currentLearningLanguage) return;
     favoriteLetters = new Set(result.letters || []);
     updateDifficultCount();
     updateStarButton(learningTargetLetter);
@@ -215,17 +385,27 @@ let repasoTargetLetter = null;
 let repasoSameStreak = 0;
 let repasoLastDetected = null;
 let repasoIsCorrect = false;
+let repasoAttemptLogged = false;
+let repasoAwaitingNewAttempt = false;
+let repasoResetTimer = null;
 const REPASO_STREAK_TO_CONFIRM = 3;
 
 function buildRepasoList(){
-  repasoList = Array.from(favoriteLetters).sort();
+  // Solo letras del alfabeto activo (los favoritos ya vienen separados por idioma).
+  repasoList = Array.from(favoriteLetters).filter((l) => LETTERS.includes(l)).sort((a, b) => LETTERS.indexOf(a) - LETTERS.indexOf(b));
   if(repasoIndex >= repasoList.length){
     repasoIndex = 0;
   }
 }
 
 function resetRepasoFeedback(){
+  if(repasoResetTimer){
+    clearTimeout(repasoResetTimer);
+    repasoResetTimer = null;
+  }
   repasoIsCorrect = false;
+  repasoAttemptLogged = false;
+  repasoAwaitingNewAttempt = false;
   repasoSameStreak = 0;
   repasoLastDetected = null;
   if(repasoVideoWrap){
@@ -237,18 +417,29 @@ function resetRepasoFeedback(){
   }
   if(repasoStatusPill){
     repasoStatusPill.className = "learning-status-pill";
-    repasoStatusPill.textContent = "Esperando seña…";
+    repasoStatusPill.textContent = tr("waitingSign");
   }
   if(repasoCaption){
-    repasoCaption.textContent = "Repite la seña";
+    repasoCaption.textContent = tr("repeatSign");
   }
   if(repasoDetected){
     repasoDetected.textContent = "-";
+  }
+  if(repasoAssistantCard){
+    repasoAssistantCard.classList.add("hidden");
+  }
+}
+
+function resetReviewSession(){
+  // Descarta el historial temporal de 5 intentos de la IA de Repaso.
+  if(window.pywebview && window.pywebview.api && window.pywebview.api.reset_review_attempts){
+    window.pywebview.api.reset_review_attempts().catch(() => {});
   }
 }
 
 function syncRepasoView(){
   buildRepasoList();
+  updateRepasoUnstarButton();
 
   if(repasoList.length === 0){
     if(repasoEmptyState) repasoEmptyState.classList.remove("hidden");
@@ -266,6 +457,7 @@ function syncRepasoView(){
   }
 
   const letterValue = repasoList[repasoIndex];
+  if(letterValue !== repasoTargetLetter) resetReviewSession();
   repasoTargetLetter = letterValue;
 
   if(repasoLetter) repasoLetter.textContent = letterValue;
@@ -274,6 +466,7 @@ function syncRepasoView(){
   if(repasoReferenceImage && repasoReferenceArt){
     showReferenceImage(repasoReferenceImage, repasoReferenceArt, letterValue);
   }
+  renderSignInstructions($("repasoInstructions"), letterValue);
 
   resetRepasoFeedback();
 }
@@ -301,16 +494,94 @@ async function openRepasoForLetter(letter){
   }
 }
 
+function renderRepasoFeedback(feedback){
+  if(!feedback || !repasoAssistantCard) return;
+  // La IA responde en el idioma activo; descarta respuestas de otro idioma.
+  if(feedback.language && feedback.language !== currentLearningLanguage) return;
+  if(repasoAssistantTitle){
+    repasoAssistantTitle.textContent = feedback.correct ? tr("wellDone") : "🤖 " + (feedback.title || tr("checkSign"));
+  }
+  if(repasoAssistantMessage){
+    repasoAssistantMessage.textContent = feedback.message || "";
+  }
+  if(repasoAssistantTip){
+    repasoAssistantTip.textContent = feedback.tip || "";
+  }
+  repasoAssistantCard.classList.remove("hidden");
+}
+
+function showRepasoRetry(attemptNumber, attemptLimit){
+  const number = attemptNumber || 1;
+  const limit = attemptLimit || 5;
+  if(repasoCaption){
+    repasoCaption.textContent = tr("attemptMismatch", number, limit);
+  }
+  if(repasoResetTimer) clearTimeout(repasoResetTimer);
+  repasoResetTimer = setTimeout(() => {
+    if(currentView() !== "repaso" || repasoIsCorrect) return;
+    if(repasoVideoWrap){
+      repasoVideoWrap.classList.remove("learning-incorrect");
+    }
+    if(repasoOverlay){
+      repasoOverlay.classList.remove("learning-overlay-incorrect");
+      repasoOverlay.textContent = "";
+    }
+    if(repasoStatusPill){
+      repasoStatusPill.className = "learning-status-pill";
+      repasoStatusPill.textContent = tr("attemptRetry", number, limit);
+    }
+  }, 850);
+}
+
+function logRepasoAttempt(detectedLetter){
+  if(repasoAttemptLogged) return;
+  repasoAttemptLogged = true;
+  const target = repasoTargetLetter;
+  window.pywebview.api.review_attempt(target, detectedLetter).then((result) => {
+    if(target !== repasoTargetLetter) return;
+    if(result && result.ok && result.feedback){
+      const details = result.feedback.details || [];
+      const isComparativeFeedback = details.includes("attempts_analyzed=5");
+      // Los primeros cuatro intentos conservan la indicacion corta de la
+      // camara. La explicacion de IA se reserva para la comparacion final.
+      if(isComparativeFeedback || result.feedback.correct){
+        renderRepasoFeedback(result.feedback);
+      }
+      if(detectedLetter !== target){
+        repasoAttemptLogged = false;
+        repasoAwaitingNewAttempt = true;
+        showRepasoRetry(result.review_attempt, result.review_attempt_limit);
+      }
+    }else{
+      repasoAttemptLogged = false;
+    }
+  }).catch(() => {
+    repasoAttemptLogged = false;
+  });
+}
+
 function updateRepasoFeedback(detectedLetterRaw){
   const detected = (detectedLetterRaw && String(detectedLetterRaw).trim()) ? String(detectedLetterRaw).trim().toUpperCase() : null;
   if(repasoDetected){
     repasoDetected.textContent = detected || "-";
   }
+  if(!repasoTargetLetter) return;
 
   if(!detected){
     repasoSameStreak = 0;
     repasoLastDetected = null;
+    repasoAwaitingNewAttempt = false;
     return;
+  }
+
+  // Tras un error, exigir que el usuario cambie o retire la mano antes de
+  // confirmar otro intento. Asi una misma seña sostenida no suma intentos
+  // repetidos en cada frame.
+  if(repasoAwaitingNewAttempt && detected === repasoLastDetected){
+    return;
+  }
+  if(repasoAwaitingNewAttempt){
+    repasoAwaitingNewAttempt = false;
   }
 
   if(detected === repasoLastDetected){
@@ -323,8 +594,13 @@ function updateRepasoFeedback(detectedLetterRaw){
   const isMatch = (detected === repasoTargetLetter);
 
   if(isMatch && repasoSameStreak >= REPASO_STREAK_TO_CONFIRM){
+    if(repasoResetTimer){
+      clearTimeout(repasoResetTimer);
+      repasoResetTimer = null;
+    }
     if(!repasoIsCorrect){
       repasoIsCorrect = true;
+      logRepasoAttempt(detected);
     }
     if(repasoVideoWrap){
       repasoVideoWrap.classList.add("learning-correct");
@@ -333,17 +609,18 @@ function updateRepasoFeedback(detectedLetterRaw){
     if(repasoOverlay){
       repasoOverlay.classList.add("learning-overlay-correct");
       repasoOverlay.classList.remove("learning-overlay-incorrect");
-      repasoOverlay.textContent = "✓ Correcto";
+      repasoOverlay.textContent = tr("correct");
     }
     if(repasoStatusPill){
       repasoStatusPill.className = "learning-status-pill learning-status-correct";
-      repasoStatusPill.textContent = "✓ Correcto";
+      repasoStatusPill.textContent = tr("correctExcl");
     }
     if(repasoCaption){
-      repasoCaption.textContent = "¡Bien hecho! Presiona Siguiente para continuar";
+      repasoCaption.textContent = tr("wellDoneNext");
     }
   }else if(!isMatch && repasoSameStreak >= REPASO_STREAK_TO_CONFIRM){
     repasoIsCorrect = false;
+    logRepasoAttempt(detected);
     if(repasoVideoWrap){
       repasoVideoWrap.classList.add("learning-incorrect");
       repasoVideoWrap.classList.remove("learning-correct");
@@ -351,14 +628,14 @@ function updateRepasoFeedback(detectedLetterRaw){
     if(repasoOverlay){
       repasoOverlay.classList.add("learning-overlay-incorrect");
       repasoOverlay.classList.remove("learning-overlay-correct");
-      repasoOverlay.textContent = "✗ Incorrecto";
+      repasoOverlay.textContent = tr("tryAgain");
     }
     if(repasoStatusPill){
       repasoStatusPill.className = "learning-status-pill learning-status-incorrect";
-      repasoStatusPill.textContent = `✗ Incorrecto: se detectó ${detected}`;
+      repasoStatusPill.textContent = tr("detectedIs", detected);
     }
     if(repasoCaption){
-      repasoCaption.textContent = `Busca la seña de la letra ${repasoTargetLetter}`;
+      repasoCaption.textContent = tr("lookForSign", repasoTargetLetter);
     }
   }
 }
@@ -375,6 +652,7 @@ let learningIsCorrect = false;
 let learningAttemptLogged = false;
 let learningAnalysis = null;
 let accessibilitySettingsDirty = false;
+let retoMode = "name";
 const LEARNING_STREAK_TO_CONFIRM = 3;
 
 function setView(name){
@@ -452,12 +730,29 @@ function applyAccessibilityPreferences(colorBlindMode, accessibleReadingMode, ni
   applyDyslexiaSpacingMode(dyslexiaSpacingMode, syncControls);
 }
 
+function renderRetoHint(feedback, target){
+  const valid = feedback && feedback.target_letter === target && (!feedback.language || feedback.language === currentLearningLanguage);
+  retoAiHint.classList.toggle("hidden", !valid);
+  if(!valid) return;
+  retoAiHintTitle.textContent = feedback.title || "";
+  retoAiHintMessage.textContent = feedback.message || "";
+  retoAiHintTip.textContent = feedback.tip || "";
+}
+
 function renderReto(st){
   const letters = st.challenge_letters || [];
   const idx = st.challenge_index || 0;
   const done = !!st.challenge_done;
+  const mode = st.challenge_mode === "word" ? "word" : "name";
+  const word = st.challenge_word || "";
+
+  retoTitle.textContent = mode === "word" ? `${tr("retoTitleWord")} ${word}` : tr("retoTitleName");
+  const skipped = Array.from(new Set(st.challenge_skipped || [])).filter((c) => c.trim());
+  retoSkipped.classList.toggle("hidden", skipped.length === 0);
+  retoSkipped.textContent = skipped.length ? tr("retoSkipped", skipped.join(", ")) : "";
 
   if(letters.length === 0){
+    retoEmpty.textContent = tr("retoEmpty");
     retoEmpty.classList.remove("hidden");
     retoGrid.classList.add("hidden");
     retoWord.classList.add("hidden");
@@ -481,7 +776,8 @@ function renderReto(st){
   if(done){
     retoGrid.classList.add("hidden");
     retoComplete.classList.remove("hidden");
-    retoSubtitle.textContent = "¡Nombre completo!";
+    retoSubtitle.textContent = mode === "word" ? tr("wordComplete") : tr("nameComplete");
+    retoCompleteText.textContent = mode === "word" ? tr("retoCompleteWord", word) : tr("retoCompleteName");
     return;
   }
 
@@ -491,8 +787,10 @@ function renderReto(st){
   const target = letters[idx];
   retoLetter.textContent = target;
   showReferenceImage(retoReferenceImage, retoReferenceArt, target);
-  retoCaption.textContent = `Haz la seña de la letra "${target}"`;
-  retoSubtitle.textContent = `Letra ${idx + 1} de ${letters.length}`;
+  renderSignInstructions($("retoInstructions"), target);
+  renderRetoHint(st.challenge_feedback, target);
+  retoCaption.textContent = tr("retoCaption", target);
+  retoSubtitle.textContent = tr("retoLetterOf", idx + 1, letters.length);
 
   const progress = Math.max(0, Math.min(1, st.challenge_progress || 0));
   retoProgressFill.style.width = (progress * 100) + "%";
@@ -506,18 +804,18 @@ function renderFrame(frameB64, videoEl, fallbackEl, errorMsg){
     fallbackEl.style.display = "none";
     if(statusEl){
       statusEl.className = "camera-status camera-status-active";
-      statusEl.innerHTML = "<strong>Cámara activa</strong><span>Coloca tu mano frente a la cámara.</span>";
+      statusEl.innerHTML = `<strong>${tr("cameraActive")}</strong><span>${tr("cameraActiveHint")}</span>`;
     }
   }else{
     videoEl.style.display = "none";
     fallbackEl.style.display = "grid";
     const hasCameraError = !!errorMsg;
-    fallbackEl.textContent = errorMsg || "Iniciando cámara…";
+    fallbackEl.textContent = errorMsg || tr("cameraStarting");
     if(statusEl){
       statusEl.className = `camera-status ${hasCameraError ? "camera-status-error" : "camera-status-loading"}`;
       statusEl.innerHTML = hasCameraError
-        ? "<strong>No se pudo acceder a la cámara</strong><span>Verifica los permisos de tu navegador.</span>"
-        : "<strong>Iniciando cámara…</strong><span>Preparando la imagen.</span>";
+        ? `<strong>${tr("cameraErrorTitle")}</strong><span>${tr("cameraErrorHint")}</span>`
+        : `<strong>${tr("cameraStarting")}</strong><span>${tr("cameraLoadingHint")}</span>`;
     }
   }
 }
@@ -536,10 +834,10 @@ function resetLearningFeedback(){
   }
   if(learningStatusPill){
     learningStatusPill.className = "learning-status-pill";
-    learningStatusPill.textContent = "Esperando seña…";
+    learningStatusPill.textContent = tr("waitingSign");
   }
   if(learningCaption){
-    learningCaption.textContent = "Repite la seña";
+    learningCaption.textContent = tr("repeatSign");
   }
   if(learningDetected){
     learningDetected.textContent = "-";
@@ -567,11 +865,11 @@ function renderLearningAssistant(analysis, letter){
   learningAssistantAttempts.textContent = `${analysis.attempts}/5`;
   learningAssistantMessage.textContent = analysis.message || "";
   learningAssistantRecommendation.textContent = analysis.recommendation === "practice"
-    ? "⚠️ Necesitas practicar más esta letra."
+    ? tr("recPractice")
     : analysis.recommendation === "optional_practice"
-      ? "💡 Puedes practicar esta letra nuevamente si lo deseas."
+      ? tr("recOptional")
       : analysis.recommendation === "good"
-        ? "✅ Tu desempeño es bueno."
+        ? tr("recGood")
         : "";
   updateAssistantFavoriteButton(letter || learningTargetLetter);
 }
@@ -579,16 +877,17 @@ function renderLearningAssistant(analysis, letter){
 async function refreshLearningAssistant(letter){
   try{
     const result = await window.pywebview.api.learning_performance(letter);
-    if(result && result.ok) renderLearningAssistant(result.analysis, result.letter);
+    if(result && result.ok && result.letter === learningTargetLetter) renderLearningAssistant(result.analysis, result.letter);
   }catch(e){
     // El asistente conserva el ultimo analisis valido si la consulta falla.
   }
 }
 
 function syncLearningView(letter, progressText){
-  const letterValue = (letter && letter.trim()) ? letter.trim().toUpperCase() : "A";
-  const idx = LETTERS.indexOf(letterValue);
+  const requested = (letter && letter.trim()) ? letter.trim().toUpperCase() : LETTERS[0];
+  const idx = LETTERS.indexOf(requested);
   const finalIndex = idx >= 0 ? idx : 0;
+  const letterValue = LETTERS[finalIndex];
   const progressValue = progressText || `${finalIndex + 1}/${LETTERS.length}`;
 
   learningTargetLetter = letterValue;
@@ -596,11 +895,12 @@ function syncLearningView(letter, progressText){
   learningProgress.textContent = `${letterValue} — ${progressValue}`;
 
   showReferenceImage(learningReferenceImage, learningReferenceArt, letterValue);
+  renderSignInstructions($("learningInstructions"), letterValue);
 
   updateStarButton(letterValue);
   updateAssistantFavoriteButton(letterValue);
   resetLearningFeedback();
-  refreshLearningAssistant(letterValue);
+  if(lastLoggedIn) refreshLearningAssistant(letterValue);
 }
 
 function updateLearningFeedback(detectedLetterRaw){
@@ -622,10 +922,10 @@ function updateLearningFeedback(detectedLetterRaw){
       }
       if(learningStatusPill){
         learningStatusPill.className = "learning-status-pill";
-        learningStatusPill.textContent = "Esperando seña…";
+        learningStatusPill.textContent = tr("waitingSign");
       }
       if(learningCaption){
-        learningCaption.textContent = "Repite la seña";
+        learningCaption.textContent = tr("repeatSign");
       }
     }
     return;
@@ -647,7 +947,7 @@ function updateLearningFeedback(detectedLetterRaw){
       learningCorrectCount += 1;
       logLearningAttempt(detected);
       if(learningCounter){
-        learningCounter.textContent = `Correctas: ${learningCorrectCount}`;
+        learningCounter.textContent = tr("correctCount", learningCorrectCount);
       }
     }
     if(learningVideoWrap){
@@ -657,14 +957,14 @@ function updateLearningFeedback(detectedLetterRaw){
     if(learningOverlay){
       learningOverlay.classList.add("learning-overlay-correct");
       learningOverlay.classList.remove("learning-overlay-incorrect");
-      learningOverlay.textContent = "✓ Correcto";
+      learningOverlay.textContent = tr("correct");
     }
     if(learningStatusPill){
       learningStatusPill.className = "learning-status-pill learning-status-correct";
-      learningStatusPill.textContent = "✓ Correcto";
+      learningStatusPill.textContent = tr("correct");
     }
     if(learningCaption){
-      learningCaption.textContent = "¡Bien hecho! Presiona Siguiente para continuar";
+      learningCaption.textContent = tr("wellDoneNext");
     }
   }else if(!isMatch && learningSameStreak >= LEARNING_STREAK_TO_CONFIRM){
     learningIsCorrect = false;
@@ -676,39 +976,82 @@ function updateLearningFeedback(detectedLetterRaw){
     if(learningOverlay){
       learningOverlay.classList.add("learning-overlay-incorrect");
       learningOverlay.classList.remove("learning-overlay-correct");
-      learningOverlay.textContent = "✗ Incorrecto";
+      learningOverlay.textContent = tr("incorrect");
     }
     if(learningStatusPill){
       learningStatusPill.className = "learning-status-pill learning-status-incorrect";
-      learningStatusPill.textContent = `✗ Incorrecto: se detectó ${detected}`;
+      learningStatusPill.textContent = tr("incorrectDetected", detected);
     }
     if(learningCaption){
-      learningCaption.textContent = `Busca la seña de la letra ${learningTargetLetter}`;
+      learningCaption.textContent = tr("lookForSign", learningTargetLetter);
     }
   }
   // ===== FIN: identifica si la letra es correcta y pinta el marco =====
 }
 
+// ===== Chat de interacción =====
+// Cada mensaje guarda su tipo ("voice" | "signs") y el idioma en que se dijo:
+// la etiqueta se muestra en el idioma activo y "Escuchar" usa la voz del idioma del mensaje.
+let chatMessages = [];
 
-
-
-function addBubble(who, text){
+function renderBubble(message){
+  const isVoice = message.kind ? message.kind === "voice" : String(message.who || "").includes("voz");
   const div = document.createElement("div");
-  div.className = "bubble " + (who.includes("voz") ? "me" : "other");
+  div.className = "bubble " + (isVoice ? "me" : "other");
+  const head = document.createElement("div");
+  head.className = "bubble-head";
   const whoDiv = document.createElement("div");
   whoDiv.className = "who";
-  whoDiv.textContent = who;
+  whoDiv.textContent = message.kind === "voice" ? tr("chatVoice") : message.kind === "signs" ? tr("chatSigns") : (message.who || "");
+  const speakBtn = document.createElement("button");
+  speakBtn.type = "button";
+  speakBtn.className = "bubble-speak";
+  speakBtn.textContent = "🔊";
+  speakBtn.title = tr("speakAria");
+  speakBtn.setAttribute("aria-label", tr("speakAria"));
+  speakBtn.onclick = () => speakText(message.text, message.speech_locale);
+  head.appendChild(whoDiv);
+  head.appendChild(speakBtn);
   const txt = document.createElement("div");
-  txt.textContent = text;
-  div.appendChild(whoDiv);
+  txt.textContent = message.text;
+  if(message.speech_locale) txt.lang = message.speech_locale;
+  div.appendChild(head);
   div.appendChild(txt);
   chat.appendChild(div);
+}
+
+function addBubble(message){
+  chatMessages.push(message);
+  renderBubble(message);
   chat.scrollTop = chat.scrollHeight;
+}
+
+function renderChat(){
+  chat.innerHTML = "";
+  chatMessages.forEach(renderBubble);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function clearChat(){
+  chatMessages = [];
+  chat.innerHTML = "";
+}
+
+function updateVoiceLanguage(){
+  if(voiceLanguage) voiceLanguage.textContent = tr("voiceListeningIn", languagePack.speech_locale);
+}
+
+function updateRecButton(){
+  const btn = $("btnRec");
+  btn.textContent = recording ? tr("stop") : tr("record");
+  btn.classList.toggle("danger", recording);
+  btn.classList.toggle("primary", !recording);
 }
 
 async function poll(){
   try{
     const st = await window.pywebview.api.get_state();
+    if(!languagePacks[currentLearningLanguage]) loadActiveLanguagePack();
     if(st && st.logged_in){
       btnLogout.classList.remove("hidden");
       if(!accessibilitySettingsDirty){
@@ -726,18 +1069,16 @@ async function poll(){
       }
 
       signText.value = st.sign_text || "";
-      letterPill.textContent = "Letra: " + (st.letter || "-");
+      letterPill.textContent = tr("letterLabel", st.letter || "-");
 
-      if(currentView() !== "aprendizaje"){
-        syncLearningView(st.letter || "A", "1/27");
-      }else{
+      if(currentView() === "aprendizaje"){
         updateLearningFeedback(st.letter);
       }
 
       renderFrame(st.frame_jpeg_b64, videoInteraction, videoFallbackInteraction, st.camera_error);
       renderFrame(st.frame_jpeg_b64, videoAprendizaje, videoFallbackAprendizaje, st.camera_error);
       renderFrame(st.frame_jpeg_b64, videoReto, videoFallbackReto, st.camera_error);
-      renderReto(st);
+      if(currentView() === "reto") renderReto(st);
 
       // Si estamos en modo evaluación, mostrar el estado calculado por backend.
       try{
@@ -745,8 +1086,8 @@ async function poll(){
         if(typeof evalDetectedLetter !== 'undefined'){
           evalDetectedLetter.textContent = st.evaluation_detected || st.letter || "-";
           evalRequestedLetter.textContent = st.evaluation_target || "-";
-          evalTime.textContent = "Tiempo: " + formatTimeSec(st.evaluation_remaining || 0);
-          evalScore.textContent = "Puntaje: " + (st.evaluation_score || 0);
+          evalTime.textContent = tr("time", formatTimeSec(st.evaluation_remaining || 0));
+          evalScore.textContent = tr("score", st.evaluation_score || 0);
           const currentHits = st.evaluation_hits || 0;
           const currentErrors = st.evaluation_errors || 0;
           if(currentHits > evalLastHits){
@@ -756,8 +1097,8 @@ async function poll(){
           }
           evalLastHits = currentHits;
           evalLastErrors = currentErrors;
-          evalHits.textContent = "Aciertos: " + currentHits;
-          evalErrors.textContent = "Errores: " + currentErrors;
+          evalHits.textContent = tr("hitsLabel", currentHits);
+          evalErrors.textContent = tr("errorsLabel", currentErrors);
           if(currentView() === "evaluacion_run" && !st.evaluation_active && st.evaluation_duration){
             stopEvaluation();
           }
@@ -773,7 +1114,7 @@ async function poll(){
       // append new messages
       if(Array.isArray(st.new_messages)){
         for(const m of st.new_messages){
-          addBubble(m.who, m.text);
+          addBubble(m);
         }
       }
 
@@ -781,9 +1122,8 @@ async function poll(){
     }else{
       btnLogout.classList.add("hidden");
       menuUsername = "";
-      if(currentLearningLanguage !== "es") renderLearningLanguage("es");
       // No interrumpir el registro mientras todavía no existe una sesión.
-      if(["interaction", "menu", "aprendizaje", "reto", "evaluacion_run", "evaluacion_config", "evaluacion_resultados", "settings"].includes(currentView())){
+      if(["interaction", "menu", "aprendizaje", "reto", "repaso", "evaluacion_run", "evaluacion_config", "evaluacion_resultados", "evaluacion_historial", "settings"].includes(currentView())){
         setView("login");
       }
 
@@ -828,9 +1168,9 @@ $("btnLogin").onclick = async () => {
   loginError.textContent = "";
   const u = $("loginUser").value.trim();
   const p = $("loginPass").value;
-  const res = await window.pywebview.api.login(u, p);
+  const res = await window.pywebview.api.login(u, p, currentLearningLanguage);
   if(!res.ok){
-    loginError.textContent = res.msg || "Error";
+    loginError.textContent = res.msg || tr("genericError");
     return;
   }
   accessibilitySettingsDirty = false;
@@ -843,127 +1183,80 @@ $("btnLogin").onclick = async () => {
       state.dyslexia_spacing_mode,
       state.reading_font_size,
     );
+    renderLearningLanguage(state.learning_language);
   }
 };
-// ===== Idioma de aprendizaje (menú principal) =====
-// El menú principal se muestra en el idioma que el usuario está aprendiendo.
-const MENU_TEXTS = {
-  es: {
-    subtitle: "Interacción (Voz + Señas)",
-    greeting: "¡Hola!",
-    greetingName: (name) => `¡Hola, ${name}!`,
-    streak: (n) => `Racha: ${n} ${n === 1 ? "día" : "días"} 🔥`,
-    learningIn: "Aprendiendo en",
-    langEs: "Español", langEn: "Inglés", langPt: "Portugués",
-    heroTitle: "Tus manos también hablan",
-    heroText1: "El lenguaje de señas es una lengua completa, con su propia gramática y cultura. Aprenderlo te acerca a millones de personas discapacitadas y hace que la comunicación sea para todos.",
-    heroText2: "Practica cada letra con la cámara, a tu ritmo, y convierte cada seña en un paso hacia una comunicación sin barreras.",
-    wordAria: "La palabra HOLA deletreada en señas",
-    caption: "Estás aprendiendo lenguaje de señas en español.",
-    menuAria: "Opciones del menú principal",
-    interaction: "Iniciar interacción", interactionDesc: "Conversa con voz y señas en tiempo real",
-    groupLearn: "Aprende",
-    learning: "Aprendizaje", learningDesc: "Letra por letra",
-    review: "Repaso", reviewDesc: "Refuerza lo aprendido",
-    challenge: "Reto", challengeDesc: "Deletrea tu nombre",
-    groupTest: "Ponte a prueba",
-    evaluation: "Modo evaluación", evaluationDesc: "Mide tu velocidad",
-    history: "Historial", historyDesc: "Revisa tu progreso",
-    settings: "⚙ Configuración",
-    logout: "Cerrar sesión",
-  },
-  en: {
-    subtitle: "Interaction (Voice + Signs)",
-    greeting: "Hi!",
-    greetingName: (name) => `Hi, ${name}!`,
-    streak: (n) => `Streak: ${n} ${n === 1 ? "day" : "days"} 🔥`,
-    learningIn: "Learning in",
-    langEs: "Spanish", langEn: "English", langPt: "Portuguese",
-    heroTitle: "Your hands speak too",
-    heroText1: "Sign language is a complete language, with its own grammar and culture. Learning it brings you closer to millions of disabled people and makes communication possible for everyone.",
-    heroText2: "Practice each letter with the camera, at your own pace, and turn every sign into a step toward barrier-free communication.",
-    wordAria: "The word HOLA fingerspelled in sign language",
-    caption: "You are learning sign language in English.",
-    menuAria: "Main menu options",
-    interaction: "Start interaction", interactionDesc: "Talk with voice and signs in real time",
-    groupLearn: "Learn",
-    learning: "Learning", learningDesc: "Letter by letter",
-    review: "Review", reviewDesc: "Reinforce what you learned",
-    challenge: "Challenge", challengeDesc: "Spell your name",
-    groupTest: "Test yourself",
-    evaluation: "Evaluation mode", evaluationDesc: "Measure your speed",
-    history: "History", historyDesc: "Check your progress",
-    settings: "⚙ Settings",
-    logout: "Log out",
-  },
-  pt: {
-    subtitle: "Interação (Voz + Sinais)",
-    greeting: "Olá!",
-    greetingName: (name) => `Olá, ${name}!`,
-    streak: (n) => `Sequência: ${n} ${n === 1 ? "dia" : "dias"} 🔥`,
-    learningIn: "Aprendendo em",
-    langEs: "Espanhol", langEn: "Inglês", langPt: "Português",
-    heroTitle: "Suas mãos também falam",
-    heroText1: "A língua de sinais é uma língua completa, com sua própria gramática e cultura. Aprendê-la aproxima você de milhões de pessoas com deficiência e torna a comunicação possível para todos.",
-    heroText2: "Pratique cada letra com a câmera, no seu ritmo, e transforme cada sinal em um passo rumo a uma comunicação sem barreiras.",
-    wordAria: "A palavra HOLA soletrada em sinais",
-    caption: "Você está aprendendo língua de sinais em português.",
-    menuAria: "Opções do menu principal",
-    interaction: "Iniciar interação", interactionDesc: "Converse com voz e sinais em tempo real",
-    groupLearn: "Aprenda",
-    learning: "Aprendizado", learningDesc: "Letra por letra",
-    review: "Revisão", reviewDesc: "Reforce o que aprendeu",
-    challenge: "Desafio", challengeDesc: "Soletre seu nome",
-    groupTest: "Teste-se",
-    evaluation: "Modo avaliação", evaluationDesc: "Meça sua velocidade",
-    history: "Histórico", historyDesc: "Veja seu progresso",
-    settings: "⚙ Configurações",
-    logout: "Sair",
-  },
-};
+
+// ===== Idioma de aprendizaje =====
 let learningLanguageSaving = false;
-let currentLearningLanguage = "es";
 let menuUsername = "";
 
-function menuTexts(){
-  return MENU_TEXTS[currentLearningLanguage] || MENU_TEXTS.es;
-}
-
 function menuGreetingText(){
-  const t = menuTexts();
-  return menuUsername ? t.greetingName(menuUsername) : t.greeting;
+  return menuUsername ? tr("greetingName", menuUsername) : tr("greeting");
 }
 
 // Usado por el indicador de racha (script en index.html).
-window.formatStudyStreak = (n) => menuTexts().streak(n);
+window.formatStudyStreak = (n) => tr("streak", n);
 
-function applyMenuLanguage(){
-  const t = menuTexts();
-  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t[el.dataset.i18n]; });
-  viewMenu.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t[el.dataset.i18nTitle]; });
-  viewMenu.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", t[el.dataset.i18nAria]); });
-  $("menuLanguageCaption").textContent = t.caption;
+// Aplica los textos del idioma activo a toda la interfaz.
+function applyLanguage(){
+  document.documentElement.lang = languagePack.ui_locale || currentLearningLanguage;
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = tr(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => { el.placeholder = tr(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = tr(el.dataset.i18nTitle); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", tr(el.dataset.i18nAria)); });
+  $("menuLanguageCaption").textContent = tr("caption");
   $("menuGreeting").textContent = menuGreetingText();
   const streak = $("studyStreak");
   const days = parseInt(streak.textContent.replace(/\D+/g, ""), 10) || 0;
-  streak.textContent = t.streak(days);
+  streak.textContent = tr("streak", days);
+  updateDifficultCount();
+  if(learningCounter) learningCounter.textContent = tr("correctCount", learningCorrectCount);
+  updateRepasoUnstarButton();
+  updateVoiceLanguage();
+  updateRecButton();
+  renderChat();
+  if(ttsError) ttsError.textContent = "";
 }
 
 function renderLearningLanguage(language){
-  const code = MENU_TEXTS[language] ? language : "es";
+  const code = I18N[language] ? language : "es";
   const input = document.querySelector(`input[name="menuLearningLanguage"][value="${code}"]`);
   if(input && !input.checked) input.checked = true;
-  if(code === currentLearningLanguage && viewMenu.dataset.lang === code) return;
+  const regInput = document.querySelector(`input[name="regLearningLanguage"][value="${code}"]`);
+  if(regInput && !regInput.checked) regInput.checked = true;
+  if(code === currentLearningLanguage && document.body.dataset.lang === code) return;
   currentLearningLanguage = code;
+  document.body.dataset.lang = code;
   viewMenu.dataset.lang = code;
   viewMenu.lang = code;
-  applyMenuLanguage();
+  storeUiLanguage(code);
+  TTS.cancel();
+  showTtsMessage("");
+  languagePack = languagePacks[code] || LANGUAGE_FALLBACK[code];
+  applyLanguage();
   applySignAlphabet();
+  loadActiveLanguagePack();
 }
 
-// Cambia el abecedario y las imágenes de referencia al del idioma elegido.
+// El perfil completo (instrucciones de cada seña) viene del backend. Se pide
+// otra vez si todavía no estaba disponible (p. ej. antes de "pywebviewready").
+function loadActiveLanguagePack(){
+  const code = currentLearningLanguage;
+  if(languagePacks[code] && languagePack === languagePacks[code]) return;
+  ensureLanguagePack(code).then((pack) => {
+    if(!pack || currentLearningLanguage !== code || languagePack === pack) return;
+    languagePack = pack;
+    applyLanguage();
+    applySignAlphabet();
+  });
+}
+window.addEventListener("pywebviewready", loadActiveLanguagePack);
+
+// Cambia el abecedario, las imágenes y las instrucciones al del idioma elegido
+// y descarta el estado que pertenecía al idioma anterior.
 function applySignAlphabet(){
-  LETTERS = ALPHABETS[currentLearningLanguage] || ALPHABETS.es;
+  LETTERS = languagePack.learning_alphabet || LANGUAGE_FALLBACK.es.learning_alphabet;
   viewMenu.querySelectorAll(".menu-word-tile").forEach((tile) => {
     const img = tile.querySelector("img");
     const letter = tile.querySelector("b").textContent.trim();
@@ -975,7 +1268,17 @@ function applySignAlphabet(){
   if(learningIndex >= LETTERS.length) learningIndex = 0;
   const idx = LETTERS.indexOf(learningTargetLetter);
   if(idx >= 0) learningIndex = idx;
+  learningAnalysis = null;
+  if(learningAssistantCard) learningAssistantCard.classList.add("hidden");
   syncLearningView(LETTERS[learningIndex], `${learningIndex + 1}/${LETTERS.length}`);
+  // Repaso: los favoritos y el historial de 5 intentos son propios de cada idioma.
+  repasoIndex = 0;
+  repasoTargetLetter = null;
+  resetRepasoFeedback();
+  if(lastLoggedIn){
+    resetReviewSession();
+    refreshFavoriteLetters();
+  }
   if(currentView() === "repaso") syncRepasoView();
 }
 
@@ -987,6 +1290,7 @@ document.querySelectorAll('input[name="menuLearningLanguage"]').forEach((input) 
     switcher.classList.add("saving");
     try{
       const res = await window.pywebview.api.set_learning_language(input.value);
+      if(res && res.ok && res.language_pack) languagePacks[res.learning_language] = res.language_pack;
       renderLearningLanguage(res && res.ok ? res.learning_language : currentLearningLanguage);
     }catch(e){
       renderLearningLanguage(currentLearningLanguage);
@@ -994,6 +1298,13 @@ document.querySelectorAll('input[name="menuLearningLanguage"]').forEach((input) 
       learningLanguageSaving = false;
       switcher.classList.remove("saving");
     }
+  });
+});
+
+// Registro: al elegir el idioma de aprendizaje, la interfaz cambia de inmediato.
+document.querySelectorAll('input[name="regLearningLanguage"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    if(input.checked) renderLearningLanguage(input.value);
   });
 });
 
@@ -1005,7 +1316,7 @@ $("btnContinueRegister").onclick = () => {
   const password = $("regPass").value;
   const confirmation = $("regPass2").value;
   if(!username || !password || !confirmation){
-    regError.textContent = "Completa todos los campos para continuar";
+    regError.textContent = tr("fillAllFields");
     return;
   }
   setView("register_language");
@@ -1029,7 +1340,7 @@ $("btnRegister").onclick = async () => {
   const learningLanguage = document.querySelector('input[name="regLearningLanguage"]:checked')?.value || "es";
   const res = await window.pywebview.api.register(u, p, p2, colorBlindMode, accessibleReadingMode, dyslexiaSpacingMode, readingFontSize, learningLanguage);
   if(!res.ok) {
-    $("regAccessibilityError").textContent = res.msg || "Error";
+    $("regAccessibilityError").textContent = res.msg || tr("genericError");
   }
   else{
     // limpiar por seguridad
@@ -1039,27 +1350,26 @@ $("btnRegister").onclick = async () => {
     $("regAccessibleReadingMode").checked = false;
     $("regDyslexiaSpacingMode").checked = false;
     regReadingFontSize.value = "medium";
-    document.querySelector('input[name="regLearningLanguage"][value="es"]').checked = true;
     setView("login");
   }
 };
-$("btnLogout").onclick = async () => {
+
+async function logoutAndReset(){
   await window.pywebview.api.logout();
-  chat.innerHTML = "";
+  clearChat();
+  TTS.cancel();
   favoriteLetters = new Set();
   favoriteUsername = null;
+  setView("login");
+}
+
+$("btnLogout").onclick = async () => {
+  await logoutAndReset();
   $("loginUser").value = "";
   $("loginPass").value = "";
-  setView("login");
 };
 
-$("btnLogoutMenu").onclick = async () => {
-  await window.pywebview.api.logout();
-  chat.innerHTML = "";
-  favoriteLetters = new Set();
-  favoriteUsername = null;
-  setView("login");
-};
+$("btnLogoutMenu").onclick = logoutAndReset;
 
 $("btnOpenSettings").onclick = () => {
   settingsError.textContent = "";
@@ -1102,7 +1412,7 @@ btnSaveSettings.onclick = async () => {
   );
   btnSaveSettings.disabled = false;
   if(!result || !result.ok){
-    settingsError.textContent = result?.msg || "No se pudo guardar la preferencia";
+    settingsError.textContent = result?.msg || tr("saveError");
     btnSaveSettings.disabled = false;
     return;
   }
@@ -1112,12 +1422,16 @@ btnSaveSettings.onclick = async () => {
   setView("menu");
 };
 
-$("btnOpenInteraction").onclick = () => setView("interaction");
+$("btnOpenInteraction").onclick = () => {
+  updateVoiceLanguage();
+  if(ttsError) ttsError.textContent = "";
+  setView("interaction");
+};
 $("btnOpenAprendizaje").onclick = () => {
   learningIndex = 0;
   learningCorrectCount = 0;
   if(learningCounter){
-    learningCounter.textContent = "Correctas: 0";
+    learningCounter.textContent = tr("correctCount", 0);
   }
   updateDifficultCount();
   syncLearningView(LETTERS[learningIndex], `${learningIndex + 1}/${LETTERS.length}`);
@@ -1155,7 +1469,12 @@ if($("btnOpenRepaso")){
   };
 }
 if($("btnBackRepaso")){
-  $("btnBackRepaso").onclick = () => setView("menu");
+  $("btnBackRepaso").onclick = () => {
+    resetReviewSession();
+    resetRepasoFeedback();
+    repasoTargetLetter = null;
+    setView("menu");
+  };
 }
 if($("btnPrevRepaso")){
   $("btnPrevRepaso").onclick = () => moveRepaso(-1);
@@ -1174,9 +1493,16 @@ if(btnUnstarRepaso){
     syncRepasoView();
   };
 }
+if($("btnOpenRepasoAssistant")){
+  $("btnOpenRepasoAssistant").onclick = () => repasoAssistantCard.classList.toggle("hidden");
+}
+if($("btnCloseRepasoAssistant")){
+  $("btnCloseRepasoAssistant").onclick = () => repasoAssistantCard.classList.add("hidden");
+}
 
 $("btnBackInteraction").onclick = () => {
   if(recording) return;
+  TTS.cancel();
   setView("menu");
 };
 $("btnBackAprendizaje").onclick = () => setView("menu");
@@ -1196,10 +1522,6 @@ function formatTimeSec(s){
   const mm = Math.floor(s/60).toString().padStart(2,'0');
   const ss = (s%60).toString().padStart(2,'0');
   return `${mm}:${ss}`;
-}
-
-function pickRandomLetter(){
-  return LETTERS[Math.floor(Math.random()*LETTERS.length)];
 }
 
 function clearEvalFeedback(){
@@ -1227,7 +1549,7 @@ function showEvalFeedback(isCorrect){
   if(evalOverlay){
     evalOverlay.classList.toggle("learning-overlay-correct", isCorrect);
     evalOverlay.classList.toggle("learning-overlay-incorrect", !isCorrect);
-    evalOverlay.textContent = isCorrect ? "✓ ¡Correcto! +5 puntos" : "✗ Incorrecto -2 puntos";
+    evalOverlay.textContent = isCorrect ? tr("evalCorrectFeedback") : tr("evalIncorrectFeedback");
   }
   evalFeedbackTimeoutId = setTimeout(clearEvalFeedback, EVAL_FEEDBACK_DURATION_MS);
 }
@@ -1239,10 +1561,10 @@ async function startEvaluationWithDuration(seconds){
   clearEvalFeedback();
   evalRequestedLetter.textContent = result.target_letter || "-";
   evalDetectedLetter.textContent = "-";
-  evalTime.textContent = "Tiempo: " + formatTimeSec(seconds);
-  evalScore.textContent = "Puntaje: 0";
-  evalHits.textContent = "Aciertos: 0";
-  evalErrors.textContent = "Errores: 0";
+  evalTime.textContent = tr("time", formatTimeSec(seconds));
+  evalScore.textContent = tr("score", 0);
+  evalHits.textContent = tr("hitsLabel", 0);
+  evalErrors.textContent = tr("errorsLabel", 0);
   evalLastHits = 0;
   evalLastErrors = 0;
   setView("evaluacion_run");
@@ -1281,8 +1603,8 @@ async function stopEvaluation(showResults = true){
   evalResultHits.textContent = results.hits || 0;
   evalResultErrors.textContent = results.errors || 0;
   evalResultDuration.textContent = formatTimeSec(results.elapsed_seconds || results.duration_seconds || 0);
-  renderEvaluationLetters(evalResultHitLetters, results.hit_letters, "Sin aciertos");
-  renderEvaluationLetters(evalResultErrorLetters, results.error_letters, "Sin errores");
+  renderEvaluationLetters(evalResultHitLetters, results.hit_letters, tr("noHits"));
+  renderEvaluationLetters(evalResultErrorLetters, results.error_letters, tr("noErrors"));
   evalRequestedLetter.textContent = '-';
   evalDetectedLetter.textContent = '-';
   clearEvalFeedback();
@@ -1309,7 +1631,7 @@ function evaluationHistoryKey(){
   return `traductor.evaluationHistory.${user}`;
 }
 
-function loadEvaluationHistory(){
+function loadAllEvaluationHistory(){
   try{
     const history = JSON.parse(localStorage.getItem(evaluationHistoryKey()) || "[]");
     return Array.isArray(history) ? history : [];
@@ -1318,10 +1640,16 @@ function loadEvaluationHistory(){
   }
 }
 
+// El historial se muestra por idioma (las sesiones antiguas sin idioma son de LSC).
+function loadEvaluationHistory(){
+  return loadAllEvaluationHistory().filter((session) => (session.language || "es") === currentLearningLanguage);
+}
+
 function saveEvaluationSession(results){
   const session = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     date: new Date().toISOString(),
+    language: currentLearningLanguage,
     duration_seconds: Number(results.duration_seconds || 0),
     score: Number(results.score || 0),
     hits: Number(results.hits || 0),
@@ -1329,7 +1657,7 @@ function saveEvaluationSession(results){
     hit_letters: Array.isArray(results.hit_letters) ? results.hit_letters.slice() : [],
     error_letters: Array.isArray(results.error_letters) ? results.error_letters.slice() : []
   };
-  const history = [session, ...loadEvaluationHistory()];
+  const history = [session, ...loadAllEvaluationHistory()];
   try{
     localStorage.setItem(evaluationHistoryKey(), JSON.stringify(history));
   }catch(e){
@@ -1340,31 +1668,31 @@ function saveEvaluationSession(results){
 
 function formatEvaluationDate(isoDate){
   const date = new Date(isoDate);
-  if(Number.isNaN(date.getTime())) return "Fecha desconocida";
-  return date.toLocaleDateString("es-ES", {day:"2-digit", month:"2-digit", year:"numeric"});
+  if(Number.isNaN(date.getTime())) return tr("unknownDate");
+  return date.toLocaleDateString(languagePack.ui_locale, {day:"2-digit", month:"2-digit", year:"numeric"});
 }
 
 function formatEvaluationDateTime(isoDate){
   const date = new Date(isoDate);
-  if(Number.isNaN(date.getTime())) return "Fecha desconocida";
-  return date.toLocaleString("es-ES", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
+  if(Number.isNaN(date.getTime())) return tr("unknownDate");
+  return date.toLocaleString(languagePack.ui_locale, {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
 }
 
 function formatEvaluationDuration(seconds){
   const total = Math.max(0, Number(seconds) || 0);
-  if(total < 60) return `${total} segundos`;
+  if(total < 60) return tr("durationSeconds", total);
   const minutes = Math.floor(total / 60);
   const rest = total % 60;
-  return rest ? `${minutes} min ${rest} s` : `${minutes} ${minutes === 1 ? "minuto" : "minutos"}`;
+  return rest ? tr("durationMinSec", minutes, rest) : tr("durationMinutes", minutes);
 }
 
 function showEvaluationHistorySession(session){
   if(!session) return;
   evaluationHistoryEmpty.classList.add("hidden");
   evaluationHistorySummary.classList.remove("hidden");
-  evaluationHistoryMeta.textContent = `${formatEvaluationDateTime(session.date)} — ${formatEvaluationDuration(session.duration_seconds)} — ${session.score} puntos — ${session.hits} aciertos — ${session.errors} errores`;
-  renderEvaluationLetters(historyHitLetters, session.hit_letters, "Sin aciertos");
-  renderEvaluationLetters(historyErrorLetters, session.error_letters, "Sin errores");
+  evaluationHistoryMeta.textContent = `${formatEvaluationDateTime(session.date)} — ${tr("sessionLine", formatEvaluationDuration(session.duration_seconds), session.score, session.hits, session.errors)}`;
+  renderEvaluationLetters(historyHitLetters, session.hit_letters, tr("noHits"));
+  renderEvaluationLetters(historyErrorLetters, session.error_letters, tr("noErrors"));
   document.querySelectorAll(".evaluation-history-item").forEach((item) => {
     item.classList.toggle("selected", item.dataset.sessionId === session.id);
   });
@@ -1374,7 +1702,10 @@ function renderEvaluationHistory(){
   const history = loadEvaluationHistory();
   evaluationHistoryList.innerHTML = "";
   if(history.length === 0){
-    evaluationHistoryList.innerHTML = '<p class="muted">Todavía no hay evaluaciones guardadas.</p>';
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = tr("noHistory");
+    evaluationHistoryList.appendChild(empty);
     evaluationHistoryEmpty.classList.remove("hidden");
     evaluationHistorySummary.classList.add("hidden");
   }else{
@@ -1383,7 +1714,12 @@ function renderEvaluationHistory(){
       item.type = "button";
       item.className = "evaluation-history-item";
       item.dataset.sessionId = session.id;
-      item.innerHTML = `<strong>${formatEvaluationDate(session.date)}</strong><span>${formatEvaluationDuration(session.duration_seconds)} — ${session.score} puntos — ${session.hits} aciertos — ${session.errors} errores</span>`;
+      const strong = document.createElement("strong");
+      strong.textContent = formatEvaluationDate(session.date);
+      const span = document.createElement("span");
+      span.textContent = tr("sessionLine", formatEvaluationDuration(session.duration_seconds), session.score, session.hits, session.errors);
+      item.appendChild(strong);
+      item.appendChild(span);
       item.onclick = () => showEvaluationHistorySession(session);
       evaluationHistoryList.appendChild(item);
     });
@@ -1392,7 +1728,10 @@ function renderEvaluationHistory(){
 
   evaluationScoreProgress.innerHTML = "";
   if(history.length === 0){
-    evaluationScoreProgress.innerHTML = '<p class="muted">Completa una evaluación para ver tu progreso.</p>';
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = tr("noHistoryProgress");
+    evaluationScoreProgress.appendChild(empty);
     return;
   }
   const maxMagnitude = Math.max(1, ...history.map((session) => Math.abs(Number(session.score) || 0)));
@@ -1400,7 +1739,7 @@ function renderEvaluationHistory(){
     const row = document.createElement("div");
     row.className = "evaluation-score-row";
     const width = Math.max(4, Math.round(Math.abs(session.score || 0) / maxMagnitude * 100));
-    row.innerHTML = `<span>#${index + 1}</span><div class="evaluation-score-track"><i class="${session.score < 0 ? "negative" : ""}" style="width:${width}%"></i></div><strong>${session.score}</strong>`;
+    row.innerHTML = `<span>#${index + 1}</span><div class="evaluation-score-track"><i class="${session.score < 0 ? "negative" : ""}" style="width:${width}%"></i></div><strong>${Number(session.score) || 0}</strong>`;
     evaluationScoreProgress.appendChild(row);
   });
 }
@@ -1427,18 +1766,25 @@ $("btnStartEvaluation").onclick = () => {
   startEvaluationWithDuration(val);
 };
 
-// Reto: deletrea tu nombre
+// Reto: deletrea tu nombre o una palabra del idioma activo
+async function startReto(mode){
+  retoMode = mode === "word" ? "word" : "name";
+  retoAiHint.classList.add("hidden");
+  await window.pywebview.api.challenge_start(retoMode);
+  const st = await window.pywebview.api.get_state();
+  if(st && st.logged_in) renderReto(st);
+}
 $("btnOpenReto").onclick = async () => {
-  await window.pywebview.api.challenge_start();
+  await startReto("name");
   setView("reto");
 };
+$("btnRetoName").onclick = () => startReto("name");
+$("btnRetoWord").onclick = () => startReto("word");
 $("btnRetoBack").onclick = async () => {
   await window.pywebview.api.challenge_stop();
   setView("menu");
 };
-$("btnRetoRetry").onclick = async () => {
-  await window.pywebview.api.challenge_start();
-};
+$("btnRetoRetry").onclick = () => startReto(retoMode);
 $("btnRetoMenu").onclick = async () => {
   await window.pywebview.api.challenge_stop();
   setView("menu");
@@ -1450,26 +1796,27 @@ $("btnSpace").onclick = () => window.pywebview.api.sign_space();
 $("btnBackspace").onclick = () => window.pywebview.api.sign_backspace();
 $("btnClear").onclick = () => window.pywebview.api.sign_clear();
 $("btnSendSigns").onclick = () => window.pywebview.api.sign_send();
+$("btnSpeakSignText").onclick = () => speakText(signText.value);
 
 $("btnRec").onclick = async () => {
   voiceError.textContent = "";
   if(!recording){
     recording = true;
-    $("btnRec").textContent = "Detener";
-    $("btnRec").classList.add("danger");
-    $("btnRec").classList.remove("primary");
+    updateRecButton();
     await window.pywebview.api.voice_start();
   }else{
     $("btnRec").disabled = true;
     await window.pywebview.api.voice_stop();
     // UI se reactivará cuando backend marque status
-    setTimeout(() => { $("btnRec").disabled = false; recording=false;
-      $("btnRec").textContent = "Grabar";
-      $("btnRec").classList.remove("danger");
-      $("btnRec").classList.add("primary");
+    setTimeout(() => {
+      $("btnRec").disabled = false;
+      recording = false;
+      updateRecButton();
     }, 1200);
   }
 };
 
 applyNightMode(false);
+document.body.dataset.lang = "";
+renderLearningLanguage(currentLearningLanguage);
 startPolling();

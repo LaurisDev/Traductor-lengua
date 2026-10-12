@@ -69,8 +69,11 @@ LEARNING_LANGUAGES = ("es", "en", "pt")
 DEFAULT_LEARNING_LANGUAGE = "es"
 
 # Alfabeto dactilologico y modelo ML por idioma de aprendizaje.
-# es/en comparten el modelo original; pt usa LIBRAS (Lingua Brasileira de Sinais),
-# con su propio dataset y modelo (se entrenan con: python collect_sign_samples.py --lang pt).
+# es usa LSC (Lengua de Senas Colombiana, modelo original); pt usa LIBRAS (Lingua
+# Brasileira de Sinais) y en usa ASL (American Sign Language), cada uno con su propio
+# dataset y modelo (se entrenan con: python collect_sign_samples.py --lang pt|en).
+# El dataset de ASL se arma reutilizando las letras equivalentes de LSC y LIBRAS:
+# python build_asl_dataset.py
 _SIGN_DATA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "data",
@@ -83,7 +86,10 @@ SIGN_ALPHABETS = {
 }
 SIGN_MODEL_FILES = {
     "es": (SIGN_SAMPLES_CSV, SIGN_MODEL_PATH),
-    "en": (SIGN_SAMPLES_CSV, SIGN_MODEL_PATH),
+    "en": (
+        os.path.join(_SIGN_DATA_DIR, "asl", "sign_samples.csv"),
+        os.path.join(_SIGN_DATA_DIR, "asl", "sign_classifier.joblib"),
+    ),
     "pt": (
         os.path.join(_SIGN_DATA_DIR, "libras", "sign_samples.csv"),
         os.path.join(_SIGN_DATA_DIR, "libras", "sign_classifier.joblib"),

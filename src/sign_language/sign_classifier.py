@@ -78,7 +78,7 @@ class SignClassifier:
             default_conf = SIGN_CONFIDENCE_THRESHOLD
             default_per = SIGN_SAMPLES_PER_LETTER
             default_tiebreak = SIGN_USE_ML_TIEBREAKERS
-            # Cada idioma tiene su propio alfabeto, dataset y modelo (pt = LIBRAS).
+            # Cada idioma tiene su propio alfabeto, dataset y modelo (pt = LIBRAS, en = ASL).
             if self.language in SIGN_MODEL_FILES:
                 default_csv, default_model = SIGN_MODEL_FILES[self.language]
                 self.letters = list(SIGN_ALPHABETS[self.language])
@@ -268,6 +268,12 @@ class SignClassifier:
 
     def is_trained(self) -> bool:
         return self._model is not None and self._label_encoder is not None
+
+    def known_letters(self) -> set:
+        """Letras que el modelo cargado sabe reconocer (vacio si no hay modelo)."""
+        if self._label_encoder is None:
+            return set()
+        return {str(c) for c in self._label_encoder.classes_}
 
     def _proba_dict(self, features: np.ndarray) -> Dict[str, float]:
         assert self._model is not None and self._label_encoder is not None

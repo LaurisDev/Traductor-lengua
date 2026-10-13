@@ -8,6 +8,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from flask import Flask, abort, jsonify, request, send_from_directory, session
+from pymongo.errors import PyMongoError
 
 from src.gui_web.web_api import WebAPI
 from src.main import MainController
@@ -66,7 +67,26 @@ def call_web_api(method_name: str):
         name for name, value in vars(WebAPI).items() if callable(value)
     }:
         abort(404)
-    return jsonify(getattr(_controller().get_web_api(), method_name)(*args))
+    try:
+        controller = _controller()
+    except RuntimeError:
+        app.logger.exception("Could not initialize the database for web session")
+        return jsonify({
+            "error": (
+                "No se pudo conectar con MongoDB. Verifica la variable MONGO_URI "
+                "en Render y que Atlas permita conexiones desde Render en Network Access."
+            )
+        }), 503
+    try:
+        return jsonify(getattr(controller.get_web_api(), method_name)(*args))
+    except PyMongoError:
+        app.logger.exception("MongoDB request failed for web API method %s", method_name)
+        return jsonify({
+            "error": (
+                "No se pudo consultar MongoDB. Revisa MONGO_URI en Render y los permisos "
+                "de red del cluster en Atlas."
+            )
+        }), 503
 
 
 @app.post("/api/camera/frame")

@@ -7,8 +7,16 @@ if (!window.pywebview && window.location.protocol !== "file:") {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(args),
       }).then(async (response) => {
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+        const body = await response.text();
+        let result = {};
+        try{
+          result = body ? JSON.parse(body) : {};
+        }catch(error){
+          result = {};
+        }
+        if (!response.ok){
+          throw new Error(result.error || `El servidor respondió con error (${response.status}). Revisa Render → Logs.`);
+        }
         return result;
       });
     },

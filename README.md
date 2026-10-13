@@ -130,6 +130,8 @@ El modo de escritorio sigue disponible con `python run.py`. Para compartir un en
 
 Los participantes pueden registrarse desde la página. Cada navegador recibe una sesión independiente; para no sobrecargar el servidor gratuito, ejecuta las pruebas heurísticas de una en una. Render Free duerme el servicio tras 15 minutos sin tráfico; el primer acceso posterior puede tardar alrededor de un minuto. El uso gratuito tiene límites mensuales y menos recursos que un plan pago, así que la detección puede ir más lenta o el servicio puede quedarse sin memoria. El filesystem del servicio no es persistente; los datos de usuarios permanecen en MongoDB Atlas.
 
+Si la página carga pero iniciar sesión o registrar usuarios falla, revisa **Render → servicio → Environment** para confirmar `MONGO_URI` y **Atlas → Network Access** para comprobar que la IP de Render está permitida. La interfaz mostrará el error del backend y los detalles técnicos aparecerán en **Render → Logs**.
+
 ## Estructura del proyecto
 
 ```text

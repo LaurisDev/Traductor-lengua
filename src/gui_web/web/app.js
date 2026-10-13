@@ -641,6 +641,7 @@ function updateRepasoFeedback(detectedLetterRaw){
 }
 
 let pollTimer = null;
+let pollFailures = 0;
 let recording = false;
 let browserSpeechRecognition = null;
 let browserSpeechTranscript = "";
@@ -1143,8 +1144,10 @@ function finishBrowserVoice(errorCode = ""){
 }
 
 async function poll(){
+  let nextPollDelay = 220;
   try{
     const st = await window.pywebview.api.get_state();
+    pollFailures = 0;
     if(!languagePacks[currentLearningLanguage]) loadActiveLanguagePack();
     if(st && st.logged_in){
       startBrowserCamera();
@@ -1242,7 +1245,18 @@ async function poll(){
     }
     lastLoggedIn = !!(st && st.logged_in);
   }catch(e){
-    // silent
+    pollFailures += 1;
+    if(window.__browserDeployment){
+      const delay = Math.min(15000, 1000 * (2 ** Math.min(pollFailures - 1, 4)));
+      nextPollDelay = delay;
+      if(currentView() === "login"){
+        loginError.textContent = e.message || tr("genericError");
+      }
+    }else{
+      console.error("No se pudo actualizar el estado de la aplicación.", e);
+    }
+  }finally{
+    pollTimer = setTimeout(poll, nextPollDelay);
   }
 }
 
@@ -1254,7 +1268,6 @@ function moveLearning(step) {
 
 function startPolling(){
   if(pollTimer) return;
-  pollTimer = setInterval(poll, 220);
   poll();
   syncLearningView(LETTERS[learningIndex], `${learningIndex + 1}/${LETTERS.length}`);
 }
@@ -1264,7 +1277,13 @@ $("btnLogin").onclick = async () => {
   loginError.textContent = "";
   const u = $("loginUser").value.trim();
   const p = $("loginPass").value;
-  const res = await window.pywebview.api.login(u, p, currentLearningLanguage);
+  let res;
+  try{
+    res = await window.pywebview.api.login(u, p, currentLearningLanguage);
+  }catch(error){
+    loginError.textContent = error.message || tr("genericError");
+    return;
+  }
   if(!res.ok){
     loginError.textContent = res.msg || tr("genericError");
     return;
@@ -1434,7 +1453,13 @@ $("btnRegister").onclick = async () => {
   const dyslexiaSpacingMode = $("regDyslexiaSpacingMode").checked;
   const readingFontSize = regReadingFontSize.value;
   const learningLanguage = document.querySelector('input[name="regLearningLanguage"]:checked')?.value || "es";
-  const res = await window.pywebview.api.register(u, p, p2, colorBlindMode, accessibleReadingMode, dyslexiaSpacingMode, readingFontSize, learningLanguage);
+  let res;
+  try{
+    res = await window.pywebview.api.register(u, p, p2, colorBlindMode, accessibleReadingMode, dyslexiaSpacingMode, readingFontSize, learningLanguage);
+  }catch(error){
+    $("regAccessibilityError").textContent = error.message || tr("genericError");
+    return;
+  }
   if(!res.ok) {
     $("regAccessibilityError").textContent = res.msg || tr("genericError");
   }

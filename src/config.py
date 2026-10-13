@@ -100,6 +100,7 @@ SIGN_MODEL_FILES = {
 # True = interfaz web moderna (HTML/CSS) embebida con PyWebView
 # False = interfaz Tkinter/ttkbootstrap
 USE_WEB_UI = True
+WEB_DEPLOYMENT = os.getenv("WEB_DEPLOYMENT", "").strip().lower() in {"1", "true", "yes"}
 
 # Reconocimiento de voz (Whisper local)
 # Modelos: tiny, base, small, medium, large-v3 (más grande = mejor calidad, más lento y más RAM)

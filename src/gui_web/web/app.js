@@ -642,6 +642,15 @@ function updateRepasoFeedback(detectedLetterRaw){
 
 let pollTimer = null;
 let recording = false;
+let browserSpeechRecognition = null;
+let browserSpeechTranscript = "";
+let browserSpeechFinalizing = false;
+let browserCameraStream = null;
+let browserCameraRequested = false;
+let browserCameraVideo = null;
+let browserCameraCanvas = null;
+let browserCameraTimer = null;
+let browserCameraSending = false;
 let lastLoggedIn = null;
 let learningIndex = 0;
 let learningTargetLetter = "A";
@@ -1048,11 +1057,97 @@ function updateRecButton(){
   btn.classList.toggle("primary", !recording);
 }
 
+function stopBrowserCamera(){
+  if(browserCameraTimer){
+    clearInterval(browserCameraTimer);
+    browserCameraTimer = null;
+  }
+  if(browserCameraStream){
+    browserCameraStream.getTracks().forEach((track) => track.stop());
+    browserCameraStream = null;
+  }
+  browserCameraRequested = false;
+  browserCameraVideo = null;
+  browserCameraCanvas = null;
+}
+
+async function startBrowserCamera(){
+  if(browserCameraRequested || !window.__browserDeployment) return;
+  browserCameraRequested = true;
+  try{
+    browserCameraStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { width: { ideal: 640 }, height: { ideal: 480 } },
+    });
+    browserCameraVideo = document.createElement("video");
+    browserCameraVideo.muted = true;
+    browserCameraVideo.playsInline = true;
+    browserCameraVideo.srcObject = browserCameraStream;
+    await browserCameraVideo.play();
+    browserCameraCanvas = document.createElement("canvas");
+    browserCameraCanvas.width = 640;
+    browserCameraCanvas.height = 480;
+    browserCameraTimer = setInterval(sendBrowserCameraFrame, 140);
+  }catch(error){
+    stopBrowserCamera();
+    browserCameraRequested = true;
+    fetch("/api/camera/error", { method: "POST" }).catch(() => {});
+  }
+}
+
+function sendBrowserCameraFrame(){
+  if(browserCameraSending || !browserCameraVideo || browserCameraVideo.readyState < 2) return;
+  browserCameraSending = true;
+  const context = browserCameraCanvas.getContext("2d");
+  context.drawImage(browserCameraVideo, 0, 0, browserCameraCanvas.width, browserCameraCanvas.height);
+  browserCameraCanvas.toBlob(async (blob) => {
+    try{
+      if(blob){
+        const response = await fetch("/api/camera/frame", {
+          method: "POST",
+          headers: { "Content-Type": "image/jpeg" },
+          body: blob,
+        });
+        if(!response.ok && response.status !== 409) throw new Error(`HTTP ${response.status}`);
+      }
+    }catch(error){
+      if(browserCameraTimer){
+        clearInterval(browserCameraTimer);
+        browserCameraTimer = null;
+      }
+      fetch("/api/camera/error", { method: "POST" }).catch(() => {});
+    }finally{
+      browserCameraSending = false;
+    }
+  }, "image/jpeg", 0.65);
+}
+
+function finishBrowserVoice(errorCode = ""){
+  if(browserSpeechFinalizing) return;
+  browserSpeechFinalizing = true;
+  recording = false;
+  updateRecButton();
+  window.pywebview.api.voice_stop().catch(() => {});
+  if(errorCode){
+    voiceError.textContent = tr("browserSpeechError", errorCode);
+  }else if(browserSpeechTranscript){
+    window.pywebview.api.voice_submit_text(browserSpeechTranscript).then((result) => {
+      if(!result || !result.ok) voiceError.textContent = result?.msg || tr("genericError");
+    }).catch(() => {
+      voiceError.textContent = tr("genericError");
+    });
+  }else{
+    voiceError.textContent = tr("voiceRepeat");
+  }
+  browserSpeechRecognition = null;
+}
+
 async function poll(){
   try{
     const st = await window.pywebview.api.get_state();
     if(!languagePacks[currentLearningLanguage]) loadActiveLanguagePack();
     if(st && st.logged_in){
+      startBrowserCamera();
       btnLogout.classList.remove("hidden");
       if(!accessibilitySettingsDirty){
         applyAccessibilityPreferences(st.color_blind_mode, st.accessible_reading_mode, st.night_mode, st.dyslexia_spacing_mode, st.reading_font_size);
@@ -1120,6 +1215,7 @@ async function poll(){
 
       voiceError.textContent = st.voice_error || "";
     }else{
+      stopBrowserCamera();
       btnLogout.classList.add("hidden");
       menuUsername = "";
       // No interrumpir el registro mientras todavía no existe una sesión.
@@ -1800,6 +1896,43 @@ $("btnSpeakSignText").onclick = () => speakText(signText.value);
 
 $("btnRec").onclick = async () => {
   voiceError.textContent = "";
+  if(window.__browserDeployment){
+    if(!recording){
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(!SpeechRecognition){
+        voiceError.textContent = tr("browserSpeechUnsupported");
+        return;
+      }
+      recording = true;
+      browserSpeechFinalizing = false;
+      browserSpeechTranscript = "";
+      updateRecButton();
+      await window.pywebview.api.voice_start();
+      browserSpeechRecognition = new SpeechRecognition();
+      browserSpeechRecognition.lang = languagePack.speech_locale || "es-CO";
+      browserSpeechRecognition.continuous = true;
+      browserSpeechRecognition.interimResults = false;
+      browserSpeechRecognition.onresult = (event) => {
+        for(let i = event.resultIndex; i < event.results.length; i++){
+          browserSpeechTranscript += `${event.results[i][0].transcript} `;
+        }
+        browserSpeechTranscript = browserSpeechTranscript.trim();
+      };
+      browserSpeechRecognition.onerror = (event) => finishBrowserVoice(event.error || "unknown");
+      browserSpeechRecognition.onend = () => {
+        if(!browserSpeechFinalizing) finishBrowserVoice();
+      };
+      try{
+        browserSpeechRecognition.start();
+      }catch(error){
+        finishBrowserVoice("unavailable");
+      }
+    }else{
+      if(browserSpeechRecognition) browserSpeechRecognition.stop();
+      else finishBrowserVoice();
+    }
+    return;
+  }
   if(!recording){
     recording = true;
     updateRecButton();

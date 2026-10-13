@@ -77,6 +77,9 @@ class WebAPI:
         self._c.on_voice_stop_capture()
         return {"ok": True}
 
+    def voice_submit_text(self, text: str) -> Dict[str, Any]:
+        return self._c.submit_browser_voice_text(text)
+
     # ===== Texto a voz (respaldo con voces SAPI de Windows) =====
     def speak(self, text: str, locale: Optional[str] = None) -> Dict[str, Any]:
         return self._c.web_speak(text, locale)
@@ -149,4 +152,3 @@ class WebAPI:
         st = dict(st)
         st["new_messages"] = new_msgs
         return st
-

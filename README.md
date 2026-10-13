@@ -117,9 +117,18 @@ En el menu principal pulse **Cerrar sesion**. Volvera a la pantalla de inicio de
 - **La letra no cambia**: Ilumine bien la mano y mantenga el gesto estable unos segundos; el sistema confirma la letra tras varios frames iguales.
 - **Voz a texto falla o es muy lento**: Compruebe permisos del microfono en Windows. Si aparece error de `compute_type`, pruebe en `src/config.py` con `WHISPER_COMPUTE_TYPE = "float32"`.
 
-### Uso en celular
+### Publicar una version web para pruebas
 
-Esta aplicacion es de **escritorio** (Python + Tkinter + OpenCV). No funciona tal cual en el celular: los sistemas moviles no ejecutan este tipo de programa. Para usarla en el celular haria falta una version distinta, por ejemplo una app movil (Android/iOS) o una pagina web que use la camara del telefono desde el navegador; la logica de reconocimiento podria reutilizarse en un servidor o reescribirse en otro lenguaje.
+El modo de escritorio sigue disponible con `python run.py`. Para compartir un enlace, el repositorio incluye una version web para Render (`Dockerfile`, `render.yaml` y `web_server.py`). En este modo la camara del participante se usa desde el navegador y sus frames se procesan en el servidor. La interfaz necesita HTTPS para solicitar acceso a la camara.
+
+1. Sube el proyecto a un repositorio de GitHub. No subas `venv/` ni credenciales.
+2. Crea una cuenta gratuita en [MongoDB Atlas](https://www.mongodb.com/atlas), crea un cluster y un usuario de base de datos. En **Network Access**, permite conexiones desde Render (para una demo se puede autorizar `0.0.0.0/0`; usa una contraseña robusta).
+3. En [Render](https://render.com/), crea un **Blueprint** y conecta el repositorio. Render detectara `render.yaml` y construira el servicio web.
+4. En la configuración del servicio, agrega `MONGO_URI` con la cadena de conexión de Atlas. Sustituye la contraseña de ejemplo en la cadena y no la publiques en GitHub. `SESSION_SECRET` se genera automáticamente.
+5. Espera a que el despliegue finalice y abre la URL `https://...onrender.com` que muestra Render. Comparte ese enlace con quienes harán las pruebas.
+6. Cada participante debe permitir la cámara. Para voz a texto se recomienda Chrome o Edge; el navegador puede usar su proveedor de reconocimiento de voz. La detección de señas se ejecuta en Render, por lo que se recomienda el plan Starter para que el servicio tenga memoria y CPU suficientes.
+
+Los participantes pueden registrarse desde la página. Cada navegador recibe una sesión independiente; para no sobrecargar el servidor, ejecuta las pruebas heurísticas de una en una. Render puede tardar en volver a despertar una instancia gratuita si se utiliza un plan que entre en suspensión.
 
 ## Estructura del proyecto
 

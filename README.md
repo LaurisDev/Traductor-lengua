@@ -126,9 +126,9 @@ El modo de escritorio sigue disponible con `python run.py`. Para compartir un en
 3. En [Render](https://render.com/), crea un **Blueprint** y conecta el repositorio. Render detectara `render.yaml` y construira el servicio web.
 4. En la configuración del servicio, agrega `MONGO_URI` con la cadena de conexión de Atlas. Sustituye la contraseña de ejemplo en la cadena y no la publiques en GitHub. `SESSION_SECRET` se genera automáticamente.
 5. Espera a que el despliegue finalice y abre la URL `https://...onrender.com` que muestra Render. Comparte ese enlace con quienes harán las pruebas.
-6. Cada participante debe permitir la cámara. Para voz a texto se recomienda Chrome o Edge; el navegador puede usar su proveedor de reconocimiento de voz. La detección de señas se ejecuta en Render, por lo que se recomienda el plan Starter para que el servicio tenga memoria y CPU suficientes.
+6. Cada participante debe permitir la cámara. Para voz a texto se recomienda Chrome o Edge; el navegador puede usar su proveedor de reconocimiento de voz. La cámara y la detección de señas se ejecutan mediante el servicio web de Render.
 
-Los participantes pueden registrarse desde la página. Cada navegador recibe una sesión independiente; para no sobrecargar el servidor, ejecuta las pruebas heurísticas de una en una. Render puede tardar en volver a despertar una instancia gratuita si se utiliza un plan que entre en suspensión.
+Los participantes pueden registrarse desde la página. Cada navegador recibe una sesión independiente; para no sobrecargar el servidor gratuito, ejecuta las pruebas heurísticas de una en una. Render Free duerme el servicio tras 15 minutos sin tráfico; el primer acceso posterior puede tardar alrededor de un minuto. El uso gratuito tiene límites mensuales y menos recursos que un plan pago, así que la detección puede ir más lenta o el servicio puede quedarse sin memoria. El filesystem del servicio no es persistente; los datos de usuarios permanecen en MongoDB Atlas.
 
 ## Estructura del proyecto
 

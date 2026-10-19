@@ -1717,8 +1717,6 @@ $("btnLogout").onclick = async () => {
   $("loginPass").value = "";
 };
 
-$("btnLogoutMenu").onclick = logoutAndReset;
-
 $("btnOpenSettings").onclick = () => {
   settingsError.textContent = "";
   accessibilitySettingsDirty = false;

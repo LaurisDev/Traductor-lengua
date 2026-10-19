@@ -127,12 +127,12 @@ def run_steps(window, controller, db):
         check("Escape lo cierra", not tour_visible())
 
         # ===== Usuario existente (sin el campo): no ve el tutorial =====
-        click("#btnLogoutMenu")
+        click("#btnLogout")
         js(f"document.getElementById('loginUser').value='antiguo'; document.getElementById('loginPass').value='{FakeAuth.PASSWORD}'")
         click("#btnLogin")
         wait(1.5)
         check("usuario existente: sin tutorial", not tour_visible())
-        click("#btnLogoutMenu")
+        click("#btnLogout")
         js("localStorage.clear()")
     except Exception as exc:  # pragma: no cover - reporte de la prueba
         import traceback

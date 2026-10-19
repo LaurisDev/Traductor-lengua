@@ -214,7 +214,7 @@ def run_steps(window, controller):
         click("#btnBackInteraction")
 
         # Cerrar sesion: el login conserva el ultimo idioma
-        click("#btnLogoutMenu")
+        click("#btnLogout")
         check("logout: login en portugues", text("#viewLogin h2") == "Entrar", text("#viewLogin h2"))
         js("localStorage.clear()")
     except Exception as exc:  # pragma: no cover - reporte de la prueba

@@ -18,6 +18,7 @@ from src.config import (
     MONGO_DB_NAME,
     MONGO_URI,
     MONGO_USERS_COLLECTION,
+    WEB_DEPLOYMENT,
 )
 from .models import User
 from src.languages import normalize_language, t
@@ -37,7 +38,11 @@ class DatabaseManager:
 
     def _get_client(self) -> MongoClient:
         if self._client is None:
-            self._client = MongoClient(self._mongo_uri)
+            selection_timeout_ms = 8000 if WEB_DEPLOYMENT else 30000
+            self._client = MongoClient(
+                self._mongo_uri,
+                serverSelectionTimeoutMS=selection_timeout_ms,
+            )
         return self._client
 
     def _users_collection(self):

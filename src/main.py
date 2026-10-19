@@ -20,7 +20,6 @@ if _PROJECT_ROOT not in sys.path:
 
 from src.database import DatabaseManager
 from src.auth import AuthService
-from src.gui import App
 from src.camera import CameraCapture
 from src.image_processing import HandDetector
 from src.sign_language import (
@@ -31,7 +30,7 @@ from src.sign_language import (
     SignClassifier,
     spell_text,
 )
-from src.config import DEFAULT_LEARNING_LANGUAGE, USE_WEB_UI
+from src.config import DEFAULT_LEARNING_LANGUAGE, USE_WEB_UI, WEB_DEPLOYMENT
 from src.languages import (
     MODULE_CHALLENGE,
     MODULE_REVIEW,
@@ -53,7 +52,7 @@ class MainController:
         self._auth = AuthService(self._db)
         self._db.init_database()
 
-        self._app: App = None
+        self._app = None
         self._current_user = None
         self._login_screen = None
         self._register_screen = None
@@ -90,6 +89,7 @@ class MainController:
         self._web_api = None
         self._web_messages = []  # {"who": str, "text": str}
         self._web_frame_b64: Optional[str] = None
+        self._browser_frame_queue: "queue.Queue[any]" = queue.Queue(maxsize=1)
         self._web_letter: Optional[str] = None
         self._web_finger_state= None
         self._web_confidence:float = 0.0
@@ -1042,6 +1042,12 @@ class MainController:
     def on_voice_start_capture(self) -> None:
         if self._voice_recording:
             return
+        if WEB_DEPLOYMENT:
+            self._voice_recording = True
+            self._voice_status = "voice_status_recording"
+            self._voice_error = ""
+            self._voice_language = self._web_learning_language
+            return
         if self._voice_thread is not None and self._voice_thread.is_alive():
             self._voice_error = "mic_busy"
             return
@@ -1060,6 +1066,10 @@ class MainController:
         thread.start()
 
     def on_voice_stop_capture(self) -> None:
+        if WEB_DEPLOYMENT:
+            self._voice_recording = False
+            self._voice_status = "voice_status_ready"
+            return
         if self._voice_stop_event is not None:
             self._voice_stop_event.set()
         self._voice_status = "voice_status_transcribing"
@@ -1145,14 +1155,20 @@ class MainController:
     def _start_translation_loop(self) -> None:
         """Inicializa camara, detectores y arranca el bucle de traduccion."""
         self._camera_error = None
-        self._camera = CameraCapture()
-        if not self._camera.open():
-            self._camera_error = "camera_open_error"
-            if self._translation_screen:
-                self._translation_screen.show_camera_error()
-            return
-        for _ in range(15):
-            self._camera.read()
+        while not self._browser_frame_queue.empty():
+            try:
+                self._browser_frame_queue.get_nowait()
+            except queue.Empty:
+                break
+        if not WEB_DEPLOYMENT:
+            self._camera = CameraCapture()
+            if not self._camera.open():
+                self._camera_error = "camera_open_error"
+                if self._translation_screen:
+                    self._translation_screen.show_camera_error()
+                return
+            for _ in range(15):
+                self._camera.read()
         self._hand_detector = HandDetector()
         self._sign_classifier = SignClassifier(language=self._web_learning_language)
         self._finger_analyzer = FingerAnalyzer()
@@ -1179,9 +1195,16 @@ class MainController:
         assert self._translation_queue is not None
         assert self._stop_translation_event is not None
         while self._translation_running and not self._stop_translation_event.is_set():
-            if not self._camera or not self._camera.is_opened():
-                break
-            ret, frame = self._camera.read()
+            if WEB_DEPLOYMENT:
+                try:
+                    frame = self._browser_frame_queue.get(timeout=0.25)
+                except queue.Empty:
+                    continue
+                ret = frame is not None
+            else:
+                if not self._camera or not self._camera.is_opened():
+                    break
+                ret, frame = self._camera.read()
             if not ret or frame is None:
                 self._read_fail_count += 1
                 if self._read_fail_count >= self._MAX_READ_FAILS_BEFORE_MESSAGE:
@@ -1368,6 +1391,46 @@ class MainController:
         self._translation_screen = None
         self._aprendizaje_screen = None
 
+    def submit_browser_frame(self, frame) -> bool:
+        """Entrega el frame más reciente enviado por la cámara del navegador."""
+        if not WEB_DEPLOYMENT or not self._translation_running:
+            return False
+        try:
+            self._browser_frame_queue.put_nowait(frame)
+        except queue.Full:
+            try:
+                self._browser_frame_queue.get_nowait()
+            except queue.Empty:
+                pass
+            self._browser_frame_queue.put_nowait(frame)
+        self._camera_error = None
+        return True
+
+    def set_browser_camera_error(self) -> None:
+        if WEB_DEPLOYMENT:
+            self._camera_error = "camera_open_error"
+
+    def submit_browser_voice_text(self, text: str) -> dict:
+        if not WEB_DEPLOYMENT:
+            return {"ok": False, "msg": "Esta función solo está disponible en el despliegue web."}
+        if self._current_user is None:
+            return {"ok": False, "msg": self._t("must_login")}
+        clean_text = (text or "").strip()
+        if not clean_text:
+            self._voice_error = "voice_repeat"
+            return {"ok": False, "msg": self._t("voice_repeat")}
+        self._web_messages.append({
+            "who": t(self._voice_language, "chat_voice"),
+            "kind": "voice",
+            "text": clean_text,
+            "language": self._voice_language,
+            "speech_locale": get_profile(self._voice_language).speech_locale,
+        })
+        self._voice_recording = False
+        self._voice_status = "voice_status_ready"
+        self._voice_error = ""
+        return {"ok": True}
+
     def run(self) -> None:
         """Punto de entrada: crea la GUI y arranca."""
         if USE_WEB_UI:
@@ -1375,6 +1438,7 @@ class MainController:
             self._app = WebApp(self)
             self._app.run()
         else:
+            from src.gui import App
             self._app = App(self)
             self._app.run()
 

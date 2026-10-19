@@ -85,6 +85,11 @@ class AuthService:
             return t(language, "password_short", n=MIN_PASSWORD_LENGTH)
         if len(password) > MAX_PASSWORD_LENGTH:
             return t(language, "password_long", n=MAX_PASSWORD_LENGTH)
+        if not any(c.isupper() for c in password):
+            return t(language, "password_no_upper")
+        # Caracter especial: cualquier simbolo que no sea letra, numero ni espacio.
+        if not any(not c.isalnum() and not c.isspace() for c in password):
+            return t(language, "password_no_special")
         return ""
 
     def login(self, username: str, password: str) -> Optional[User]:

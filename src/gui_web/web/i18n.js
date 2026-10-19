@@ -41,6 +41,7 @@ const I18N = {
     spacingDesc: "Aumenta ligeramente el espacio entre las letras para facilitar la lectura.",
     registerBtn: "Registrarse",
     genericError: "Error",
+    passwordRules: "Mínimo 6 caracteres, una mayúscula y un carácter especial.",
     connectionError: "No pudimos conectarnos en este momento. Intenta de nuevo en unos segundos.",
     // Menú
     greeting: "¡Hola!",
@@ -265,6 +266,7 @@ const I18N = {
     spacingDesc: "Slightly increases the space between letters to make reading easier.",
     registerBtn: "Sign up",
     genericError: "Error",
+    passwordRules: "At least 6 characters, one uppercase letter and one special character.",
     connectionError: "We couldn't connect right now. Please try again in a few seconds.",
     greeting: "Hi!",
     greetingName: (name) => `Hi, ${name}!`,
@@ -478,6 +480,7 @@ const I18N = {
     spacingDesc: "Aumenta levemente o espaço entre as letras para facilitar a leitura.",
     registerBtn: "Cadastrar",
     genericError: "Erro",
+    passwordRules: "Mínimo de 6 caracteres, uma letra maiúscula e um caractere especial.",
     connectionError: "Não conseguimos conectar agora. Tente novamente em alguns segundos.",
     greeting: "Olá!",
     greetingName: (name) => `Olá, ${name}!`,

@@ -117,20 +117,9 @@ En el menu principal pulse **Cerrar sesion**. Volvera a la pantalla de inicio de
 - **La letra no cambia**: Ilumine bien la mano y mantenga el gesto estable unos segundos; el sistema confirma la letra tras varios frames iguales.
 - **Voz a texto falla o es muy lento**: Compruebe permisos del microfono en Windows. Si aparece error de `compute_type`, pruebe en `src/config.py` con `WHISPER_COMPUTE_TYPE = "float32"`.
 
-### Publicar una version web para pruebas
+### Uso en celular
 
-El modo de escritorio sigue disponible con `python run.py`. Para compartir un enlace, el repositorio incluye una version web para Render (`Dockerfile`, `render.yaml` y `web_server.py`). En este modo la camara del participante se usa desde el navegador y sus frames se procesan en el servidor. La interfaz necesita HTTPS para solicitar acceso a la camara.
-
-1. Sube el proyecto a un repositorio de GitHub. No subas `venv/` ni credenciales.
-2. Crea una cuenta gratuita en [MongoDB Atlas](https://www.mongodb.com/atlas), crea un cluster y un usuario de base de datos. En **Network Access**, permite conexiones desde Render (para una demo se puede autorizar `0.0.0.0/0`; usa una contraseña robusta).
-3. En [Render](https://render.com/), crea un **Blueprint** y conecta el repositorio. Render detectara `render.yaml` y construira el servicio web.
-4. En la configuración del servicio, agrega `MONGO_URI` con la cadena de conexión de Atlas. Sustituye la contraseña de ejemplo en la cadena y no la publiques en GitHub. `SESSION_SECRET` se genera automáticamente.
-5. Espera a que el despliegue finalice y abre la URL `https://...onrender.com` que muestra Render. Comparte ese enlace con quienes harán las pruebas.
-6. Cada participante debe permitir la cámara. Para voz a texto se recomienda Chrome o Edge; el navegador puede usar su proveedor de reconocimiento de voz. La cámara y la detección de señas se ejecutan mediante el servicio web de Render.
-
-Los participantes pueden registrarse desde la página. Cada navegador recibe una sesión independiente; para no sobrecargar el servidor gratuito, ejecuta las pruebas heurísticas de una en una. Render Free duerme el servicio tras 15 minutos sin tráfico; el primer acceso posterior puede tardar alrededor de un minuto. El uso gratuito tiene límites mensuales y menos recursos que un plan pago, así que la detección puede ir más lenta o el servicio puede quedarse sin memoria. El filesystem del servicio no es persistente; los datos de usuarios permanecen en MongoDB Atlas.
-
-Si la página carga pero iniciar sesión o registrar usuarios falla, revisa **Render → servicio → Environment** para confirmar `MONGO_URI` y **Atlas → Network Access** para comprobar que la IP de Render está permitida. La interfaz mostrará el error del backend y los detalles técnicos aparecerán en **Render → Logs**.
+Esta aplicacion es de **escritorio** (Python + Tkinter + OpenCV). No funciona tal cual en el celular: los sistemas moviles no ejecutan este tipo de programa. Para usarla en el celular haria falta una version distinta, por ejemplo una app movil (Android/iOS) o una pagina web que use la camara del telefono desde el navegador; la logica de reconocimiento podria reutilizarse en un servidor o reescribirse en otro lenguaje.
 
 ## Estructura del proyecto
 

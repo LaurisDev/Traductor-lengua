@@ -36,11 +36,9 @@ class AuthService:
         """
         # Los mensajes salen en el idioma que la persona eligio para aprender.
         lang = normalize_language(learning_language)
-        msg = self._validate_credentials(username, password, lang)
-        if msg:
+        ok, msg = self.validate_registration(username, password, confirm_password, lang)
+        if not ok:
             return False, msg
-        if password != confirm_password:
-            return False, t(lang, "passwords_mismatch")
         if learning_language not in LEARNING_LANGUAGES:
             return False, t(lang, "invalid_language")
         return self._db.register_user(
@@ -52,6 +50,28 @@ class AuthService:
             reading_font_size=reading_font_size,
             learning_language=learning_language,
         )
+
+    def validate_registration(
+        self,
+        username: str,
+        password: str,
+        confirm_password: str,
+        language: str = "es",
+    ) -> Tuple[bool, str]:
+        """
+        Valida el primer paso del registro (formato, contrasenas y usuario
+        disponible) antes de pasar a elegir idioma y accesibilidad.
+        Retorna (valido, mensaje).
+        """
+        lang = normalize_language(language)
+        msg = self._validate_credentials(username, password, lang)
+        if msg:
+            return False, msg
+        if password != confirm_password:
+            return False, t(lang, "passwords_mismatch")
+        if self._db.user_exists(username):
+            return False, t(lang, "username_taken")
+        return True, ""
 
     def _validate_credentials(self, username: str, password: str, language: str = "es") -> str:
         """Valida longitud y caracteres. Retorna mensaje de error o cadena vacia."""

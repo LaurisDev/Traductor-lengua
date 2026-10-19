@@ -38,6 +38,16 @@ class WebAPI:
         )
         return {"ok": ok, "msg": msg}
 
+    def validate_registration(
+        self,
+        username: str,
+        password: str,
+        confirm_password: str,
+        ui_language: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        ok, msg = self._c.web_validate_registration(username, password, confirm_password, ui_language)
+        return {"ok": ok, "msg": msg}
+
     def logout(self) -> Dict[str, Any]:
         self._c.web_logout()
         self._last_msg_idx = 0
@@ -76,9 +86,6 @@ class WebAPI:
     def voice_stop(self) -> Dict[str, Any]:
         self._c.on_voice_stop_capture()
         return {"ok": True}
-
-    def voice_submit_text(self, text: str) -> Dict[str, Any]:
-        return self._c.submit_browser_voice_text(text)
 
     # ===== Texto a voz (respaldo con voces SAPI de Windows) =====
     def speak(self, text: str, locale: Optional[str] = None) -> Dict[str, Any]:
@@ -161,3 +168,4 @@ class WebAPI:
         st = dict(st)
         st["new_messages"] = new_msgs if consume_messages else []
         return st
+

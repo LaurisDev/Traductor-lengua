@@ -2099,7 +2099,7 @@ function renderEvaluationHistory(){
     const row = document.createElement("div");
     row.className = "evaluation-score-row";
     const width = Math.max(4, Math.round(Math.abs(session.score || 0) / maxMagnitude * 100));
-    row.innerHTML = `<span>#${index + 1}</span><div class="evaluation-score-track"><i class="${session.score < 0 ? "negative" : ""}" style="width:${width}%"></i></div><strong>${Number(session.score) || 0}</strong>`;
+    row.innerHTML = `<span>#${index + 1}</span><div class="evaluation-score-track"><i class="${session.score < 0 ? "negative" : ""}" style="--pct:${width}%"></i></div><strong>${Number(session.score) || 0}</strong>`;
     evaluationScoreProgress.appendChild(row);
   });
 }
@@ -2323,3 +2323,14 @@ document.addEventListener("keydown", (e) => {
 });
 window.addEventListener("resize", positionTour);
 window.addEventListener("scroll", positionTour, true);
+
+// ===== "¿Cómo funciona?" plegable =====
+// En pantallas pequeñas se muestra plegado para que la vista quepa sin scroll;
+// el título queda visible y se despliega al tocarlo.
+const howItWorks = $("howItWorks");
+const compactScreen = window.matchMedia("(max-width: 980px), (max-height: 700px)");
+function syncHowItWorks(){
+  if(howItWorks) howItWorks.open = !compactScreen.matches;
+}
+compactScreen.addEventListener("change", syncHowItWorks);
+syncHowItWorks();

@@ -359,8 +359,9 @@
           <div class="learning-grid">
             <div class="panel card learning-panel left-panel">
               <div class="learning-progress" id="learningProgress">A — 1/27</div>
-              <div class="how-it-works" aria-labelledby="howItWorksTitle">
-                <h3 id="howItWorksTitle" data-i18n="howItWorks">¿Cómo funciona?</h3>
+              <!-- Abierto en pantallas grandes; en pantallas pequeñas se pliega (ver app.js). -->
+              <details class="how-it-works" id="howItWorks" open>
+                <summary><h3 id="howItWorksTitle" data-i18n="howItWorks">¿Cómo funciona?</h3></summary>
                 <ol>
                   <li data-i18n="howStep1">Selecciona una letra.</li>
                   <li data-i18n="howStep2">Coloca tu mano frente a la cámara.</li>
@@ -368,7 +369,7 @@
                   <li data-i18n="howStep4">Observa la letra detectada.</li>
                   <li data-i18n="howStep5">Continúa para formar una palabra.</li>
                 </ol>
-              </div>
+              </details>
               <div class="reference-box">
                 <div class="reference-figure" id="learningReferenceArt" aria-label="Referencia de la seña" data-i18n-aria="referenceAria">
                   <img id="learningReferenceImage" alt="Imagen de referencia de la seña" />
@@ -460,7 +461,6 @@
               </div>
             </div>
             <button class="ai-robot" id="btnOpenLearningAssistant" type="button" aria-label="Abrir asistente IA" title="Abrir asistente IA" data-i18n-aria="openAssistant" data-i18n-title="openAssistant">🤖</button>
-          </div>
           </div>
         </section>
 

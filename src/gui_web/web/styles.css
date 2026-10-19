@@ -1286,3 +1286,220 @@ body.night-mode{background:var(--color-fondo); color:var(--text)}
 @media (max-width:600px){
   .tour-card, .tour.no-target .tour-card{left:16px; right:16px; width:auto; bottom:16px; top:auto; transform:none}
 }
+
+/* =====================================================================
+   Ajuste a pantalla: cada vista se ve completa sin scroll y se adapta
+   a escritorio, laptop, tablet y celular. La app mide exactamente el
+   alto de la ventana; la cámara y las imágenes de referencia se encogen
+   para que botones y textos siempre queden visibles. Solo el chat y la
+   lista del historial (que crecen con el uso) se desplazan por dentro.
+   ===================================================================== */
+:root{
+  --fit-gap:clamp(6px, 1.4vh, 14px);
+  --fit-pad:clamp(8px, 1.6vh, 16px);
+}
+.app{height:100vh; height:100dvh; min-height:0; overflow:hidden}
+.topbar{flex:none; padding:clamp(6px, 1.3vh, 16px) clamp(12px, 3vw, 44px)}
+.logo{width:clamp(32px, 5vh, 44px); height:clamp(32px, 5vh, 44px)}
+.content{
+  flex:1; min-height:0; min-width:0;
+  display:flex; align-items:center; justify-content:center;
+  padding:0 clamp(8px, 2.5vw, 36px) clamp(8px, 1.6vh, 18px);
+}
+.content > section{max-height:100%; max-width:100%; min-height:0}
+
+/* Tarjetas centradas (login, registro, menú, configuración, evaluación) */
+.auth,.menu,.settings,.evaluation-config,.evaluation-results{overflow:hidden}
+.menu,.settings{max-height:100%}
+
+/* Vistas a pantalla completa */
+.view-wrap{width:min(1280px, 100%); height:100%; max-height:880px; gap:var(--fit-gap)}
+.view-bar{flex:none; padding:clamp(6px, 1.1vh, 11px) 16px}
+.grid,.learning,.learning-grid{flex:1 1 0; min-height:0}
+.learning{display:flex; flex-direction:column}
+#viewAprendizaje .learning{padding-bottom:0}
+.learning-grid{grid-template-rows:minmax(0, 1fr)}
+.grid{grid-template-rows:minmax(0, 1fr)}
+.panel{min-height:0; padding:var(--fit-pad)}
+.panel-head{margin-bottom:var(--fit-gap)}
+.learning-panel{gap:var(--fit-gap); overflow:hidden}
+.learning-progress{margin-bottom:0; flex:none}
+.how-it-works{margin:0; flex:none; padding:clamp(8px, 1.3vh, 14px) 16px}
+.how-it-works h3{margin-bottom:4px}
+.how-it-works ol{font-size:clamp(13px, 1.75vh, 15px); line-height:1.35}
+.sign-instructions{flex:none}
+
+/* Imagen de referencia: ocupa el alto disponible y conserva su proporción */
+.reference-box{flex:1 1 0; min-height:0; padding:var(--fit-pad); gap:var(--fit-gap)}
+.reference-figure{width:auto; height:auto; flex:1 1 0; min-height:48px; max-width:100%; aspect-ratio:1}
+.letter-reference{font-size:clamp(2.2rem, 7vh, 7rem); flex:none}
+.star-btn{flex:none; width:clamp(34px, 5vh, 44px); height:clamp(34px, 5vh, 44px); font-size:clamp(17px, 2.6vh, 22px)}
+
+/* Cámara: toma el espacio libre en vez de una altura mínima fija */
+.camera-box{gap:var(--fit-gap); min-height:0}
+.camera-box > *:not(.learning-video-wrap){flex:none}
+.video-wrap,.learning-video-wrap{flex:1 1 0; min-height:80px}
+.learning-caption{font-size:clamp(.95rem, 2vh, 1.15rem)}
+.learning-actions{position:static}
+
+/* Interacción */
+.grid > .panel > .field{margin:var(--fit-gap) 0}
+.hint{margin-top:6px}
+
+/* Evaluación en curso */
+#viewEvaluacionRun > .card{flex:1 1 0; min-height:0; height:auto !important; display:flex}
+#viewEvaluacionRun > .card > .panel{flex:1; min-height:0}
+#viewEvaluacionRun .grid > .panel > div:last-child{flex:1 1 0; min-height:0}
+#evalVideoWrap{max-height:none !important; flex:1 1 0}
+#viewEvaluacionRun .letter-reference{font-size:clamp(2rem, 6vh, 5.5rem)}
+
+/* Historial */
+.evaluation-history-layout{width:100%; flex:1 1 0; min-height:0; grid-template-rows:minmax(0, 1fr)}
+.evaluation-history-list-panel{min-height:0}
+.evaluation-history-list{max-height:none; flex:1 1 0; min-height:0}
+.evaluation-progress-panel{width:100%; margin-top:0; flex:none}
+.evaluation-history-detail{overflow:hidden}
+
+/* Reto */
+#viewReto .reto-head,#viewReto .reto-word,#viewReto .reto-skipped{flex:none}
+
+/* Repaso vacío */
+#repasoEmptyState{flex:none; padding:24px}
+
+/* ---------- Pantallas bajas (laptops 1366x768, 1280x720) ---------- */
+@media (max-height:800px){
+  .menu{padding:clamp(12px, 2.2vh, 22px) 24px}
+  .menu-layout{margin-top:clamp(8px, 1.6vh, 20px); gap:20px}
+  .menu-hero h2{margin-bottom:6px}
+  .menu-hero-text{line-height:1.45; margin-bottom:6px}
+  .menu-word{margin-top:10px; padding:10px}
+  .menu-options{gap:8px}
+  .menu-option{min-height:54px; padding:8px 12px}
+  .menu-main-action{min-height:54px; padding:10px 16px}
+  .settings{padding:12px}
+  .settings-bar{margin-bottom:8px}
+  .settings-toggle{margin-top:10px; padding:10px 14px}
+  .settings-actions{margin-top:10px}
+  .auth{padding:18px 22px 16px}
+  .field{margin:10px 0}
+  .register-language-options,.register-accessibility .accessibility-preferences{margin-top:14px}
+  .evaluation-config{padding-top:22px; padding-bottom:22px}
+  .evaluation-config>p{margin-bottom:16px}
+  .evaluation-option-content{min-height:104px}
+  .evaluation-config .evaluation-actions{margin-top:18px}
+  .evaluation-results{padding:18px 22px}
+  .evaluation-result-summary{margin:12px 0}
+}
+
+/* "¿Cómo funciona?" plegable */
+.how-it-works{position:relative}
+.how-it-works summary{cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px}
+.how-it-works summary::-webkit-details-marker{display:none}
+.how-it-works summary::after{content:"▾"; color:var(--color-principal); font-size:14px; transition:transform .2s ease}
+.how-it-works:not([open]) summary::after{transform:rotate(-90deg)}
+.how-it-works:not([open]) h3{margin-bottom:0}
+.reference-figure{align-self:center}
+/* La imagen llena el marco sin depender de la altura calculada del flex */
+.reference-figure img{position:absolute; inset:0}
+
+/* El botón flotante del asistente no tapa "Siguiente" */
+#viewAprendizaje .learning-actions,#viewRepaso .learning-actions{padding-right:clamp(44px, 5vw, 64px)}
+
+/* ---------- Tablet y celular: una columna ---------- */
+@media (max-width:980px){
+  .content{align-items:stretch}
+  .view-wrap{height:100%; min-height:0}
+  body{overflow:auto}
+  /* Al desplegar "¿Cómo funciona?" se muestra encima, sin empujar la vista */
+  .how-it-works[open] ol{
+    position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:6;
+    padding:12px 14px 12px 34px; border-radius:14px;
+    background:var(--card); border:1px solid var(--border); box-shadow:var(--shadow);
+  }
+  .grid,.learning-grid{grid-template-columns:minmax(0, 1fr)}
+  /* Interacción: cámara arriba, conversación abajo */
+  #viewInteraction .grid{grid-template-rows:minmax(0, 1.25fr) minmax(0, 1fr)}
+  /* Aprendizaje, Repaso y Reto: referencia compacta arriba, cámara abajo */
+  .learning-grid{grid-template-rows:auto minmax(0, 1fr)}
+  .left-panel{display:grid; grid-template-columns:auto minmax(0, 1fr); align-items:center; gap:6px 12px}
+  .left-panel > *{grid-column:1 / -1}
+  .left-panel > .learning-progress{grid-column:1}
+  .left-panel > .how-it-works{grid-column:2; padding:6px 12px}
+  .reference-box{flex-direction:row; justify-content:center; padding:8px 12px}
+  .reference-figure{flex:none; height:clamp(64px, 13vh, 150px); width:auto}
+  .letter-reference{font-size:clamp(2rem, 6vh, 4rem)}
+  .sign-instructions{padding:8px 12px}
+  .sign-instructions-text,#viewAprendizaje .sign-instructions-text{font-size:13px; line-height:1.35}
+  #viewAprendizaje .sign-instructions-title{font-size:13px}
+  /* Evaluación en curso: letra pedida + cámara arriba, estado abajo */
+  #viewEvaluacionRun .grid{grid-template-columns:minmax(0, 1fr) !important; grid-template-rows:minmax(0, 1fr) auto}
+  /* Historial */
+  .evaluation-history-layout{grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(0, 1fr) auto}
+}
+
+/* ---------- Celular ---------- */
+@media (max-width:700px){
+  .view-wrap{min-height:0}
+  .view-bar{padding:6px 10px}
+  .view-title{min-width:0}
+  .panel{padding:10px}
+  .learning-status-row{gap:6px}
+  .learning-counter{padding:5px 10px; font-size:13px}
+  .letter-confirm .btn.accent{padding:6px 12px}
+  .grid > .panel > .field{margin:6px 0}
+  .grid > .panel > .field label{margin-bottom:3px}
+  #signText{padding:9px 12px}
+  #viewInteraction .row .btn{padding:8px 10px; font-size:13px}
+  .reto-word{gap:6px}
+  .reto-letter-tile{width:32px; height:32px}
+  .reto-head{gap:8px}
+  .reto-mode-actions .btn{padding:7px 10px; font-size:12.5px}
+  /* Menú compacto */
+  .menu{padding:14px 14px 12px}
+  .menu-layout{gap:10px; margin-top:8px}
+  .menu-hero h2{font-size:1.25rem; margin-bottom:4px}
+  .menu-hero-text{font-size:12.5px; line-height:1.4; margin-bottom:4px}
+  .menu-word{margin-top:6px; padding:8px}
+  .menu-word-letters{gap:6px; max-width:260px; margin:0 auto}
+  .menu-word figcaption{margin-top:4px; font-size:11.5px; text-align:center}
+  .menu-options{gap:6px}
+  .menu-group-title{margin-bottom:4px}
+  .menu-group-grid,.menu-group-grid.two{grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px}
+  .menu-group-grid.two{grid-template-columns:repeat(2, minmax(0, 1fr))}
+  .menu-option{min-height:0; padding:7px 9px}
+  .menu-option strong{font-size:13px}
+  .menu-options .btn small{font-size:11px; line-height:1.25}
+  .menu-main-action{min-height:0; padding:8px 12px}
+  .menu-footer{padding-top:6px}
+  .menu-footer .btn{padding:6px 9px; font-size:12px}
+  /* Configuración compacta */
+  .settings{padding:10px}
+  .settings-content{padding:0 4px 4px}
+  .settings-toggle{margin-top:6px; padding:8px 10px; gap:10px}
+  .settings-toggle small{font-size:11.5px; line-height:1.3}
+  .settings-size-option{margin-top:6px; padding:8px 10px}
+  .settings-actions{margin-top:6px}
+}
+
+/* Mensajes de error vacíos no ocupan espacio */
+.error:empty{min-height:0; margin:0}
+@media (max-width:980px){
+  /* Evaluación: el estado va en una fila compacta (letra detectada + Detener) */
+  #viewEvaluacionRun .grid > .panel:last-child{flex-direction:row; flex-wrap:wrap; align-items:center; gap:8px 12px}
+  #viewEvaluacionRun .grid > .panel:last-child > .panel-head{margin:0}
+  #viewEvaluacionRun .grid > .panel:last-child > .field{margin:0; display:flex; align-items:center; gap:8px; flex:1}
+  #viewEvaluacionRun .grid > .panel:last-child > .field label{margin:0}
+  #viewEvaluacionRun .grid > .panel:last-child > .row{margin-top:0 !important}
+}
+/* Las tarjetas se centran verticalmente aunque las vistas ocupen todo el alto */
+.auth,.menu,.settings,.evaluation-config,.evaluation-results{align-self:center}
+
+/* Progreso de puntajes: barras verticales (12 sesiones en poco alto) */
+.evaluation-score-track i{width:var(--pct, 0%)}
+.evaluation-score-progress{flex-direction:row; align-items:flex-end; gap:clamp(4px, 1vw, 12px); height:clamp(70px, 13vh, 130px); margin-top:6px}
+.evaluation-score-progress > p{align-self:center}
+.evaluation-score-row{display:flex; flex-direction:column-reverse; align-items:center; gap:3px; flex:1 1 0; min-width:0; height:100%; font-size:11px}
+.evaluation-score-row .evaluation-score-track{width:min(26px, 100%); height:auto; flex:1 1 0; display:flex; align-items:flex-end; border-radius:8px}
+.evaluation-score-row .evaluation-score-track i{width:100%; height:var(--pct, 0%)}
+.evaluation-history-list-panel .evaluation-history-list{margin-top:6px}
+.evaluation-history-list{overflow-x:hidden}

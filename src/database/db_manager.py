@@ -91,6 +91,8 @@ class DatabaseManager:
                     "username": username_clean,
                     "password_hash": password_hash,
                     "learning_language": learning_language,
+                    # Los usuarios nuevos ven el tutorial al entrar por primera vez.
+                    "tutorial_completed": False,
                     "accessibility": {
                         "color_blind_mode": bool(color_blind_mode),
                         "accessible_reading_mode": bool(accessible_reading_mode),
@@ -230,6 +232,32 @@ class DatabaseManager:
         doc = users.find_one({"username": username_clean}, {"accessibility.night_mode": 1}) or {}
         accessibility = doc.get("accessibility", {})
         return bool(accessibility.get("night_mode", False))
+
+    def get_tutorial_completed(self, username: str) -> bool:
+        """
+        Indica si el usuario ya vio el tutorial de bienvenida. Las cuentas creadas
+        antes de existir el tutorial no tienen el campo y se tratan como completadas.
+        """
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return True
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {"tutorial_completed": 1}) or {}
+        return bool(doc.get("tutorial_completed", True))
+
+    def set_tutorial_completed(self, username: str, completed: bool = True) -> bool:
+        """Guarda si el usuario termino (u omitio) el tutorial de bienvenida."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            raise ValueError("El usuario es obligatorio")
+        users = self._users_collection()
+        result = users.update_one(
+            {"username": username_clean},
+            {"$set": {"tutorial_completed": bool(completed)}},
+        )
+        if result.matched_count != 1:
+            raise ValueError("El usuario autenticado no existe")
+        return bool(completed)
 
     def get_learning_language(self, username: str) -> str:
         """Obtiene el idioma en el que el usuario aprende lenguaje de señas."""

@@ -107,6 +107,7 @@ class MainController:
         self._web_dyslexia_spacing_mode = False
         self._web_reading_font_size = "medium"
         self._web_night_mode = False
+        self._web_tutorial_pending = False
         self._web_learning_language = DEFAULT_LEARNING_LANGUAGE
         self._learning_performance = LearningPerformanceAnalyzer(DEFAULT_LEARNING_LANGUAGE)
         self._review_ai = ReviewAI(DEFAULT_LEARNING_LANGUAGE, MODULE_REVIEW)
@@ -317,6 +318,7 @@ class MainController:
         self._web_dyslexia_spacing_mode = self._db.get_dyslexia_spacing_mode(user.username)
         self._web_reading_font_size = self._db.get_reading_font_size(user.username)
         self._web_night_mode = self._db.get_night_mode(user.username)
+        self._web_tutorial_pending = not self._db.get_tutorial_completed(user.username)
         self._apply_learning_language(self._db.get_learning_language(user.username))
         self._ensure_translation_running()
         return True, "OK"
@@ -364,6 +366,7 @@ class MainController:
         self._web_dyslexia_spacing_mode = False
         self._web_reading_font_size = "medium"
         self._web_night_mode = False
+        self._web_tutorial_pending = False
         self._apply_learning_language(DEFAULT_LEARNING_LANGUAGE)
         self._study_streak = {"current_streak": 0, "best_streak": 0, "last_study_date": None}
         self._review_attempts.clear()
@@ -442,6 +445,14 @@ class MainController:
             return {"ok": False, "msg": self._t("invalid_language")}
         self._apply_learning_language(language)
         return {"ok": True, "learning_language": language, "language_pack": language_pack(language)}
+
+    def web_complete_tutorial(self) -> dict:
+        """El usuario termino u omitio el tutorial: no se vuelve a mostrar solo."""
+        if self._current_user is None:
+            return {"ok": False, "msg": self._t("must_login")}
+        self._db.set_tutorial_completed(self._current_user.username, True)
+        self._web_tutorial_pending = False
+        return {"ok": True}
 
     def web_get_language_pack(self, language: Optional[str] = None) -> dict:
         """Perfil del idioma (voz, alfabeto, imagenes, instrucciones de cada sena)."""
@@ -767,6 +778,7 @@ class MainController:
             "dyslexia_spacing_mode": self._web_dyslexia_spacing_mode if self._current_user else False,
             "reading_font_size": self._web_reading_font_size if self._current_user else "medium",
             "night_mode": self._web_night_mode if self._current_user else False,
+            "tutorial_pending": self._web_tutorial_pending if self._current_user else False,
             "learning_language": language,
             "ui_locale": profile.ui_locale,
             "speech_locale": profile.speech_locale,

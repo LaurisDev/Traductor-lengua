@@ -1374,6 +1374,7 @@ async function poll(){
       if(currentView() === "login" || currentView() === "register"){
         setView("menu");
       }
+      maybeStartTour(st);
 
       if(Array.isArray(st.recognizable_letters) && st.learning_language === currentLearningLanguage){
         recognizableLetters = st.recognizable_letters;
@@ -1435,6 +1436,10 @@ async function poll(){
     }else{
       btnLogout.classList.add("hidden");
       menuUsername = "";
+      if(tourActive){
+        tourActive = false;
+        tour.classList.add("hidden");
+      }
       // No interrumpir el registro mientras todavía no existe una sesión.
       if(["interaction", "menu", "aprendizaje", "reto", "repaso", "evaluacion_run", "evaluacion_config", "evaluacion_resultados", "evaluacion_historial", "settings"].includes(currentView())){
         setView("login");
@@ -2188,3 +2193,133 @@ applyNightMode(false);
 document.body.dataset.lang = "";
 renderLearningLanguage(currentLearningLanguage);
 startPolling();
+
+// ===== Tutorial de bienvenida =====
+// Se muestra solo la primera vez que entra un usuario recién registrado
+// (el backend envía tutorial_pending) y se puede repetir con "Ver tutorial".
+const TOUR_STEPS = [
+  { title: () => tr("tourWelcomeTitle", menuUsername), text: "tourWelcomeText" },
+  { target: ".lang-switch", title: "tourLanguageTitle", text: "tourLanguageText" },
+  { target: "#btnOpenAprendizaje", title: "tourLearningTitle", text: "tourLearningText" },
+  { target: "#btnOpenRepaso", title: "tourReviewTitle", text: "tourReviewText" },
+  { target: "#btnOpenReto", title: "tourChallengeTitle", text: "tourChallengeText" },
+  { target: "#btnOpenEvaluacion", title: "tourEvaluationTitle", text: "tourEvaluationText" },
+  { target: "#btnOpenEvaluacionHistorial", title: "tourHistoryTitle", text: "tourHistoryText" },
+  { target: "#btnOpenInteraction", title: "tourInteractionTitle", text: "tourInteractionText" },
+  { target: "#btnOpenSettings", title: "tourSettingsTitle", text: "tourSettingsText" },
+  { title: "tourTipsTitle", text: "tourTipsText" },
+];
+const tour = $("tour");
+const tourSpotlight = $("tourSpotlight");
+const tourCard = $("tourCard");
+let tourIndex = 0;
+let tourActive = false;
+// Evita reabrir el tutorial automático en la misma sesión mientras se guarda.
+let tourAutoShown = false;
+
+function tourText(value){
+  return typeof value === "function" ? value() : tr(value);
+}
+
+function positionTour(){
+  if(!tourActive) return;
+  const step = TOUR_STEPS[tourIndex];
+  const target = step.target ? document.querySelector(step.target) : null;
+  const visible = target && target.offsetParent !== null;
+  tour.classList.toggle("no-target", !visible);
+  tourCard.style.top = "";
+  tourCard.style.left = "";
+  if(!visible) return;
+
+  const r = target.getBoundingClientRect();
+  const pad = 6;
+  tourSpotlight.style.top = `${r.top - pad}px`;
+  tourSpotlight.style.left = `${r.left - pad}px`;
+  tourSpotlight.style.width = `${r.width + pad * 2}px`;
+  tourSpotlight.style.height = `${r.height + pad * 2}px`;
+
+  // En pantallas angostas la tarjeta queda fija abajo (ver styles.css).
+  if(window.innerWidth <= 600) return;
+  const gap = 14;
+  const card = tourCard.getBoundingClientRect();
+  let top = r.bottom + gap;
+  if(top + card.height > window.innerHeight - 16) top = r.top - card.height - gap;
+  top = Math.max(16, Math.min(top, window.innerHeight - card.height - 16));
+  let left = r.left + r.width / 2 - card.width / 2;
+  left = Math.max(16, Math.min(left, window.innerWidth - card.width - 16));
+  tourCard.style.top = `${top}px`;
+  tourCard.style.left = `${left}px`;
+}
+
+function renderTourStep(){
+  const step = TOUR_STEPS[tourIndex];
+  const last = tourIndex === TOUR_STEPS.length - 1;
+  $("tourProgress").textContent = tr("tourStepOf", tourIndex + 1, TOUR_STEPS.length);
+  $("tourTitle").textContent = tourText(step.title);
+  $("tourText").textContent = tourText(step.text);
+  $("tourSkip").textContent = tr("tourSkip");
+  $("tourSkip").classList.toggle("hidden", last);
+  $("tourPrev").textContent = tr("tourPrev");
+  $("tourPrev").classList.toggle("hidden", tourIndex === 0);
+  $("tourNext").textContent = last ? tr("tourFinish") : tr("tourNext");
+
+  const target = step.target ? document.querySelector(step.target) : null;
+  if(target) target.scrollIntoView({ block: "center", behavior: "smooth" });
+  positionTour();
+  // Reubica tras el scroll suave.
+  setTimeout(positionTour, 350);
+  $("tourNext").focus();
+}
+
+function startTour(){
+  if(currentView() !== "menu") setView("menu");
+  tourIndex = 0;
+  tourActive = true;
+  tour.classList.remove("hidden");
+  renderTourStep();
+}
+
+async function endTour(){
+  tourActive = false;
+  tour.classList.add("hidden");
+  try{
+    await window.pywebview.api.complete_tutorial();
+  }catch(e){
+    // Si no se pudo guardar, se volverá a ofrecer en el próximo inicio de sesión.
+  }
+}
+
+function moveTour(step){
+  const next = tourIndex + step;
+  if(next < 0) return;
+  if(next >= TOUR_STEPS.length){
+    endTour();
+    return;
+  }
+  tourIndex = next;
+  renderTourStep();
+}
+
+// Llamado desde poll(): abre el tutorial al llegar al menú si el usuario es nuevo.
+function maybeStartTour(st){
+  if(!st.tutorial_pending){
+    tourAutoShown = false;
+    return;
+  }
+  if(tourActive || tourAutoShown || currentView() !== "menu") return;
+  tourAutoShown = true;
+  startTour();
+}
+
+$("tourNext").onclick = () => moveTour(1);
+$("tourPrev").onclick = () => moveTour(-1);
+$("tourSkip").onclick = () => endTour();
+$("btnOpenTutorial").onclick = () => startTour();
+document.addEventListener("keydown", (e) => {
+  if(!tourActive) return;
+  if(e.key === "Escape") endTour();
+  else if(e.key === "ArrowRight") moveTour(1);
+  else if(e.key === "ArrowLeft") moveTour(-1);
+});
+window.addEventListener("resize", positionTour);
+window.addEventListener("scroll", positionTour, true);

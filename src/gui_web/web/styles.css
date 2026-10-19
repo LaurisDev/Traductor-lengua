@@ -1257,3 +1257,32 @@ body.night-mode{background:var(--color-fondo); color:var(--text)}
   border:1px solid var(--border); box-shadow:var(--shadow);
   z-index:1000; font-size:14px;
 }
+
+/* ===== Tutorial de bienvenida ===== */
+.tour{position:fixed; inset:0; z-index:1000}
+.tour.hidden{display:none}
+/* Sin elemento resaltado (bienvenida y consejos) se oscurece toda la pantalla. */
+.tour.no-target{background:rgba(20,32,38,.6)}
+.tour-spotlight{
+  position:fixed; border-radius:16px; pointer-events:none;
+  box-shadow:0 0 0 4px var(--yellow), 0 0 0 9999px rgba(20,32,38,.6);
+  transition:top .25s ease, left .25s ease, width .25s ease, height .25s ease;
+}
+.tour.no-target .tour-spotlight{display:none}
+.tour-card{
+  position:fixed; width:min(380px, calc(100vw - 32px));
+  background:var(--card); color:var(--text);
+  border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow);
+  padding:20px 22px 18px;
+}
+.tour.no-target .tour-card{top:50%; left:50%; transform:translate(-50%, -50%)}
+.tour-progress{font-size:.85em; font-weight:700; color:var(--color-principal); margin-bottom:6px}
+.tour-title{margin:0 0 8px; font-size:1.25em}
+.tour-text{margin:0 0 18px; line-height:1.5}
+.tour-actions{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+.tour-nav{display:flex; gap:8px; margin-left:auto}
+.night-mode .tour-card{background:rgba(36,56,64,.98)}
+@media (prefers-reduced-motion: reduce){ .tour-spotlight{transition:none} }
+@media (max-width:600px){
+  .tour-card, .tour.no-target .tour-card{left:16px; right:16px; width:auto; bottom:16px; top:auto; transform:none}
+}

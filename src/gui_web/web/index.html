@@ -204,6 +204,7 @@
               </button>
 
               <div class="menu-footer">
+                <button class="btn ghost" id="btnOpenTutorial" data-i18n="tutorialReplay">❓ Ver tutorial</button>
                 <button class="btn ghost" id="btnOpenSettings" data-i18n="settings">⚙ Configuración</button>
                 <button class="btn ghost" id="btnLogoutMenu" data-i18n="logout">Cerrar sesión</button>
               </div>
@@ -770,6 +771,23 @@
           </div>
         </section>
       </main>
+    </div>
+
+    <!-- TUTORIAL DE BIENVENIDA (usuarios nuevos o desde "Ver tutorial") -->
+    <div class="tour hidden" id="tour" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourText">
+      <div class="tour-spotlight" id="tourSpotlight"></div>
+      <div class="tour-card" id="tourCard">
+        <div class="tour-progress" id="tourProgress" aria-hidden="true"></div>
+        <h2 class="tour-title" id="tourTitle"></h2>
+        <p class="tour-text" id="tourText"></p>
+        <div class="tour-actions">
+          <button class="btn ghost" id="tourSkip"></button>
+          <div class="tour-nav">
+            <button class="btn secondary" id="tourPrev"></button>
+            <button class="btn primary" id="tourNext"></button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="./i18n.js"></script>

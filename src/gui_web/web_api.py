@@ -75,6 +75,9 @@ class WebAPI:
     def set_learning_language(self, language: str) -> Dict[str, Any]:
         return self._c.web_set_learning_language(language)
 
+    def complete_tutorial(self) -> Dict[str, Any]:
+        return self._c.web_complete_tutorial()
+
     def get_language_pack(self, language: Optional[str] = None) -> Dict[str, Any]:
         return self._c.web_get_language_pack(language)
 

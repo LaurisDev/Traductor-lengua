@@ -36,6 +36,13 @@ class FakeDB:
     def get_night_mode(self, u):
         return False
 
+    def get_tutorial_completed(self, u):
+        return self._user(u).get("tutorial_completed", True)
+
+    def set_tutorial_completed(self, u, completed=True):
+        self._user(u)["tutorial_completed"] = bool(completed)
+        return bool(completed)
+
     def get_learning_language(self, u):
         return self._user(u)["learning_language"]
 

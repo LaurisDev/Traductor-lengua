@@ -365,8 +365,8 @@ input:focus{border-color:var(--lagoon); background:#fff; box-shadow:0 0 0 4px rg
   border-radius:16px;
   background:rgba(var(--color-secundario-rgb),.13);
 }
-.how-it-works h3{color:var(--color-principal); margin-bottom:8px}
-.how-it-works ol{margin:0; padding-left:20px; color:var(--muted); font-size:12px; line-height:1.55}
+.how-it-works h3{color:var(--color-principal); margin-bottom:8px; font-size:17px}
+.how-it-works ol{margin:0; padding-left:20px; color:var(--muted); font-size:15px; line-height:1.4}
 .how-it-works li{padding-left:3px}
 
 .reference-box{
@@ -1194,8 +1194,44 @@ body.night-mode{background:var(--color-fondo); color:var(--text)}
 .sign-instructions-head{display:flex; align-items:center; justify-content:space-between; gap:8px}
 .sign-instructions-title{font-size:13px; color:var(--color-principal)}
 .sign-instructions-text{margin:6px 0 0; font-size:14px; line-height:1.45; color:var(--text)}
+#viewAprendizaje .sign-instructions-title{font-size:16px}
+#viewAprendizaje .sign-instructions-text{font-size:16px}
 .speak-btn{padding:4px 10px; font-size:12px; min-height:0}
 .voice-language{margin:6px 0 2px}
+
+@media (min-width: 981px){
+  #viewAprendizaje.view-wrap{height:min(720px, calc(100vh - 120px)); min-height:0}
+  #viewAprendizaje .learning{display:flex; padding-bottom:0}
+  #viewAprendizaje .learning-grid{
+    flex:1;
+    height:100%;
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1.3fr);
+    grid-template-rows:minmax(0, 1fr);
+    gap:12px;
+  }
+  #viewAprendizaje .learning-panel{padding:12px; gap:8px}
+  #viewAprendizaje .learning-progress{margin-bottom:0}
+  #viewAprendizaje .how-it-works{margin:0; padding:10px 12px}
+  #viewAprendizaje .how-it-works h3{font-size:17px}
+  #viewAprendizaje .how-it-works ol{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); column-gap:16px; font-size:14px}
+  #viewAprendizaje .reference-box{
+    min-height:0;
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    grid-template-rows:minmax(0, 1fr) auto;
+    gap:6px 12px;
+    padding:10px;
+  }
+  #viewAprendizaje .reference-figure{grid-column:1 / -1; width:min(100%, 22vh); min-height:0}
+  #viewAprendizaje .letter-reference{font-size:clamp(3rem, 6vh, 5rem)}
+  #viewAprendizaje .sign-instructions{margin:0; padding:9px 12px}
+  #viewAprendizaje .sign-instructions-text{font-size:16px}
+  #viewAprendizaje .learning-difficult-count{flex:0 0 auto}
+  #viewAprendizaje .camera-box{min-height:0; gap:10px}
+  #viewAprendizaje .learning-video-wrap{min-height:0}
+  #viewAprendizaje .learning-actions{position:static; padding-top:0}
+}
+
 .bubble-head{display:flex; align-items:center; justify-content:space-between; gap:8px}
 .bubble-speak{
   border:0; background:transparent; cursor:pointer; font-size:14px; line-height:1;

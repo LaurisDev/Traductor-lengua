@@ -9,9 +9,9 @@ ENV PYTHONUNBUFFERED=1 \
     WEB_DEPLOYMENT=1 \
     PORT=8000
 
-# Librerias de sistema que necesitan OpenCV y MediaPipe.
+# Librerias de sistema que necesitan OpenCV y MediaPipe (libegl1/libgles2: detector de manos).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libgomp1 \
+    && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libgomp1 libegl1 libgles2 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -u 1000 user

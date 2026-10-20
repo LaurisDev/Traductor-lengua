@@ -73,6 +73,29 @@ class WebServerTests(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.get_json()["error"], "database_unavailable")
 
+    def test_idle_sessions_are_released(self):
+        class FakeController:
+            def __init__(self):
+                self.logged_out = False
+
+            def web_logout(self):
+                self.logged_out = True
+
+        idle, active = FakeController(), FakeController()
+        limit = web_server.SESSION_IDLE_SECONDS
+        with web_server._controllers_lock:
+            web_server._controllers.update({"idle": idle, "active": active})
+            web_server._last_seen.update({"idle": 0.0, "active": limit})
+            web_server._release_idle_sessions(limit + 1)
+            remaining = set(web_server._controllers)
+            web_server._controllers.pop("active", None)
+            web_server._last_seen.pop("active", None)
+
+        self.assertTrue(idle.logged_out)
+        self.assertFalse(active.logged_out)
+        self.assertNotIn("idle", remaining)
+        self.assertIn("active", remaining)
+
 
 if __name__ == "__main__":
     unittest.main()

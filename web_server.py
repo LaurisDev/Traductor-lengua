@@ -11,6 +11,7 @@ import os
 os.environ.setdefault("WEB_DEPLOYMENT", "1")
 import secrets
 import threading
+import time
 from pathlib import Path
 
 import cv2
@@ -30,7 +31,25 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 _controllers = {}
+_last_seen = {}
 _controllers_lock = threading.Lock()
+
+# Una pestaña abierta consulta el estado varias veces por segundo. Si una sesion
+# pasa este tiempo sin actividad (pestaña cerrada sin cerrar sesion), se libera
+# su detector de manos y su hilo para no agotar la memoria del servidor.
+SESSION_IDLE_SECONDS = int(os.getenv("SESSION_IDLE_SECONDS", "600"))
+
+
+def _release_idle_sessions(now: float) -> None:
+    """Debe llamarse con _controllers_lock tomado."""
+    for session_id in [sid for sid, seen in _last_seen.items() if now - seen > SESSION_IDLE_SECONDS]:
+        controller = _controllers.pop(session_id, None)
+        _last_seen.pop(session_id, None)
+        if controller is not None:
+            try:
+                controller.web_logout()
+            except Exception:
+                app.logger.exception("Could not release idle web session")
 
 
 def _controller() -> MainController:
@@ -39,11 +58,14 @@ def _controller() -> MainController:
         session_id = secrets.token_urlsafe(24)
         session["web_session_id"] = session_id
         session.permanent = True
+    now = time.monotonic()
     with _controllers_lock:
+        _release_idle_sessions(now)
         controller = _controllers.get(session_id)
         if controller is None:
             controller = MainController()
             _controllers[session_id] = controller
+        _last_seen[session_id] = now
         return controller
 
 

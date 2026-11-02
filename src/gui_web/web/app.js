@@ -13,6 +13,7 @@ const viewEvaluacionRun = $("viewEvaluacionRun");
 const viewEvaluacionResultados = $("viewEvaluacionResultados");
 const viewEvaluacionHistorial = $("viewEvaluacionHistorial");
 const viewSettings = $("viewSettings");
+const viewProfile = $("viewProfile");
 
 // Evaluation elements
 const evalRequestedLetter = $("evalRequestedLetter");
@@ -873,6 +874,7 @@ function setView(name){
   viewEvaluacionResultados.classList.toggle("hidden", name !== "evaluacion_resultados");
   viewEvaluacionHistorial.classList.toggle("hidden", name !== "evaluacion_historial");
   viewSettings.classList.toggle("hidden", name !== "settings");
+  viewProfile.classList.toggle("hidden", name !== "profile");
   if(typeof viewRepaso !== 'undefined') viewRepaso.classList.toggle("hidden", name !== "repaso");
   viewReto.classList.toggle("hidden", name !== "reto");
 }
@@ -885,6 +887,7 @@ function currentView(){
   if(!viewEvaluacionConfig.classList.contains("hidden")) return "evaluacion_config";
   if(!viewEvaluacionResultados.classList.contains("hidden")) return "evaluacion_resultados";
   if(!viewEvaluacionHistorial.classList.contains("hidden")) return "evaluacion_historial";
+  if(!viewProfile.classList.contains("hidden")) return "profile";
   if(!viewSettings.classList.contains("hidden")) return "settings";
   if(!viewReto.classList.contains("hidden")) return "reto";
   if(!viewAprendizaje.classList.contains("hidden")) return "aprendizaje";
@@ -1445,7 +1448,7 @@ async function poll(){
         tour.classList.add("hidden");
       }
       // No interrumpir el registro mientras todavía no existe una sesión.
-      if(["interaction", "menu", "aprendizaje", "reto", "repaso", "evaluacion_run", "evaluacion_config", "evaluacion_resultados", "evaluacion_historial", "settings"].includes(currentView())){
+      if(["interaction", "menu", "aprendizaje", "reto", "repaso", "evaluacion_run", "evaluacion_config", "evaluacion_resultados", "evaluacion_historial", "settings", "profile"].includes(currentView())){
         setView("login");
       }
 
@@ -1729,6 +1732,12 @@ $("btnOpenSettings").onclick = () => {
   accessibilitySettingsDirty = false;
   setView("settings");
 };
+$("btnOpenProfile").onclick = openProfile;
+$("btnBackProfile").onclick = () => setView("menu");
+$("btnProfileLearning").onclick = () => $("btnOpenAprendizaje").click();
+$("btnProfileReview").onclick = () => $("btnOpenRepaso").click();
+$("btnProfileHistory").onclick = () => $("btnOpenEvaluacionHistorial").click();
+$("btnProfileSettings").onclick = () => $("btnOpenSettings").click();
 $("btnBackSettings").onclick = () => {
   accessibilitySettingsDirty = false;
   setView("menu");
@@ -2008,6 +2017,96 @@ function loadAllEvaluationHistory(){
 // El historial se muestra por idioma (las sesiones antiguas sin idioma son de LSC).
 function loadEvaluationHistory(){
   return loadAllEvaluationHistory().filter((session) => (session.language || "es") === currentLearningLanguage);
+}
+
+async function openProfile(){
+  setView("profile");
+  $("profileUsername").textContent = menuUsername || "—";
+  $("profileAvatar").textContent = Array.from(menuUsername || "E")[0].toLocaleUpperCase();
+  $("profileLanguage").textContent = languagePack.sign_language || "LSC";
+  $("profileError").classList.add("hidden");
+  $("profileError").textContent = "";
+  $("profileLettersPracticed").textContent = "—";
+  $("profileCorrectAnswers").textContent = "—";
+  $("profileTotalAttempts").textContent = "—";
+  $("profileBestStreak").textContent = "—";
+  $("profileProgressCount").textContent = "—";
+  $("profileProgressBar").setAttribute("aria-valuenow", "0");
+  $("profileProgressFill").style.width = "0%";
+  renderProfileFavorites(favoriteLetters);
+  renderProfileEvaluations(loadEvaluationHistory());
+
+  try{
+    const [summary, favorites, state] = await Promise.all([
+      window.pywebview.api.learning_summary(),
+      window.pywebview.api.get_favorite_letters(),
+      window.pywebview.api.get_state(false),
+    ]);
+    if(currentView() !== "profile") return;
+    if(!summary || !summary.ok || !favorites || !favorites.ok || !state || !state.logged_in){
+      throw new Error((summary && summary.msg) || (favorites && favorites.msg) || tr("profileLoadError"));
+    }
+    if(summary.language !== currentLearningLanguage || favorites.language !== currentLearningLanguage) return;
+
+    const practiced = Math.min(Number(summary.practiced_letters) || 0, Number(summary.alphabet_size) || 0);
+    const alphabetSize = Number(summary.alphabet_size) || LETTERS.length;
+    const progress = alphabetSize ? Math.round((practiced / alphabetSize) * 100) : 0;
+    $("profileUsername").textContent = state.username || menuUsername || "—";
+    $("profileAvatar").textContent = Array.from(state.username || menuUsername || "E")[0].toLocaleUpperCase();
+    $("profileLanguage").textContent = state.sign_language || languagePack.sign_language || "LSC";
+    $("profileLettersPracticed").textContent = String(practiced);
+    $("profileCorrectAnswers").textContent = String(Number(summary.correct) || 0);
+    $("profileTotalAttempts").textContent = String(Number(summary.attempts) || 0);
+    $("profileBestStreak").textContent = String(Number(state.study_streak && state.study_streak.best_streak) || 0);
+    $("profileProgressCount").textContent = tr("profileProgressCount", practiced, alphabetSize);
+    $("profileProgressBar").setAttribute("aria-valuenow", String(progress));
+    $("profileProgressFill").style.width = `${progress}%`;
+    favoriteLetters = new Set(favorites.letters || []);
+    renderProfileFavorites(favoriteLetters);
+    renderProfileEvaluations(loadEvaluationHistory());
+  }catch(error){
+    if(currentView() === "profile"){
+      console.error("No se pudo cargar el perfil", error);
+      $("profileError").textContent = error.message || tr("profileLoadError");
+      $("profileError").classList.remove("hidden");
+    }
+  }
+}
+
+function renderProfileFavorites(letters){
+  const container = $("profileFavorites");
+  container.replaceChildren();
+  const values = Array.from(letters || []).sort();
+  $("profileFavoriteCount").textContent = String(values.length);
+  $("profileFavoritesEmpty").classList.toggle("hidden", values.length > 0);
+  values.forEach((letter) => {
+    const chip = document.createElement("span");
+    chip.className = "profile-favorite-letter";
+    chip.textContent = letter;
+    container.appendChild(chip);
+  });
+}
+
+function renderProfileEvaluations(sessions){
+  const container = $("profileEvaluations");
+  container.replaceChildren();
+  const recent = (sessions || []).slice(0, 3);
+  $("profileEvaluationsEmpty").classList.toggle("hidden", recent.length > 0);
+  recent.forEach((session) => {
+    const row = document.createElement("article");
+    row.className = "profile-evaluation-row";
+    const summary = document.createElement("span");
+    summary.className = "profile-evaluation-summary";
+    const date = document.createElement("strong");
+    date.textContent = formatEvaluationDate(session.date);
+    const details = document.createElement("small");
+    details.textContent = tr("profileEvaluationDetails", Number(session.hits) || 0, Number(session.errors) || 0);
+    summary.append(date, details);
+    const score = document.createElement("b");
+    score.textContent = tr("profileEvaluationScore", Number(session.score) || 0);
+    row.append(summary, score);
+    container.appendChild(row);
+  });
 }
 
 function saveEvaluationSession(results){

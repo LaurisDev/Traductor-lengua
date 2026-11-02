@@ -734,6 +734,21 @@ class MainController:
             "study_streak": self._study_streak,
         }
 
+    def web_learning_summary(self) -> dict:
+        """Devuelve el progreso general del usuario en el idioma activo."""
+        if self._current_user is None:
+            return {"ok": False, "msg": self._t("must_login")}
+        language = self._web_learning_language
+        summary = self._db.get_learning_summary(self._current_user.username, language)
+        summary.update(
+            {
+                "ok": True,
+                "language": language,
+                "alphabet_size": len(get_profile(language).learning_alphabet),
+            }
+        )
+        return summary
+
     def web_get_favorite_letters(self) -> dict:
         if self._current_user is None:
             return {"ok": False, "msg": self._t("must_login"), "letters": []}

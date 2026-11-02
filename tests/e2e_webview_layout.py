@@ -31,7 +31,7 @@ SIZES = [(1920, 1080), (1366, 768), (1280, 720), (1024, 768), (768, 1024), (390,
 
 # Vistas que no requieren sesion se miden antes de iniciar sesion.
 PUBLIC_VIEWS = ["landing", "login", "register", "register_language", "register_accessibility"]
-PRIVATE_VIEWS = ["menu", "settings", "interaction", "aprendizaje", "repaso", "reto",
+PRIVATE_VIEWS = ["menu", "profile", "settings", "interaction", "aprendizaje", "repaso", "reto",
                  "evaluacion_config", "evaluacion_run", "evaluacion_resultados", "evaluacion_historial"]
 
 RESULTS = []

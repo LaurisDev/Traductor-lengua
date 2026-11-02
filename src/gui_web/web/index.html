@@ -267,9 +267,63 @@
               </button>
 
               <div class="menu-footer">
+                <button class="btn ghost" id="btnOpenProfile" data-i18n="profile">👤 Mi perfil</button>
                 <button class="btn ghost" id="btnOpenTutorial" data-i18n="tutorialReplay">❓ Ver tutorial</button>
-                <button class="btn ghost" id="btnOpenSettings" data-i18n="settings">⚙ Configuración</button>              </div>
+                <button class="btn ghost" id="btnOpenSettings" data-i18n="settings">⚙ Configuración</button>
+              </div>
             </nav>
+          </div>
+        </section>
+
+        <!-- PERFIL Y PROGRESO -->
+        <section class="view-wrap hidden" id="viewProfile">
+          <div class="view-bar">
+            <button class="btn ghost back-btn" id="btnBackProfile" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="profileTitle">Mi perfil de aprendizaje</div>
+          </div>
+          <div class="profile-content">
+            <section class="card profile-identity">
+              <div class="profile-avatar" id="profileAvatar" aria-hidden="true">E</div>
+              <div class="profile-identity-copy">
+                <span class="profile-eyebrow" data-i18n="profile">MI PERFIL</span>
+                <h2 id="profileUsername">—</h2>
+                <p class="muted" data-i18n="profileSubtitle">Tu camino de aprendizaje, a tu manera.</p>
+              </div>
+              <div class="profile-language-badge"><span aria-hidden="true">✦</span><span id="profileLanguage">LSC</span></div>
+            </section>
+
+            <section class="card profile-progress-card">
+              <div class="profile-section-heading">
+                <div><span class="profile-eyebrow" data-i18n="profileProgressEyebrow">PASO A PASO</span><h2 data-i18n="profileProgressTitle">Tu progreso</h2></div>
+                <button class="btn ghost profile-link" id="btnProfileLearning" data-i18n="profilePractice">Seguir aprendiendo →</button>
+              </div>
+              <div class="profile-stats">
+                <article class="profile-stat profile-stat-mint"><span class="profile-stat-icon" aria-hidden="true">✳</span><strong id="profileLettersPracticed">—</strong><span data-i18n="profileLettersPracticedLabel">Letras practicadas</span></article>
+                <article class="profile-stat profile-stat-coral"><span class="profile-stat-icon" aria-hidden="true">✓</span><strong id="profileCorrectAnswers">—</strong><span data-i18n="profileCorrectLabel">Señas correctas</span></article>
+                <article class="profile-stat profile-stat-blue"><span class="profile-stat-icon" aria-hidden="true">↗</span><strong id="profileTotalAttempts">—</strong><span data-i18n="profileAttemptsLabel">Intentos registrados</span></article>
+                <article class="profile-stat profile-stat-yellow"><span class="profile-stat-icon" aria-hidden="true">🔥</span><strong id="profileBestStreak">—</strong><span data-i18n="profileBestStreakLabel">Mejor racha</span></article>
+              </div>
+              <div class="profile-alphabet-progress">
+                <div class="profile-progress-copy"><strong data-i18n="profileAlphabetProgress">Avance en el alfabeto</strong><span id="profileProgressCount">—</span></div>
+                <div class="profile-progress-track" role="progressbar" id="profileProgressBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria="profileAlphabetProgress"><span id="profileProgressFill"></span></div>
+              </div>
+              <p class="profile-error hidden" id="profileError" role="status"></p>
+            </section>
+
+            <div class="profile-detail-grid">
+              <section class="card profile-detail-card">
+                <div class="profile-section-heading"><div><span class="profile-eyebrow" data-i18n="profileCollectionEyebrow">TU COLECCIÓN</span><h2 data-i18n="profileFavoritesTitle">Letras para repasar</h2></div><span class="profile-count" id="profileFavoriteCount">0</span></div>
+                <div class="profile-favorites" id="profileFavorites"></div>
+                <p class="profile-empty muted hidden" id="profileFavoritesEmpty" data-i18n="profileNoFavorites">Todavía no guardaste letras. Marca una con ⭐ mientras practicas.</p>
+                <button class="btn secondary profile-secondary-action" id="btnProfileReview" data-i18n="profileReview">Ir a Repaso →</button>
+              </section>
+              <section class="card profile-detail-card">
+                <div class="profile-section-heading"><div><span class="profile-eyebrow" data-i18n="profileHistoryEyebrow">TUS RETOS</span><h2 data-i18n="profileRecentEvaluations">Evaluaciones recientes</h2></div><button class="btn ghost profile-link" id="btnProfileHistory" data-i18n="profileViewHistory">Ver historial →</button></div>
+                <div class="profile-evaluations" id="profileEvaluations"></div>
+                <p class="profile-empty muted hidden" id="profileEvaluationsEmpty" data-i18n="profileNoEvaluations">Completa una evaluación y aparecerá aquí.</p>
+              </section>
+            </div>
+            <div class="profile-footer-actions"><span data-i18n="profileSettingsHint">Personaliza tu experiencia cuando quieras.</span><button class="btn ghost" id="btnProfileSettings" data-i18n="settings">⚙ Configuración</button></div>
           </div>
         </section>
 

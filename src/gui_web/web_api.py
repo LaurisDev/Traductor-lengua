@@ -146,6 +146,9 @@ class WebAPI:
     def learning_performance(self, letter: str) -> Dict[str, Any]:
         return self._c.web_learning_performance(letter)
 
+    def learning_summary(self) -> Dict[str, Any]:
+        return self._c.web_learning_summary()
+
     def get_favorite_letters(self) -> Dict[str, Any]:
         return self._c.web_get_favorite_letters()
 
@@ -171,4 +174,3 @@ class WebAPI:
         st = dict(st)
         st["new_messages"] = new_msgs if consume_messages else []
         return st
-

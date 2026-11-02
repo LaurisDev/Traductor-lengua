@@ -103,6 +103,10 @@ def run_steps(window, controller):
         check("ES asistente IA en espanol", "Continúa practicando" in text("#learningAssistantMessage"),
               text("#learningAssistantMessage"))
         click("#btnBackAprendizaje")
+        click("#btnOpenProfile")
+        check("ES perfil: nombre y progreso guardado", text("#profileUsername") == "ana" and text("#profileProgressCount") == "1 de 27 letras",
+              text("#profileUsername") + " / " + text("#profileProgressCount"))
+        click("#btnBackProfile")
 
         # ===== 3) Cambiar a Ingles - ASL =====
         switch_language("en")
@@ -114,6 +118,10 @@ def run_steps(window, controller):
         check("EN imagenes del menu en ASL", js("[...document.querySelectorAll('.menu-word-tile img')].every(i=>i.getAttribute('src').startsWith('./assets/letras/asl/'))"))
         vt = visible_text()
         check("EN menu sin textos en espanol", not any(w in vt for w in SPANISH_WORDS), [w for w in SPANISH_WORDS if w in vt])
+        click("#btnOpenProfile")
+        check("EN perfil: traducción y alfabeto ASL", text("#viewProfile .view-title") == "My learning profile" and text("#profileProgressCount") == "0 of 26 letters",
+              text("#viewProfile .view-title") + " / " + text("#profileProgressCount"))
+        click("#btnBackProfile")
 
         # ===== 4) Repaso (ASL) =====
         click("#btnOpenRepaso")

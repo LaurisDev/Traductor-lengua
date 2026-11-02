@@ -61,6 +61,15 @@ class FakeDB:
     def get_learning_performance(self, u, letter, language=None):
         return dict(self.attempts.get((language, letter), {"attempts": 0, "correct": 0, "incorrect": 0}))
 
+    def get_learning_summary(self, u, language=None):
+        matching = [stats for (lang, _), stats in self.attempts.items() if lang == language]
+        return {
+            "attempts": sum(stats["attempts"] for stats in matching),
+            "correct": sum(stats["correct"] for stats in matching),
+            "incorrect": sum(stats["incorrect"] for stats in matching),
+            "practiced_letters": len(matching),
+        }
+
     def get_favorite_letters(self, u, language=None):
         return sorted(self.favorites.get(language, set()))
 

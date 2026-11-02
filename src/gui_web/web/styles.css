@@ -1633,3 +1633,80 @@ body.night-mode{background:var(--color-fondo); color:var(--text)}
   .landing,.landing-float-card{animation:none}
   .landing-primary span{transition:none}
 }
+
+/* Perfil de aprendizaje */
+.profile-content{flex:1 1 0; min-height:0; display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:var(--fit-gap)}
+.profile-identity,.profile-progress-card,.profile-detail-card{min-width:0; border-radius:18px}
+.profile-identity{display:flex; align-items:center; gap:14px; padding:clamp(12px, 2vh, 20px) clamp(14px, 2.4vw, 26px); background:linear-gradient(115deg, rgba(150,199,179,.22), rgba(255,253,249,.92) 58%, rgba(249,185,92,.14))}
+.profile-avatar{display:grid; flex:0 0 auto; width:clamp(46px, 7vh, 64px); height:clamp(46px, 7vh, 64px); place-items:center; border-radius:19px; background:linear-gradient(135deg,var(--coral),var(--yellow)); color:#fff; font-family:Georgia,serif; font-size:clamp(23px, 4vh, 34px); box-shadow:0 8px 18px rgba(215,137,127,.23)}
+.profile-identity-copy{min-width:0}
+.profile-eyebrow{display:block; color:#75938b; font-size:9px; font-weight:800; letter-spacing:.14em}
+.profile-identity h2,.profile-section-heading h2{margin:3px 0 0; color:var(--color-texto); font-size:clamp(15px, 2vh, 19px)}
+.profile-identity-copy .muted{margin:3px 0 0; font-size:11px}
+.profile-language-badge{display:flex; align-items:center; gap:7px; margin-left:auto; padding:8px 12px; border:1px solid rgba(var(--color-principal-rgb),.14); border-radius:999px; background:rgba(255,255,255,.66); color:var(--color-principal); font-size:11px; font-weight:800}
+.profile-language-badge span:first-child{color:var(--coral)}
+.profile-progress-card{padding:clamp(13px, 2vh, 20px) clamp(14px, 2.4vw, 24px)}
+.profile-section-heading{display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0}
+.profile-link{flex:0 0 auto; padding:7px 10px; color:var(--color-principal); font-size:11px}
+.profile-stats{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:clamp(7px, 1.4vw, 14px); margin-top:clamp(10px, 1.8vh, 18px)}
+.profile-stat{display:grid; grid-template-columns:auto 1fr; align-items:center; gap:2px 9px; min-width:0; padding:10px 12px; border:1px solid rgba(41,64,74,.07); border-radius:13px; background:rgba(255,255,255,.62)}
+.profile-stat-icon{display:grid; grid-row:span 2; width:29px; height:29px; place-items:center; border-radius:9px; background:rgba(150,199,179,.25); color:#5b8979; font-size:15px}
+.profile-stat-coral .profile-stat-icon{background:rgba(215,137,127,.18); color:#bd7068}
+.profile-stat-blue .profile-stat-icon{background:rgba(99,152,169,.16); color:#508397}
+.profile-stat-yellow .profile-stat-icon{background:rgba(249,185,92,.2); color:#bc842a}
+.profile-stat>strong{overflow:hidden; color:#39535a; font-size:clamp(17px, 2.4vh, 23px); line-height:1.05; text-overflow:ellipsis}
+.profile-stat>span:last-child{overflow:hidden; color:#899492; font-size:9px; text-overflow:ellipsis; white-space:nowrap}
+.profile-alphabet-progress{margin-top:clamp(10px, 1.7vh, 16px)}
+.profile-progress-copy{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:7px; color:#617471; font-size:10px}
+.profile-progress-copy span{color:#899492}
+.profile-progress-track{height:8px; overflow:hidden; border-radius:999px; background:rgba(var(--color-principal-rgb),.12)}
+.profile-progress-track span{display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--mint),var(--lagoon)); transition:width .4s ease}
+.profile-error{margin:8px 0 0; color:var(--danger); font-size:11px}
+.profile-detail-grid{display:grid; grid-template-columns:1fr 1fr; gap:var(--fit-gap); min-height:0}
+.profile-detail-card{display:flex; flex-direction:column; min-height:0; padding:clamp(12px, 1.8vh, 18px)}
+.profile-detail-card .profile-section-heading h2{font-size:clamp(13px, 1.8vh, 16px)}
+.profile-count{display:grid; flex:0 0 auto; min-width:26px; height:26px; place-items:center; border-radius:50%; background:rgba(var(--color-secundario-rgb),.25); color:#557b72; font-size:10px; font-weight:800}
+.profile-favorites{display:flex; align-content:flex-start; flex-wrap:wrap; gap:6px; min-height:0; margin:clamp(9px, 1.5vh, 14px) 0}
+.profile-favorite-letter{display:grid; width:29px; height:29px; place-items:center; border:1px solid rgba(var(--color-principal-rgb),.16); border-radius:9px; background:rgba(var(--color-secundario-rgb),.16); color:#557b72; font-size:11px; font-weight:800}
+.profile-empty{margin:8px 0; font-size:10px; line-height:1.45}
+.profile-secondary-action{align-self:flex-start; margin-top:auto; padding:7px 10px; font-size:10px}
+.profile-evaluations{display:flex; flex-direction:column; min-height:0; margin-top:4px}
+.profile-evaluation-row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid rgba(41,64,74,.08)}
+.profile-evaluation-row:last-child{border-bottom:0}
+.profile-evaluation-summary{display:flex; flex-direction:column; gap:3px; min-width:0}
+.profile-evaluation-summary strong{color:#526a6d; font-size:10px}
+.profile-evaluation-summary small{color:#899492; font-size:9px}
+.profile-evaluation-row>b{flex:0 0 auto; color:#508397; font-size:10px}
+.profile-footer-actions{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:2px 4px 0; color:#899492; font-size:10px}
+.profile-footer-actions .btn{padding:6px 9px; font-size:10px}
+@media (max-width:620px){
+  .profile-content{gap:8px}
+  .profile-identity{gap:10px; padding:10px 12px}
+  .profile-avatar{width:42px; height:42px; border-radius:14px; font-size:24px}
+  .profile-identity-copy .muted{font-size:9px}
+  .profile-language-badge{padding:6px 8px; font-size:9px}
+  .profile-progress-card{padding:10px 11px}
+  .profile-stats{gap:5px; margin-top:9px}
+  .profile-stat{grid-template-columns:1fr; justify-items:center; gap:4px; padding:7px 3px; text-align:center}
+  .profile-stat-icon{grid-row:auto; width:22px; height:22px; border-radius:7px; font-size:12px}
+  .profile-stat>strong{font-size:17px}
+  .profile-stat>span:last-child{font-size:8px; white-space:normal}
+  .profile-alphabet-progress{margin-top:9px}
+  .profile-detail-grid{grid-template-columns:1fr 1fr; gap:8px}
+  .profile-detail-card{padding:9px}
+  .profile-detail-card .profile-section-heading{align-items:flex-start; gap:4px}
+  .profile-detail-card .profile-link{padding:4px 2px; font-size:9px}
+  .profile-detail-card .profile-section-heading h2{font-size:12px}
+  .profile-favorite-letter{width:24px; height:24px}
+  .profile-footer-actions{font-size:8px}
+  .profile-footer-actions .btn{padding:5px 7px; font-size:9px}
+}
+@media (max-height:700px) and (min-width:621px){
+  .profile-content{gap:7px}
+  .profile-identity{padding-top:8px; padding-bottom:8px}
+  .profile-progress-card{padding-top:9px; padding-bottom:9px}
+  .profile-stats{margin-top:8px}
+  .profile-stat{padding:7px 9px}
+  .profile-alphabet-progress{margin-top:8px}
+  .profile-detail-card{padding:9px 12px}
+}

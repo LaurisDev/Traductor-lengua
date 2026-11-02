@@ -14,6 +14,7 @@ const viewEvaluacionResultados = $("viewEvaluacionResultados");
 const viewEvaluacionHistorial = $("viewEvaluacionHistorial");
 const viewSettings = $("viewSettings");
 const viewProfile = $("viewProfile");
+const viewFaq = $("viewFaq");
 
 // Evaluation elements
 const evalRequestedLetter = $("evalRequestedLetter");
@@ -83,7 +84,8 @@ const learningAssistantAttempts = $("learningAssistantAttempts");
 const learningAssistantRecommendation = $("learningAssistantRecommendation");
 const btnAssistantFavorite = $("btnAssistantFavorite");
 const btnPracticeNow = $("btnPracticeNow");
-const btnLogout = $("btnLogout");
+const btnHelp = $("btnHelp");
+const helpMenu = $("helpMenu");
 const settingsColorBlindMode = $("settingsColorBlindMode");
 const settingsAccessibleReadingMode = $("settingsAccessibleReadingMode");
 const settingsReadingFontSize = $("settingsReadingFontSize");
@@ -860,6 +862,8 @@ let retoMode = "name";
 const LEARNING_STREAK_TO_CONFIRM = 3;
 
 function setView(name){
+  document.body.dataset.view = name;
+  closeHelpMenu();
   document.body.classList.toggle("landing-active", name === "landing");
   viewLanding.classList.toggle("hidden", name !== "landing");
   viewLogin.classList.toggle("hidden", name !== "login");
@@ -875,6 +879,7 @@ function setView(name){
   viewEvaluacionHistorial.classList.toggle("hidden", name !== "evaluacion_historial");
   viewSettings.classList.toggle("hidden", name !== "settings");
   viewProfile.classList.toggle("hidden", name !== "profile");
+  viewFaq.classList.toggle("hidden", name !== "faq");
   if(typeof viewRepaso !== 'undefined') viewRepaso.classList.toggle("hidden", name !== "repaso");
   viewReto.classList.toggle("hidden", name !== "reto");
 }
@@ -888,6 +893,7 @@ function currentView(){
   if(!viewEvaluacionResultados.classList.contains("hidden")) return "evaluacion_resultados";
   if(!viewEvaluacionHistorial.classList.contains("hidden")) return "evaluacion_historial";
   if(!viewProfile.classList.contains("hidden")) return "profile";
+  if(!viewFaq.classList.contains("hidden")) return "faq";
   if(!viewSettings.classList.contains("hidden")) return "settings";
   if(!viewReto.classList.contains("hidden")) return "reto";
   if(!viewAprendizaje.classList.contains("hidden")) return "aprendizaje";
@@ -905,10 +911,21 @@ function applyColorBlindMode(enabled, syncControl = true){
   }
 }
 
+// El tamaño del texto se aplica como zoom de toda la ventana (ver set_ui_zoom en web_api.py);
+// solo se pide al backend cuando cambia, porque el poll lo reaplica cada 300 ms.
+let appliedUiZoom = null;
+function applyUiZoom(size){
+  if(size === appliedUiZoom || !window.pywebview?.api?.set_ui_zoom) return;
+  appliedUiZoom = size;
+  window.pywebview.api.set_ui_zoom(size).catch(() => { appliedUiZoom = null; });
+}
+
 function applyAccessibleReadingMode(enabled, fontSize = "medium", syncControl = true){
+  const size = ["small", "medium", "large"].includes(fontSize) ? fontSize : "medium";
   document.body.classList.toggle("accessible-reading-mode", !!enabled);
   document.body.classList.remove("reading-size-small", "reading-size-medium", "reading-size-large");
-  document.body.classList.add(`reading-size-${["small", "medium", "large"].includes(fontSize) ? fontSize : "medium"}`);
+  document.body.classList.add(`reading-size-${size}`);
+  applyUiZoom(size);
   if(syncControl && settingsAccessibleReadingMode){
     settingsAccessibleReadingMode.checked = !!enabled;
   }
@@ -1025,8 +1042,56 @@ function renderReto(st){
   retoProgressFill.style.width = (progress * 100) + "%";
 }
 
+// ===== Encendido / apagado de la cámara =====
+// Cada vista con video tiene su propio botón; todos reflejan el mismo estado.
+let cameraEnabled = true;
+let cameraToggling = false;
+
+function updateCameraToggles(){
+  document.querySelectorAll(".camera-toggle").forEach((btn) => {
+    btn.classList.toggle("off", !cameraEnabled);
+    btn.disabled = cameraToggling;
+    btn.setAttribute("aria-pressed", String(cameraEnabled));
+    btn.querySelector(".camera-toggle-label").textContent = cameraEnabled ? tr("cameraTurnOff") : tr("cameraTurnOn");
+  });
+}
+
+async function setCameraEnabled(enabled){
+  if(cameraToggling) return;
+  cameraToggling = true;
+  cameraEnabled = enabled;
+  updateCameraToggles();
+  try{
+    const res = await window.pywebview.api.set_camera(enabled);
+    if(res && typeof res.camera_enabled === "boolean") cameraEnabled = res.camera_enabled;
+  }finally{
+    cameraToggling = false;
+    updateCameraToggles();
+  }
+}
+
+document.querySelectorAll(".video-wrap").forEach((wrap) => {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "camera-toggle";
+  btn.innerHTML = '<span class="camera-toggle-dot" aria-hidden="true"></span><span class="camera-toggle-label"></span>';
+  btn.onclick = () => setCameraEnabled(!cameraEnabled);
+  wrap.appendChild(btn);
+});
+updateCameraToggles();
+
 function renderFrame(frameB64, videoEl, fallbackEl, errorMsg){
   const statusEl = videoEl?.parentElement?.querySelector(".camera-status");
+  if(!cameraEnabled){
+    videoEl.style.display = "none";
+    fallbackEl.style.display = "grid";
+    fallbackEl.textContent = tr("cameraOffTitle");
+    if(statusEl){
+      statusEl.className = "camera-status camera-status-off";
+      statusEl.innerHTML = `<strong>${tr("cameraOffTitle")}</strong><span>${tr("cameraOffHint")}</span>`;
+    }
+    return;
+  }
   if(frameB64){
     videoEl.src = "data:image/jpeg;base64," + frameB64;
     videoEl.style.display = "block";
@@ -1367,12 +1432,17 @@ async function poll(){
     const st = await window.pywebview.api.get_state();
     if(!languagePacks[currentLearningLanguage]) loadActiveLanguagePack();
     if(st && st.logged_in){
-      btnLogout.classList.remove("hidden");
+      document.body.classList.add("logged-in");
       if(!accessibilitySettingsDirty){
         applyAccessibilityPreferences(st.color_blind_mode, st.accessible_reading_mode, st.night_mode, st.dyslexia_spacing_mode, st.reading_font_size);
       }
       menuUsername = st.username || "";
       $("menuGreeting").textContent = menuGreetingText();
+      renderAccount();
+      if(!cameraToggling && typeof st.camera_enabled === "boolean" && st.camera_enabled !== cameraEnabled){
+        cameraEnabled = st.camera_enabled;
+        updateCameraToggles();
+      }
       if(!learningLanguageSaving) renderLearningLanguage(st.learning_language);
       if(st.username && favoriteUsername !== st.username){
         favoriteUsername = st.username;
@@ -1441,14 +1511,14 @@ async function poll(){
 
       voiceError.textContent = st.voice_error || "";
     }else{
-      btnLogout.classList.add("hidden");
+      document.body.classList.remove("logged-in");
       menuUsername = "";
       if(tourActive){
         tourActive = false;
         tour.classList.add("hidden");
       }
       // No interrumpir el registro mientras todavía no existe una sesión.
-      if(["interaction", "menu", "aprendizaje", "reto", "repaso", "evaluacion_run", "evaluacion_config", "evaluacion_resultados", "evaluacion_historial", "settings", "profile"].includes(currentView())){
+      if(["interaction", "menu", "aprendizaje", "reto", "repaso", "evaluacion_run", "evaluacion_config", "evaluacion_resultados", "evaluacion_historial", "settings", "profile", "faq"].includes(currentView())){
         setView("login");
       }
 
@@ -1541,6 +1611,9 @@ function applyLanguage(){
   document.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", tr(el.dataset.i18nAria)); });
   $("menuLanguageCaption").textContent = tr("caption");
   $("menuGreeting").textContent = menuGreetingText();
+  renderAccount();
+  updateCameraToggles();
+  renderFaq();
   const streak = $("studyStreak");
   const days = parseInt(streak.textContent.replace(/\D+/g, ""), 10) || 0;
   streak.textContent = tr("streak", days);
@@ -1592,7 +1665,7 @@ window.addEventListener("pywebviewready", loadActiveLanguagePack);
 // y descarta el estado que pertenecía al idioma anterior.
 function applySignAlphabet(){
   LETTERS = languagePack.learning_alphabet || LANGUAGE_FALLBACK.es.learning_alphabet;
-  viewMenu.querySelectorAll(".menu-word-tile").forEach((tile) => {
+  viewMenu.querySelectorAll(".dash-word-tile").forEach((tile) => {
     const img = tile.querySelector("img");
     const letter = tile.querySelector("b").textContent.trim();
     if(!img) return;
@@ -1718,7 +1791,7 @@ async function logoutAndReset(){
   TTS.cancel();
   favoriteLetters = new Set();
   favoriteUsername = null;
-  setView("login");
+  setView("landing");
 }
 
 $("btnLogout").onclick = async () => {
@@ -1726,6 +1799,63 @@ $("btnLogout").onclick = async () => {
   $("loginUser").value = "";
   $("loginPass").value = "";
 };
+
+// Avatar arriba a la derecha: lleva directo al perfil
+function renderAccount(){
+  $("accountAvatar").textContent = Array.from(menuUsername || "E")[0].toLocaleUpperCase();
+}
+
+// Menú de ayuda (?): preguntas frecuentes y tutorial
+function closeHelpMenu(){
+  helpMenu.classList.add("hidden");
+  btnHelp.setAttribute("aria-expanded", "false");
+}
+
+btnHelp.onclick = (e) => {
+  e.stopPropagation();
+  const open = helpMenu.classList.contains("hidden");
+  helpMenu.classList.toggle("hidden", !open);
+  btnHelp.setAttribute("aria-expanded", String(open));
+  if(open) helpMenu.querySelector(".pop-item").focus();
+};
+helpMenu.addEventListener("click", (e) => {
+  if(e.target.closest(".pop-item")) closeHelpMenu();
+});
+document.addEventListener("click", (e) => {
+  if(!e.target.closest(".nav-pop")) closeHelpMenu();
+});
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape" && !helpMenu.classList.contains("hidden")){
+    closeHelpMenu();
+    btnHelp.focus();
+  }
+});
+
+// Preguntas frecuentes: se arman desde i18n para que sigan el idioma activo
+function renderFaq(){
+  const list = $("faqList");
+  const open = new Set([...list.querySelectorAll("details[open]")].map((d) => d.dataset.index));
+  list.innerHTML = "";
+  (tr("faqItems") || []).forEach(([question, answer], i) => {
+    const item = document.createElement("details");
+    item.className = "faq-item";
+    item.dataset.index = String(i);
+    item.open = open.has(String(i));
+    const summary = document.createElement("summary");
+    summary.textContent = question;
+    const body = document.createElement("p");
+    body.textContent = answer;
+    item.append(summary, body);
+    list.appendChild(item);
+  });
+}
+
+$("btnOpenFaq").onclick = () => {
+  renderFaq();
+  setView("faq");
+};
+$("btnBackFaq").onclick = () => setView("menu");
+$("btnFaqTutorial").onclick = () => startTour();
 
 $("btnOpenSettings").onclick = () => {
   settingsError.textContent = "";

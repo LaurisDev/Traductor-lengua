@@ -115,7 +115,7 @@ def run_steps(window, controller):
         check("EN html lang", js("document.documentElement.lang") == "en-US", js("document.documentElement.lang"))
         check("EN backend actualizado", controller._web_learning_language == "en" and controller._review_ai.language == "en")
         check("EN modelo ASL cargado", controller._sign_classifier is not None and controller._sign_classifier.language == "en")
-        check("EN imagenes del menu en ASL", js("[...document.querySelectorAll('.menu-word-tile img')].every(i=>i.getAttribute('src').startsWith('./assets/letras/asl/'))"))
+        check("EN imagenes del menu en ASL", js("[...document.querySelectorAll('.dash-word-tile img')].every(i=>i.getAttribute('src').startsWith('./assets/letras/asl/'))"))
         vt = visible_text()
         check("EN menu sin textos en espanol", not any(w in vt for w in SPANISH_WORDS), [w for w in SPANISH_WORDS if w in vt])
         click("#btnOpenProfile")
@@ -221,8 +221,9 @@ def run_steps(window, controller):
               [w for w in ENGLISH_WORDS + ("Volver", "Grabar", "Cámara") if w in vt])
         click("#btnBackInteraction")
 
-        # Cerrar sesion: el login conserva el ultimo idioma
+        # Cerrar sesion: vuelve a la portada y el login conserva el ultimo idioma
         click("#btnLogout")
+        check("logout: vuelve a la portada", not js("document.getElementById('viewLanding').classList.contains('hidden')"))
         check("logout: login en portugues", text("#viewLogin h2") == "Entrar", text("#viewLogin h2"))
         js("localStorage.clear()")
     except Exception as exc:  # pragma: no cover - reporte de la prueba

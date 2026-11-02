@@ -22,7 +22,41 @@
             <button class="btn ghost" id="btnLandingLogin" type="button">Iniciar sesión</button>
             <button class="btn primary" id="btnLandingRegister" type="button">Crear cuenta <span aria-hidden="true">↗</span></button>
           </div>
-          <button class="btn ghost hidden" id="btnLogout" data-i18n="logout">Cerrar sesión</button>
+          <div class="user-nav">
+            <div class="lang-switch" role="radiogroup" aria-labelledby="langSwitchLabel">
+              <span class="lang-switch-label" id="langSwitchLabel" data-i18n="learningIn">Aprendiendo en</span>
+              <div class="lang-switch-options">
+                <label class="lang-switch-option" title="Español — LSC" data-i18n-title="langEs">
+                  <input type="radio" name="menuLearningLanguage" value="es" checked/>
+                  <span>ES</span>
+                </label>
+                <label class="lang-switch-option" title="Inglés — ASL" data-i18n-title="langEn">
+                  <input type="radio" name="menuLearningLanguage" value="en"/>
+                  <span>EN</span>
+                </label>
+                <label class="lang-switch-option" title="Portugués — Libras" data-i18n-title="langPt">
+                  <input type="radio" name="menuLearningLanguage" value="pt"/>
+                  <span>PT</span>
+                </label>
+              </div>
+            </div>
+            <div class="nav-pop">
+              <button class="icon-btn help" id="btnHelp" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="helpMenu" title="Ayuda" data-i18n-title="helpLabel" aria-label="Ayuda" data-i18n-aria="helpLabel"><span aria-hidden="true">?</span></button>
+              <div class="pop-menu hidden" id="helpMenu" role="menu" aria-labelledby="btnHelp">
+                <div class="pop-menu-title" data-i18n="helpLabel">Ayuda</div>
+                <button class="pop-item" id="btnOpenFaq" type="button" role="menuitem">
+                  <span><strong data-i18n="faqTitle">Preguntas frecuentes</strong><small data-i18n="faqDesc">Resuelve tus dudas sobre la app</small></span>
+                </button>
+                <button class="pop-item" id="btnOpenTutorial" type="button" role="menuitem">
+                  <span><strong data-i18n="tutorialLabel">Ver tutorial</strong><small data-i18n="tutorialDesc">Recorre la app paso a paso</small></span>
+                </button>
+              </div>
+            </div>
+            <button class="icon-btn" id="btnOpenSettings" type="button" title="Configuración" data-i18n-title="settingsLabel" aria-label="Configuración" data-i18n-aria="settingsLabel"><span aria-hidden="true">⚙</span></button>
+            <button class="avatar-btn" id="btnOpenProfile" type="button" title="Mi perfil" data-i18n-title="profileLabel" aria-label="Mi perfil" data-i18n-aria="profileLabel">
+              <span class="account-avatar" id="accountAvatar" aria-hidden="true">E</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -202,77 +236,52 @@
         </section>
 
         <!-- MENÚ PRINCIPAL -->
-        <section class="card menu hidden" id="viewMenu">
-          <div class="menu-top">
-            <div class="menu-greeting">
-              <span id="menuGreeting">¡Hola!</span>
-              <div class="streak-indicator" id="studyStreak" aria-live="polite">Racha: 0 días 🔥</div>
-            </div>
-            <div class="lang-switch" role="radiogroup" aria-labelledby="langSwitchLabel">
-              <span class="lang-switch-label" id="langSwitchLabel" data-i18n="learningIn">Aprendiendo en</span>
-              <div class="lang-switch-options">
-                <label class="lang-switch-option" title="Español — LSC" data-i18n-title="langEs">
-                  <input type="radio" name="menuLearningLanguage" value="es" checked/>
-                  <span>ES</span>
-                </label>
-                <label class="lang-switch-option" title="Inglés — ASL" data-i18n-title="langEn">
-                  <input type="radio" name="menuLearningLanguage" value="en"/>
-                  <span>EN</span>
-                </label>
-                <label class="lang-switch-option" title="Portugués — Libras" data-i18n-title="langPt">
-                  <input type="radio" name="menuLearningLanguage" value="pt"/>
-                  <span>PT</span>
-                </label>
+        <section class="dash hidden" id="viewMenu">
+          <header class="card dash-welcome">
+            <div class="dash-welcome-copy">
+              <div class="dash-greeting-row">
+                <span id="menuGreeting">¡Hola!</span>
+                <div class="streak-indicator" id="studyStreak" aria-live="polite">Racha: 0 días 🔥</div>
               </div>
-            </div>
-          </div>
-
-          <div class="menu-layout">
-            <div class="menu-hero">
               <h2 data-i18n="heroTitle">Tus manos también hablan</h2>
-              <p class="menu-hero-text" data-i18n="heroText1">El lenguaje de señas es una lengua completa, con su propia gramática y cultura. Aprenderlo te acerca a millones de personas discapacitadas y hace que la comunicación sea para todos.</p>
-              <p class="menu-hero-text" data-i18n="heroText2">Practica cada letra con la cámara, a tu ritmo, y convierte cada seña en un paso hacia una comunicación sin barreras.</p>
-              <figure class="menu-word" aria-label="La palabra HOLA deletreada en señas" data-i18n-aria="wordAria">
-                <div class="menu-word-letters">
-                  <span class="menu-word-tile"><img src="./assets/letras/h.png" alt="" /><b>H</b></span>
-                  <span class="menu-word-tile"><img src="./assets/letras/o.png" alt="" /><b>O</b></span>
-                  <span class="menu-word-tile"><img src="./assets/letras/l.png" alt="" /><b>L</b></span>
-                  <span class="menu-word-tile"><img src="./assets/letras/a.png" alt="" /><b>A</b></span>
-                </div>
-                <figcaption class="muted" id="menuLanguageCaption">Estás aprendiendo lenguaje de señas en español.</figcaption>
-              </figure>
+              <p data-i18n="heroText2">Practica cada letra con la cámara, a tu ritmo, y convierte cada seña en un paso hacia una comunicación sin barreras.</p>
             </div>
-
-            <nav class="menu-options" aria-label="Opciones del menú principal" data-i18n-aria="menuAria">
-              <div class="menu-group">
-                <h3 class="menu-group-title" data-i18n="groupLearn">Aprende</h3>
-                <div class="menu-group-grid">
-                  <button class="btn primary menu-option" id="btnOpenAprendizaje"><strong data-i18n="learning">Aprendizaje</strong><small data-i18n="learningDesc">Letra por letra</small></button>
-                  <button class="btn secondary menu-option" id="btnOpenRepaso"><strong data-i18n="review">Repaso</strong><small data-i18n="reviewDesc">Refuerza lo aprendido</small></button>
-                  <button class="btn secondary menu-option" id="btnOpenReto"><strong data-i18n="challenge">Reto</strong><small data-i18n="challengeDesc">Deletrea tu nombre</small></button>
-                </div>
+            <figure class="dash-word" aria-label="La palabra HOLA deletreada en señas" data-i18n-aria="wordAria">
+              <div class="dash-word-letters">
+                <span class="dash-word-tile"><img src="./assets/letras/h.png" alt="" /><b>H</b></span>
+                <span class="dash-word-tile"><img src="./assets/letras/o.png" alt="" /><b>O</b></span>
+                <span class="dash-word-tile"><img src="./assets/letras/l.png" alt="" /><b>L</b></span>
+                <span class="dash-word-tile"><img src="./assets/letras/a.png" alt="" /><b>A</b></span>
               </div>
+              <figcaption class="muted" id="menuLanguageCaption">Estás aprendiendo lenguaje de señas en español.</figcaption>
+            </figure>
+          </header>
 
-              <div class="menu-group">
-                <h3 class="menu-group-title" data-i18n="groupTest">Ponte a prueba</h3>
-                <div class="menu-group-grid two">
-                  <button class="btn secondary menu-option" id="btnOpenEvaluacion"><strong data-i18n="evaluation">Modo evaluación</strong><small data-i18n="evaluationDesc">Mide tu velocidad</small></button>
-                  <button class="btn secondary menu-option" id="btnOpenEvaluacionHistorial"><strong data-i18n="history">Historial</strong><small data-i18n="historyDesc">Revisa tu progreso</small></button>
-                </div>
+          <nav class="dash-sections" aria-label="Opciones del menú principal" data-i18n-aria="menuAria">
+            <section class="dash-section dash-learn">
+              <h3 class="dash-section-title" data-i18n="groupLearn">Aprende</h3>
+              <div class="dash-grid">
+                <button class="dash-card featured" id="btnOpenAprendizaje" type="button"><span class="dash-card-icon" aria-hidden="true">✋</span><strong data-i18n="learning">Aprendizaje</strong><small data-i18n="learningDesc">Letra por letra</small></button>
+                <button class="dash-card" id="btnOpenRepaso" type="button"><span class="dash-card-icon icon-mint" aria-hidden="true">↻</span><strong data-i18n="review">Repaso</strong><small data-i18n="reviewDesc">Refuerza lo aprendido</small></button>
+                <button class="dash-card" id="btnOpenReto" type="button"><span class="dash-card-icon icon-yellow" aria-hidden="true">★</span><strong data-i18n="challenge">Reto</strong><small data-i18n="challengeDesc">Deletrea tu nombre</small></button>
               </div>
+            </section>
 
-              <button class="btn secondary menu-main-action" id="btnOpenInteraction">
-                <strong data-i18n="interaction">Iniciar interacción</strong>
-                <small data-i18n="interactionDesc">Conversa con voz y señas en tiempo real</small>
-              </button>
-
-              <div class="menu-footer">
-                <button class="btn ghost" id="btnOpenProfile" data-i18n="profile">👤 Mi perfil</button>
-                <button class="btn ghost" id="btnOpenTutorial" data-i18n="tutorialReplay">❓ Ver tutorial</button>
-                <button class="btn ghost" id="btnOpenSettings" data-i18n="settings">⚙ Configuración</button>
+            <section class="dash-section dash-test">
+              <h3 class="dash-section-title" data-i18n="groupTest">Ponte a prueba</h3>
+              <div class="dash-grid">
+                <button class="dash-card" id="btnOpenEvaluacion" type="button"><span class="dash-card-icon icon-coral" aria-hidden="true">⏱</span><strong data-i18n="evaluation">Modo evaluación</strong><small data-i18n="evaluationDesc">Mide tu velocidad</small></button>
+                <button class="dash-card" id="btnOpenEvaluacionHistorial" type="button"><span class="dash-card-icon icon-blue" aria-hidden="true">↗</span><strong data-i18n="history">Historial</strong><small data-i18n="historyDesc">Revisa tu progreso</small></button>
               </div>
-            </nav>
-          </div>
+            </section>
+
+            <section class="dash-section dash-talk">
+              <h3 class="dash-section-title" data-i18n="groupTalk">Conversa</h3>
+              <div class="dash-grid">
+                <button class="dash-card" id="btnOpenInteraction" type="button"><span class="dash-card-icon icon-mint" aria-hidden="true">💬</span><strong data-i18n="interaction">Iniciar interacción</strong><small data-i18n="interactionDesc">Conversa con voz y señas en tiempo real</small></button>
+              </div>
+            </section>
+          </nav>
         </section>
 
         <!-- PERFIL Y PROGRESO -->
@@ -280,6 +289,7 @@
           <div class="view-bar">
             <button class="btn ghost back-btn" id="btnBackProfile" data-i18n="backToMenu">← Volver al menú</button>
             <div class="view-title" data-i18n="profileTitle">Mi perfil de aprendizaje</div>
+            <button class="btn ghost logout-btn" id="btnLogout" type="button" data-i18n="logout">Cerrar sesión</button>
           </div>
           <div class="profile-content">
             <section class="card profile-identity">
@@ -324,6 +334,26 @@
               </section>
             </div>
             <div class="profile-footer-actions"><span data-i18n="profileSettingsHint">Personaliza tu experiencia cuando quieras.</span><button class="btn ghost" id="btnProfileSettings" data-i18n="settings">⚙ Configuración</button></div>
+          </div>
+        </section>
+
+        <!-- PREGUNTAS FRECUENTES -->
+        <section class="view-wrap hidden" id="viewFaq">
+          <div class="view-bar">
+            <button class="btn ghost back-btn" id="btnBackFaq" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="faqTitle">Preguntas frecuentes</div>
+          </div>
+          <div class="card faq">
+            <div class="faq-head">
+              <span class="profile-eyebrow" data-i18n="faqEyebrow">AYUDA</span>
+              <h2 data-i18n="faqHeading">¿En qué te podemos ayudar?</h2>
+              <p class="muted" data-i18n="faqIntro">Toca una pregunta para ver la respuesta.</p>
+            </div>
+            <div class="faq-list" id="faqList"></div>
+            <div class="faq-foot">
+              <span data-i18n="faqMoreHelp">¿Prefieres verlo en la app? Repite el recorrido guiado.</span>
+              <button class="btn secondary" id="btnFaqTutorial" type="button" data-i18n="tutorialLabel">Ver tutorial</button>
+            </div>
           </div>
         </section>
 

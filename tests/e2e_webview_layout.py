@@ -32,7 +32,7 @@ SIZES = [(1920, 1080), (1366, 768), (1280, 720), (1024, 768), (768, 1024), (390,
 # Vistas que no requieren sesion se miden antes de iniciar sesion.
 PUBLIC_VIEWS = ["landing", "login", "register", "register_language", "register_accessibility"]
 PRIVATE_VIEWS = ["menu", "profile", "settings", "interaction", "aprendizaje", "repaso", "reto",
-                 "evaluacion_config", "evaluacion_run", "evaluacion_resultados", "evaluacion_historial"]
+                 "evaluacion_config", "evaluacion_run", "evaluacion_resultados", "evaluacion_historial", "faq"]
 
 RESULTS = []
 
@@ -54,7 +54,7 @@ MEASURE_JS = """(() => {
   const scan = [...view.querySelectorAll('*'), view];
   for(let p = view.parentElement; p && p !== document.documentElement; p = p.parentElement) scan.push(p);
   // Listas que crecen con el uso (conversacion, historial) pueden desplazarse por dentro.
-  const GROWING = '.chat, .evaluation-history-list';
+  const GROWING = '.chat, .evaluation-history-list, .faq-list';
   for(const el of scan){
     if(el.offsetParent === null && el !== document.body) continue;
     if(el.matches(GROWING)) continue;
@@ -134,6 +134,8 @@ def run(window, controller, db):
             js("syncRepasoView && syncRepasoView()")
         elif view == "reto":
             controller.on_challenge_start()
+        elif view == "faq":
+            js("renderFaq(); document.querySelector('.faq-item').open = true")
         elif view == "evaluacion_historial":
             js("""(() => { for(let i = 0; i < 15; i++){
                 saveEvaluationSession({duration_seconds: 60, score: (i * 7) % 23 - 6, hits: i % 5, errors: i % 3,

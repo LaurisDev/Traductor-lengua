@@ -1503,3 +1503,133 @@ body.night-mode{background:var(--color-fondo); color:var(--text)}
 .evaluation-score-row .evaluation-score-track i{width:100%; height:var(--pct, 0%)}
 .evaluation-history-list-panel .evaluation-history-list{margin-top:6px}
 .evaluation-history-list{overflow-x:hidden}
+
+/* Portada de Enseñando */
+.landing-actions{display:none; align-items:center; gap:4px}
+.landing-active .landing-actions{display:flex}
+.landing-active .topbar{padding-top:clamp(12px, 2vh, 22px); padding-bottom:clamp(8px, 1.4vh, 16px)}
+.landing-active .content{align-items:stretch; padding:0 clamp(16px, 5vw, 72px) clamp(12px, 2.4vh, 24px)}
+.landing-active .content > .landing{width:min(1160px, 100%); max-height:none}
+.landing{
+  flex:1; min-height:0; margin:0 auto; display:grid; grid-template-rows:minmax(0, 1fr) auto auto;
+  width:min(1160px, 100%); padding:clamp(12px, 2vh, 22px) 0 0;
+  color:#29404a; animation:riseIn .6s ease both;
+}
+.landing-main{display:grid; grid-template-columns:minmax(0, 1.04fr) minmax(340px, .96fr); align-items:center; gap:clamp(28px, 6vw, 84px); min-height:0}
+.landing-copy{position:relative; z-index:1; padding:0 0 10px}
+.landing-eyebrow{display:flex; align-items:center; gap:9px; margin-bottom:clamp(14px, 2.4vh, 24px); color:#638b8a; font-size:11px; font-weight:800; letter-spacing:.16em}
+.landing-eyebrow-dot,.landing-live-dot{width:8px; height:8px; border-radius:50%; background:#96c7b3; box-shadow:0 0 0 4px rgba(150,199,179,.18)}
+.landing h1{max-width:640px; margin:0; color:#29404a; font-family:Georgia, "Times New Roman", serif; font-size:clamp(42px, 4.5vw, 60px); font-weight:500; line-height:1.04; letter-spacing:-.055em}
+.landing h1 span{color:#6398a9; font-style:italic}
+.landing-description{max-width:485px; margin:clamp(14px, 2.3vh, 22px) 0 0; color:#6f7f82; font-size:clamp(14px, 1.35vw, 16px); line-height:1.75}
+.landing-cta{display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-top:clamp(20px, 3.2vh, 32px)}
+.landing-primary{display:flex; align-items:center; gap:16px; padding:15px 20px; border-radius:13px; font-size:14px; box-shadow:0 9px 22px rgba(99,152,169,.25)}
+.landing-primary span{font-size:20px; line-height:12px; transition:transform .2s ease}
+.landing-primary:hover span{transform:translateX(4px)}
+.landing-note{display:flex; align-items:center; gap:7px; color:#778589; font-size:11px}
+.landing-note span{color:#d7897f; font-size:16px}
+.landing-languages{display:flex; align-items:center; gap:12px; margin-top:clamp(22px, 4vh, 42px); color:#638b8a}
+.landing-languages>span{margin-right:5px; color:#a0aaa7; font-size:9px; font-weight:800; letter-spacing:.14em}
+.landing-language{display:flex; align-items:center; gap:6px; color:#6f7f82; font-size:11px}
+.landing-language b{display:grid; width:24px; height:24px; place-items:center; border-radius:50%; background:rgba(150,199,179,.25); color:#557b72; font-size:9px}
+.landing-languages>i{width:3px; height:3px; border-radius:50%; background:#c5ceca}
+.landing-visual{position:relative; display:grid; place-items:center; min-height:330px; height:min(47vh, 430px)}
+.landing-orbit{position:absolute; aspect-ratio:1; border:1px solid rgba(99,152,169,.15); border-radius:50%}
+.landing-orbit-one{width:min(93%, 420px)}
+.landing-orbit-two{width:min(75%, 340px); border-style:dashed; border-color:rgba(215,137,127,.23)}
+.landing-image-card{position:relative; z-index:1; width:min(69%, 288px); padding:12px 12px 0; overflow:hidden; border:1px solid rgba(41,64,74,.08); border-radius:17px; background:#fffdf9; box-shadow:0 24px 60px rgba(67,83,82,.16); transform:rotate(-2deg)}
+.landing-image-topline{display:flex; justify-content:space-between; align-items:center; padding:3px 4px 10px; color:#879392; font-size:8px; font-weight:800; letter-spacing:.14em}
+.landing-live-dot{width:7px; height:7px; background:#96c7b3; box-shadow:none}
+.landing-photo-wrap{position:relative; aspect-ratio:1 / 1.08; overflow:hidden; border-radius:10px; background:#edf2ed}
+.landing-photo-wrap img{width:100%; height:100%; display:block; object-fit:cover}
+.landing-letter{position:absolute; right:10px; bottom:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; width:54px; height:58px; border-radius:10px; background:#fffdf9; color:#6398a9; font-family:Georgia,serif; font-size:31px; line-height:.9; box-shadow:0 5px 16px rgba(41,64,74,.12)}
+.landing-letter span{margin-top:5px; color:#7e8d8a; font-family:"Trebuchet MS","Segoe UI",sans-serif; font-size:6px; letter-spacing:.04em}
+.landing-image-caption{display:flex; align-items:center; gap:10px; padding:12px 4px 13px; color:#7c8987; font-size:10px; line-height:1.4}
+.landing-image-caption strong{color:#29404a; font-size:11px}
+.landing-caption-icon{color:#d7897f; font-size:18px}
+.landing-caption-arrow{margin-left:auto; color:#6398a9; font-size:17px}
+.landing-float-card{position:absolute; z-index:2; display:flex; align-items:center; gap:9px; padding:10px 13px 10px 10px; border:1px solid rgba(41,64,74,.06); border-radius:12px; background:rgba(255,253,249,.95); box-shadow:0 10px 26px rgba(67,83,82,.12); animation:landingFloat 5s ease-in-out infinite}
+.landing-float-top{top:15%; right:0}
+.landing-float-bottom{bottom:13%; left:1%; animation-delay:-2.2s}
+.landing-float-icon{display:grid; width:32px; height:32px; place-items:center; border-radius:9px; background:rgba(150,199,179,.25); font-size:17px}
+.landing-float-sparkle{background:rgba(249,185,92,.22); color:#d79532}
+.landing-float-card>span:last-child{display:flex; flex-direction:column; gap:2px}
+.landing-float-card strong{color:#39535a; font-size:10px}
+.landing-float-card small{color:#899492; font-size:9px}
+.landing-sparkle{position:absolute; color:#d7897f}
+.landing-sparkle-one{top:21%; left:12%; font-size:19px}
+.landing-sparkle-two{right:12%; bottom:21%; color:#f9b95c; font-size:15px}
+.landing-features{display:grid; grid-template-columns:repeat(3, 1fr); gap:clamp(10px, 2vw, 24px); padding:clamp(12px, 2vh, 20px) 0; border-top:1px solid rgba(41,64,74,.1); border-bottom:1px solid rgba(41,64,74,.1)}
+.landing-feature{display:flex; align-items:center; gap:11px; min-width:0}
+.landing-feature-icon{display:grid; flex:0 0 34px; width:34px; height:34px; place-items:center; border-radius:10px; font-size:10px; font-weight:800}
+.feature-mint{background:rgba(150,199,179,.3); color:#5b8979}
+.feature-coral{background:rgba(215,137,127,.2); color:#bd7068}
+.feature-yellow{background:rgba(249,185,92,.24); color:#bc842a}
+.landing-feature>span:nth-child(2){display:flex; flex-direction:column; gap:4px; min-width:0}
+.landing-feature strong{overflow:hidden; color:#39535a; font-size:11px; text-overflow:ellipsis; white-space:nowrap}
+.landing-feature small{overflow:hidden; color:#899492; font-size:9px; text-overflow:ellipsis; white-space:nowrap}
+.landing-feature-arrow{margin-left:auto; color:#9caaa6; font-size:14px}
+.landing-footer{display:flex; justify-content:space-between; gap:12px; padding:11px 0 0; color:#9aa5a0; font-size:9px}
+.landing-footer>span:first-child{color:#557b72; font-weight:800; letter-spacing:.04em}
+.landing-footer>span:first-child span{padding-left:4px; color:#d7897f}
+@keyframes landingFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@media (max-width:900px){
+  .landing-active .content{padding-right:clamp(18px, 4vw, 38px); padding-left:clamp(18px, 4vw, 38px)}
+  .landing{padding-top:10px}
+  .landing-main{grid-template-columns:minmax(0, 1fr) minmax(270px, .82fr); gap:16px}
+  .landing h1{font-size:clamp(38px, 6vw, 54px)}
+  .landing-visual{min-height:280px}
+  .landing-image-card{width:min(72%, 250px)}
+  .landing-float-top{right:-2%}
+  .landing-float-bottom{left:-2%}
+}
+@media (max-width:620px){
+  .landing-active .topbar{padding:10px 16px}
+  .landing-active .topbar .subtitle{display:none}
+  .landing-actions{gap:0}
+  .landing-actions .btn{padding:9px 10px; font-size:11px}
+  .landing-active .content{overflow:auto; padding:0 18px 18px}
+  .landing{flex:none; min-height:100%; grid-template-rows:auto auto auto; padding-top:14px}
+  .landing-main{grid-template-columns:1fr; gap:0}
+  .landing-copy{padding:10px 0 0}
+  .landing-eyebrow{margin-bottom:13px; font-size:9px}
+  .landing h1{font-size:clamp(39px, 10.5vw, 54px)}
+  .landing-description{max-width:420px; margin-top:14px; font-size:14px; line-height:1.6}
+  .landing-cta{gap:12px; margin-top:19px}
+  .landing-primary{padding:13px 15px; font-size:12px}
+  .landing-note{font-size:9px}
+  .landing-languages{margin-top:18px}
+  .landing-visual{min-height:245px; height:245px; margin-top:3px}
+  .landing-orbit-one{width:250px}
+  .landing-orbit-two{width:205px}
+  .landing-image-card{width:155px; padding:8px 8px 0; border-radius:13px}
+  .landing-image-topline{padding-bottom:7px; font-size:7px}
+  .landing-photo-wrap{border-radius:8px}
+  .landing-letter{right:7px; bottom:7px; width:44px; height:47px; font-size:25px}
+  .landing-image-caption{gap:7px; padding:8px 3px 9px}
+  .landing-float-card{padding:7px 9px 7px 7px}
+  .landing-float-icon{width:27px; height:27px}
+  .landing-float-top{top:14%; right:2%}
+  .landing-float-bottom{bottom:10%; left:2%}
+  .landing-features{gap:9px; padding:12px 0}
+  .landing-feature{align-items:flex-start; flex-direction:column; gap:6px}
+  .landing-feature-icon{width:27px; height:27px; flex-basis:27px}
+  .landing-feature strong{font-size:9px}
+  .landing-feature small{font-size:8px; white-space:normal}
+  .landing-feature-arrow{display:none}
+  .landing-footer{padding-top:9px; font-size:8px}
+}
+@media (max-height:700px) and (min-width:621px){
+  .landing{padding-top:0}
+  .landing-main{gap:28px}
+  .landing-visual{min-height:260px; height:39vh}
+  .landing-eyebrow{margin-bottom:12px}
+  .landing-description{margin-top:13px; line-height:1.55}
+  .landing-cta{margin-top:17px}
+  .landing-languages{margin-top:19px}
+  .landing-features{padding:10px 0}
+}
+@media (prefers-reduced-motion:reduce){
+  .landing,.landing-float-card{animation:none}
+  .landing-primary span{transition:none}
+}

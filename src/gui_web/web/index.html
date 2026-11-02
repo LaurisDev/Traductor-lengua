@@ -18,13 +18,76 @@
           </div>
         </div>
         <div class="top-actions">
+          <div class="landing-actions">
+            <button class="btn ghost" id="btnLandingLogin" type="button">Iniciar sesión</button>
+            <button class="btn primary" id="btnLandingRegister" type="button">Crear cuenta <span aria-hidden="true">↗</span></button>
+          </div>
           <button class="btn ghost hidden" id="btnLogout" data-i18n="logout">Cerrar sesión</button>
         </div>
       </header>
 
       <main class="content">
+        <!-- PORTADA -->
+        <section class="landing" id="viewLanding" aria-labelledby="landingTitle">
+          <div class="landing-main">
+            <div class="landing-copy">
+              <div class="landing-eyebrow"><span class="landing-eyebrow-dot"></span> APRENDER TAMBIÉN ES CONECTAR</div>
+              <h1 id="landingTitle">Un mundo más cercano<br />empieza con <span>una seña.</span></h1>
+              <p class="landing-description">Descubre una nueva forma de comunicarte. Aprende lengua de señas a tu ritmo, practica con tu cámara y construye puentes que se sienten.</p>
+              <div class="landing-cta">
+                <button class="btn primary landing-primary" id="btnLandingStart" type="button">Comenzar a aprender <span aria-hidden="true">→</span></button>
+                <div class="landing-note"><span aria-hidden="true">✦</span> Un espacio para aprender, practicar y compartir</div>
+              </div>
+              <div class="landing-languages">
+                <span>EXPLORA</span>
+                <div class="landing-language"><b>ES</b> LSC</div>
+                <i></i>
+                <div class="landing-language"><b>EN</b> ASL</div>
+                <i></i>
+                <div class="landing-language"><b>PT</b> Libras</div>
+              </div>
+            </div>
+
+            <div class="landing-visual" aria-label="Practica el abecedario en lengua de señas">
+              <div class="landing-orbit landing-orbit-one"></div>
+              <div class="landing-orbit landing-orbit-two"></div>
+              <div class="landing-image-card">
+                <div class="landing-image-topline"><span>UNA SEÑA A LA VEZ</span><span class="landing-live-dot"></span></div>
+                <div class="landing-photo-wrap">
+                  <img src="./assets/letras/a.png" alt="Mano formando la letra A en lengua de señas" />
+                  <div class="landing-letter">A<span>de aprender</span></div>
+                </div>
+                <div class="landing-image-caption"><span class="landing-caption-icon">✳</span><span>Las manos también<br /><strong>cuentan historias.</strong></span><span class="landing-caption-arrow" aria-hidden="true">↗</span></div>
+              </div>
+              <div class="landing-float-card landing-float-top"><span class="landing-float-icon">✋</span><span><strong>Aprende</strong><small>con tus manos</small></span></div>
+              <div class="landing-float-card landing-float-bottom"><span class="landing-float-icon landing-float-sparkle">✦</span><span><strong>Conecta</strong><small>sin barreras</small></span></div>
+              <span class="landing-sparkle landing-sparkle-one" aria-hidden="true">✳</span>
+              <span class="landing-sparkle landing-sparkle-two" aria-hidden="true">✦</span>
+            </div>
+          </div>
+
+          <div class="landing-features" aria-label="Lo que puedes hacer">
+            <article class="landing-feature">
+              <span class="landing-feature-icon feature-mint">01</span>
+              <span><strong>Aprende a tu ritmo</strong><small>Practica el alfabeto paso a paso.</small></span>
+              <span class="landing-feature-arrow" aria-hidden="true">↗</span>
+            </article>
+            <article class="landing-feature">
+              <span class="landing-feature-icon feature-coral">02</span>
+              <span><strong>Practica en vivo</strong><small>Tu cámara te acompaña al aprender.</small></span>
+              <span class="landing-feature-arrow" aria-hidden="true">↗</span>
+            </article>
+            <article class="landing-feature">
+              <span class="landing-feature-icon feature-yellow">03</span>
+              <span><strong>Comunícate mejor</strong><small>Voz y señas, más cerca que nunca.</small></span>
+              <span class="landing-feature-arrow" aria-hidden="true">↗</span>
+            </article>
+          </div>
+          <div class="landing-footer"><span>Enseñando <span aria-hidden="true">✳</span></span><span>Aprender juntos cambia todo.</span></div>
+        </section>
+
         <!-- LOGIN -->
-        <section class="card auth" id="viewLogin">
+        <section class="card auth hidden" id="viewLogin">
           <h2 data-i18n="loginTitle">Iniciar sesión</h2>
           <p class="muted" data-i18n="loginSubtitle">Accede para comenzar la interacción.</p>
           <div class="field">

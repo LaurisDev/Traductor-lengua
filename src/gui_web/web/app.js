@@ -1,5 +1,6 @@
 const $ = (id) => document.getElementById(id);
 
+const viewLanding = $("viewLanding");
 const viewLogin = $("viewLogin");
 const viewRegister = $("viewRegister");
 const viewRegisterLanguage = $("viewRegisterLanguage");
@@ -858,6 +859,8 @@ let retoMode = "name";
 const LEARNING_STREAK_TO_CONFIRM = 3;
 
 function setView(name){
+  document.body.classList.toggle("landing-active", name === "landing");
+  viewLanding.classList.toggle("hidden", name !== "landing");
   viewLogin.classList.toggle("hidden", name !== "login");
   viewRegister.classList.toggle("hidden", name !== "register");
   viewRegisterLanguage.classList.toggle("hidden", name !== "register_language");
@@ -888,6 +891,7 @@ function currentView(){
   if(!viewInteraction.classList.contains("hidden")) return "interaction";
   if(!viewMenu.classList.contains("hidden")) return "menu";
   if(!viewRegister.classList.contains("hidden")) return "register";
+  if(!viewLanding.classList.contains("hidden")) return "landing";
   return "login";
 }
 
@@ -1482,6 +1486,9 @@ function startPolling(){
 }
 
 // Auth
+$("btnLandingLogin").onclick = () => setView("login");
+$("btnLandingRegister").onclick = () => setView("register");
+$("btnLandingStart").onclick = () => setView("register");
 $("btnLogin").onclick = async () => {
   loginError.textContent = "";
   const u = $("loginUser").value.trim();
@@ -2190,6 +2197,7 @@ $("btnRec").onclick = async () => {
 applyNightMode(false);
 document.body.dataset.lang = "";
 renderLearningLanguage(currentLearningLanguage);
+setView("landing");
 startPolling();
 
 // ===== Tutorial de bienvenida =====

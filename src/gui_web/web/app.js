@@ -1116,6 +1116,37 @@ function attachLocalCamera(stream){
   });
 }
 
+// Conexiones entre los 21 puntos de MediaPipe (muñeca 0; pulgar 1-4; índice 5-8; ...).
+const HAND_CONNECTIONS = [
+  [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
+  [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16],
+  [13, 17], [0, 17], [17, 18], [18, 19], [19, 20],
+];
+
+// El modelo de señas se entrenó con cámaras de 640x480 (4:3) y sus rasgos usan
+// coordenadas normalizadas. Con una cámara 16:9 la mano llegaría "aplastada", así
+// que se usa el recorte central 4:3 del video (sin estirar).
+const TRAINING_ASPECT = 4 / 3;
+function trainingCrop(vw, vh){
+  if(vw / vh > TRAINING_ASPECT){
+    const cw = vh * TRAINING_ASPECT;
+    return { x: (vw - cw) / 2, y: 0, w: cw, h: vh };
+  }
+  const ch = vw / TRAINING_ASPECT;
+  return { x: 0, y: (vh - ch) / 2, w: vw, h: ch };
+}
+
+// Puntos del video completo -> coordenadas del recorte 4:3 (como una imagen 640x480).
+function landmarksForClassifier(hand, vw, vh){
+  const crop = trainingCrop(vw, vh);
+  const r = (v) => Math.round(v * 10000) / 10000;
+  return hand.map((p) => [
+    r((p.x * vw - crop.x) / crop.w),
+    r((p.y * vh - crop.y) / crop.h),
+    r((p.z || 0) * vw / crop.w),
+  ]);
+}
+
 // Dibuja los puntos sobre el video, con el mismo recorte que object-fit: cover.
 function drawHandOverlay(wrap){
   const video = wrap.querySelector(".local-camera");
@@ -1137,12 +1168,30 @@ function drawHandOverlay(wrap){
   const scale = Math.max(w / vw, h / vh);
   const offsetX = (w - vw * scale) / 2;
   const offsetY = (h - vh * scale) / 2;
-  ctx.fillStyle = "#00ff00";
-  for(const [x, y] of latestHandPoints){
-    ctx.beginPath();
-    ctx.arc(offsetX + x * vw * scale, offsetY + y * vh * scale, 5, 0, Math.PI * 2);
-    ctx.fill();
+  const pts = latestHandPoints.map(([x, y]) => [offsetX + x * vw * scale, offsetY + y * vh * scale]);
+  // Esqueleto de la mano: huesos de cada dedo y luego las articulaciones
+  // (puntas de los dedos resaltadas).
+  const radius = Math.max(3, Math.min(6, w / 140));
+  ctx.lineWidth = Math.max(2, radius * 0.6);
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.beginPath();
+  for(const [a, b] of HAND_CONNECTIONS){
+    if(!pts[a] || !pts[b]) continue;
+    ctx.moveTo(pts[a][0], pts[a][1]);
+    ctx.lineTo(pts[b][0], pts[b][1]);
   }
+  ctx.stroke();
+  pts.forEach(([x, y], i) => {
+    const tip = i > 0 && i % 4 === 0;
+    ctx.beginPath();
+    ctx.arc(x, y, tip ? radius * 1.25 : radius, 0, Math.PI * 2);
+    ctx.fillStyle = tip ? "#f9b95c" : "#3f9a72";
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke();
+  });
 }
 
 function renderFrame(frameB64, videoEl, fallbackEl, errorMsg){
@@ -1582,7 +1631,11 @@ function sendBrowserCameraFrame(){
     return;
   }
   const context = browserCameraCanvas.getContext("2d");
-  context.drawImage(browserCameraVideo, 0, 0, browserCameraCanvas.width, browserCameraCanvas.height);
+  const vw = browserCameraVideo.videoWidth;
+  const vh = browserCameraVideo.videoHeight;
+  const crop = trainingCrop(vw, vh);
+  browserFrameCrop = { ...crop, vw, vh };
+  context.drawImage(browserCameraVideo, crop.x, crop.y, crop.w, crop.h, 0, 0, browserCameraCanvas.width, browserCameraCanvas.height);
   browserCameraCanvas.toBlob((blob) => {
     if(!blob){
       browserCameraSending = false;
@@ -1593,6 +1646,7 @@ function sendBrowserCameraFrame(){
   }, "image/jpeg", 0.65);
 }
 
+let browserFrameCrop = null;
 async function postBrowserCamera(url, contentType, body, minGap, usePointsFromServer){
   const sentAt = performance.now();
   let keepGoing = true;
@@ -1604,7 +1658,11 @@ async function postBrowserCamera(url, contentType, body, minGap, usePointsFromSe
     if(response.ok && usePointsFromServer){
       const data = await response.json();
       if(browserCameraStream && !browserHandLandmarker){
-        latestHandPoints = Array.isArray(data.hand_points) ? data.hand_points : null;
+        // Los puntos vienen del recorte 4:3: se pasan a coordenadas del video completo.
+        const c = browserFrameCrop;
+        latestHandPoints = Array.isArray(data.hand_points) && c
+          ? data.hand_points.map(([x, y]) => [(x * c.w + c.x) / c.vw, (y * c.h + c.y) / c.vh])
+          : null;
         redrawHandOverlays();
       }
     }
@@ -1688,7 +1746,7 @@ function detectBrowserHand(){
     try{
       const result = browserHandLandmarker.detectForVideo(video, performance.now());
       const hand = result?.landmarks?.[0];
-      browserLandmarks = hand ? hand.map((p) => [p.x, p.y, p.z]) : null;
+      browserLandmarks = hand ? landmarksForClassifier(hand, video.videoWidth, video.videoHeight) : null;
       latestHandPoints = hand ? hand.map((p) => [p.x, p.y]) : null;
       redrawHandOverlays();
     }catch(error){

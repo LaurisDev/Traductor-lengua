@@ -51,6 +51,13 @@ class BrowserLandmarksTests(unittest.TestCase):
         self.assertIsNone(result["hand_points"])
         self.assertIsNone(result["letter"])
 
+    def test_server_detector_not_created_for_browser_points(self):
+        # ~60 MB por sesion que no hacen falta si el navegador detecta la mano.
+        self.assertIsNone(self.c._hand_detector)
+        hand = [{"x": 0.5, "y": 0.5 - 0.01 * i, "z": 0.0} for i in range(21)]
+        self.c.wait_browser_hand_points(self.c.submit_browser_landmarks(hand), timeout=2.0)
+        self.assertIsNone(self.c._hand_detector)
+
     def test_rejected_when_translation_is_not_running(self):
         self.c._stop_translation_loop()
         self.assertEqual(self.c.submit_browser_landmarks(None), 0)

@@ -1220,7 +1220,9 @@ class MainController:
                 return
             for _ in range(15):
                 self._camera.read()
-        self._hand_detector = HandDetector()
+        # Version web: normalmente el navegador detecta la mano y envia sus puntos, asi
+        # que el detector del servidor (~60 MB por sesion) se crea solo si llega una imagen.
+        self._hand_detector = None if WEB_DEPLOYMENT else HandDetector()
         self._sign_classifier = SignClassifier(language=self._web_learning_language)
         self._finger_analyzer = FingerAnalyzer()
         self._motion_detector = MotionDetector()
@@ -1271,6 +1273,8 @@ class MainController:
                 if WEB_DEPLOYMENT and browser_landmarks is not _NO_BROWSER_LANDMARKS:
                     landmarks, frame_out = browser_landmarks, None
                 else:
+                    if self._hand_detector is None:
+                        self._hand_detector = HandDetector()
                     landmarks, frame_out = self._hand_detector.process(frame)
             except RuntimeError:
                 break

@@ -16,6 +16,16 @@ HAND_LANDMARKER_MODEL_URL = (
     "hand_landmarker/float16/1/hand_landmarker.task"
 )
 
+# Conexiones entre los 21 puntos de MediaPipe (muneca 0; pulgar 1-4; indice 5-8; ...).
+HAND_CONNECTIONS = (
+    (0, 1), (1, 2), (2, 3), (3, 4), (0, 5), (5, 6), (6, 7), (7, 8),
+    (5, 9), (9, 10), (10, 11), (11, 12), (9, 13), (13, 14), (14, 15), (15, 16),
+    (13, 17), (0, 17), (17, 18), (18, 19), (19, 20),
+)
+# Colores (BGR) iguales a los de la version web: articulaciones verdes, puntas naranjas.
+_JOINT_COLOR = (114, 154, 63)
+_TIP_COLOR = (92, 185, 249)
+
 _HandDetectorImpl = None
 _import_error = None
 _models_dir = None
@@ -158,13 +168,21 @@ class HandDetector:
         return landmarks, frame_bgr
 
     def draw_landmarks(self, frame: any, landmarks: Optional[List]) -> any:
-        """Dibuja los puntos de la mano sobre el frame (circulos en cada landmark)."""
+        """Dibuja el esqueleto de la mano sobre el frame: lineas entre los 21 puntos
+        y las articulaciones encima (puntas de los dedos resaltadas)."""
         if frame is None or landmarks is None:
             return frame
         h, w = frame.shape[:2]
-        for lm in landmarks:
-            cx, cy = int(lm["x"] * w), int(lm["y"] * h)
-            cv2.circle(frame, (cx, cy), 5, (0, 255, 0), -1)
+        pts = [(int(lm["x"] * w), int(lm["y"] * h)) for lm in landmarks]
+        radius = max(3, min(6, round(w / 140)))
+        for a, b in HAND_CONNECTIONS:
+            if a < len(pts) and b < len(pts):
+                cv2.line(frame, pts[a], pts[b], (255, 255, 255), max(2, round(radius * 0.6)), cv2.LINE_AA)
+        for i, pt in enumerate(pts):
+            tip = i > 0 and i % 4 == 0
+            r = round(radius * 1.25) if tip else radius
+            cv2.circle(frame, pt, r, _TIP_COLOR if tip else _JOINT_COLOR, -1, cv2.LINE_AA)
+            cv2.circle(frame, pt, r, (255, 255, 255), 1, cv2.LINE_AA)
         return frame
 
     def close(self) -> None:

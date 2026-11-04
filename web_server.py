@@ -119,9 +119,12 @@ def camera_frame():
         return jsonify({"error": "No se pudo interpretar el frame de cámara."}), 400
     if frame.shape[1] > 1280 or frame.shape[0] > 720:
         return jsonify({"error": "La resolución del frame excede el máximo permitido."}), 400
-    if not _controller().submit_browser_frame(frame):
+    controller = _controller()
+    seq = controller.submit_browser_frame(frame)
+    if not seq:
         return jsonify({"error": "La sesión de traducción no está activa."}), 409
-    return jsonify({"ok": True})
+    # Los puntos de la mano vuelven en esta misma respuesta (sin esperar al sondeo).
+    return jsonify(controller.wait_browser_hand_points(seq))
 
 
 @app.post("/api/camera/error")

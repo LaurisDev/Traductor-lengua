@@ -99,6 +99,11 @@ class MainController:
         self._web_landmarks= None
         # Version web: puntos [x, y] normalizados de la mano para dibujarlos en el navegador.
         self._web_hand_points: Optional[list] = None
+        # Cada frame del navegador lleva un numero; la respuesta HTTP espera a que
+        # ese frame se procese para devolver sus puntos sin pasar por el sondeo.
+        self._browser_frame_seq = 0
+        self._web_points_seq = 0
+        self._web_points_cond = threading.Condition()
         self._web_features = None
         self._web_last_frame_ts = 0.0
         # Estados y errores se guardan como claves de traduccion (src/languages/messages.py)
@@ -1240,7 +1245,7 @@ class MainController:
         while self._translation_running and not self._stop_translation_event.is_set():
             if WEB_DEPLOYMENT:
                 try:
-                    frame = self._browser_frame_queue.get(timeout=0.25)
+                    frame_seq, frame = self._browser_frame_queue.get(timeout=0.25)
                 except queue.Empty:
                     continue
                 ret = frame is not None
@@ -1284,14 +1289,18 @@ class MainController:
                     landmarks_classify = self._lm_smooth if smooth_classify else landmarks
                     if WEB_DEPLOYMENT:
                         # El navegador muestra su propia camara y dibuja estos puntos encima.
+                        # Se usan los puntos crudos: con pocos frames por segundo el
+                        # suavizado hace que los puntos se queden atras de la mano.
                         self._web_hand_points = [
-                            [round(float(lm["x"]), 4), round(float(lm["y"]), 4)] for lm in landmarks_draw
+                            [round(float(lm["x"]), 4), round(float(lm["y"]), 4)] for lm in landmarks
                         ]
                     else:
                         self._hand_detector.draw_landmarks(frame_out, landmarks_draw)
                 else:
                     self._lm_smooth = None
                     self._web_hand_points = None
+                if WEB_DEPLOYMENT:
+                    self._mark_web_points_ready(frame_seq)
 
                 letter, _conf = self._sign_classifier.letter_for_display(landmarks_classify)
 
@@ -1446,20 +1455,37 @@ class MainController:
         self._translation_screen = None
         self._aprendizaje_screen = None
 
-    def submit_browser_frame(self, frame) -> bool:
-        """Entrega el frame más reciente enviado por la cámara del navegador."""
+    def submit_browser_frame(self, frame) -> int:
+        """Entrega el frame más reciente enviado por la cámara del navegador.
+        Devuelve su número (0 si la traducción no está activa)."""
         if not WEB_DEPLOYMENT or not self._translation_running:
-            return False
+            return 0
+        with self._web_points_cond:
+            self._browser_frame_seq += 1
+            seq = self._browser_frame_seq
+        item = (seq, frame)
         try:
-            self._browser_frame_queue.put_nowait(frame)
+            self._browser_frame_queue.put_nowait(item)
         except queue.Full:
             try:
                 self._browser_frame_queue.get_nowait()
             except queue.Empty:
                 pass
-            self._browser_frame_queue.put_nowait(frame)
+            self._browser_frame_queue.put_nowait(item)
         self._camera_error = None
-        return True
+        return seq
+
+    def _mark_web_points_ready(self, seq: int) -> None:
+        with self._web_points_cond:
+            self._web_points_seq = max(self._web_points_seq, seq)
+            self._web_points_cond.notify_all()
+
+    def wait_browser_hand_points(self, seq: int, timeout: float = 1.0) -> dict:
+        """Espera a que el frame `seq` (o uno más nuevo) se procese y devuelve sus puntos."""
+        with self._web_points_cond:
+            self._web_points_cond.wait_for(lambda: self._web_points_seq >= seq, timeout=timeout)
+            fresh = self._web_points_seq >= seq
+        return {"ok": True, "fresh": fresh, "hand_points": self._web_hand_points, "letter": self._web_letter}
 
     def set_browser_camera_error(self) -> None:
         if WEB_DEPLOYMENT:

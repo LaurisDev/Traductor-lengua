@@ -223,6 +223,9 @@ class SignClassifier:
 
     def train(self, test_size: float = 0.15) -> Dict[str, float]:
         X, y = self.load_samples()
+        # El modelo cambia: lo calculado con el anterior ya no sirve.
+        self._fast_trees = None
+        self._proba_cache = None
         self._label_encoder = LabelEncoder()
         y_enc = self._label_encoder.fit_transform(y)
 
@@ -262,6 +265,12 @@ class SignClassifier:
             return False
         data = joblib.load(path)
         self._model = data["model"]
+        # Se predice un frame a la vez: repartir eso entre todos los nucleos
+        # (n_jobs=-1, util al entrenar) cuesta mas que la prediccion misma.
+        if hasattr(self._model, "n_jobs"):
+            self._model.n_jobs = 1
+        self._proba_cache = None
+        self._fast_trees = self._build_fast_trees()
         self._label_encoder = data["label_encoder"]
         self.model_path = path
         return True
@@ -275,11 +284,52 @@ class SignClassifier:
             return set()
         return {str(c) for c in self._label_encoder.classes_}
 
+    def _build_fast_trees(self):
+        """Arboles del RandomForest para promediarlos sin pasar por sklearn en cada
+        frame (sklearn valida y coordina hilos por cada uno de los arboles). Solo se
+        usa si da exactamente lo mismo que sklearn; si no, se devuelve None."""
+        model = self._model
+        if not isinstance(model, RandomForestClassifier) or getattr(model, "n_outputs_", 1) != 1:
+            return None
+        try:
+            trees = [est.tree_ for est in model.estimators_]
+            n_features = int(model.n_features_in_)
+            sample = np.random.default_rng(0).normal(size=(4, n_features)).astype(np.float32)
+            for row in sample:
+                if not np.allclose(self._fast_proba(trees, row), model.predict_proba(row.reshape(1, -1))[0], atol=1e-9):
+                    return None
+            return trees
+        except Exception:
+            return None
+
+    @staticmethod
+    def _fast_proba(trees, features: np.ndarray) -> np.ndarray:
+        x = np.ascontiguousarray(features.reshape(1, -1), dtype=np.float32)
+        total = None
+        for tree in trees:
+            value = tree.predict(x)
+            value = value[0, 0] if value.ndim == 3 else value[0]
+            norm = value.sum()
+            value = value / norm if norm > 0 else value
+            total = value if total is None else total + value
+        return total / len(trees)
+
     def _proba_dict(self, features: np.ndarray) -> Dict[str, float]:
         assert self._model is not None and self._label_encoder is not None
-        proba = self._model.predict_proba(features.reshape(1, -1))[0]
+        # El mismo frame se consulta varias veces (estabilidad + vista previa).
+        key = features.tobytes()
+        cache = getattr(self, "_proba_cache", None)
+        if cache is not None and cache[0] == key:
+            return dict(cache[1])
+        trees = getattr(self, "_fast_trees", None)
+        if trees:
+            proba = self._fast_proba(trees, features)
+        else:
+            proba = self._model.predict_proba(features.reshape(1, -1))[0]
         classes = self._label_encoder.classes_
-        return {str(c): float(p) for c, p in zip(classes, proba)}
+        result = {str(c): float(p) for c, p in zip(classes, proba)}
+        self._proba_cache = (key, result)
+        return dict(result)
 
     def _apply_tiebreakers(
         self,

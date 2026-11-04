@@ -1513,7 +1513,7 @@ function updateRecButton(){
 
 function stopBrowserCamera(){
   if(browserCameraTimer){
-    clearInterval(browserCameraTimer);
+    clearTimeout(browserCameraTimer);
     browserCameraTimer = null;
   }
   if(browserCameraStream){
@@ -1544,7 +1544,7 @@ async function startBrowserCamera(){
     browserCameraCanvas = document.createElement("canvas");
     browserCameraCanvas.width = 640;
     browserCameraCanvas.height = 480;
-    browserCameraTimer = setInterval(sendBrowserCameraFrame, 140);
+    sendBrowserCameraFrame();
   }catch(error){
     stopBrowserCamera();
     browserCameraRequested = true;
@@ -1552,9 +1552,30 @@ async function startBrowserCamera(){
   }
 }
 
+// Envía un frame y, apenas el servidor responde con los puntos de la mano, los
+// dibuja y manda el siguiente. Así los puntos siguen a la mano sin esperar al sondeo.
+const BROWSER_FRAME_MIN_GAP_MS = 60;
+function scheduleBrowserCameraFrame(delay){
+  if(!browserCameraStream) return;
+  clearTimeout(browserCameraTimer);
+  browserCameraTimer = setTimeout(sendBrowserCameraFrame, delay);
+}
+
+function redrawHandOverlays(){
+  document.querySelectorAll(".video-wrap").forEach((wrap) => drawHandOverlay(wrap));
+}
+
 function sendBrowserCameraFrame(){
-  if(browserCameraSending || !browserCameraVideo || browserCameraVideo.readyState < 2) return;
+  browserCameraTimer = null;
+  if(browserCameraSending || !browserCameraVideo) return;
+  if(browserCameraVideo.readyState < 2){
+    scheduleBrowserCameraFrame(100);
+    return;
+  }
   browserCameraSending = true;
+  const sentAt = performance.now();
+  let keepGoing = true;
+  let minGap = BROWSER_FRAME_MIN_GAP_MS;
   const context = browserCameraCanvas.getContext("2d");
   context.drawImage(browserCameraVideo, 0, 0, browserCameraCanvas.width, browserCameraCanvas.height);
   browserCameraCanvas.toBlob(async (blob) => {
@@ -1566,15 +1587,24 @@ function sendBrowserCameraFrame(){
           body: blob,
         });
         if(!response.ok && response.status !== 409) throw new Error(`HTTP ${response.status}`);
+        // 409: la traducción no está activa en esta vista; se reintenta con calma.
+        if(response.status === 409) minGap = 300;
+        if(response.ok){
+          const data = await response.json();
+          if(browserCameraStream){
+            latestHandPoints = Array.isArray(data.hand_points) ? data.hand_points : null;
+            redrawHandOverlays();
+          }
+        }
       }
     }catch(error){
-      if(browserCameraTimer){
-        clearInterval(browserCameraTimer);
-        browserCameraTimer = null;
-      }
+      keepGoing = false;
       fetch("/api/camera/error", { method: "POST" }).catch(() => {});
     }finally{
       browserCameraSending = false;
+      if(keepGoing){
+        scheduleBrowserCameraFrame(Math.max(0, minGap - (performance.now() - sentAt)));
+      }
     }
   }, "image/jpeg", 0.65);
 }
@@ -1643,7 +1673,6 @@ async function poll(){
         updateLearningFeedback(st.letter);
       }
 
-      latestHandPoints = Array.isArray(st.hand_points) ? st.hand_points : null;
       renderFrame(st.frame_jpeg_b64, videoInteraction, videoFallbackInteraction, st.camera_error);
       renderFrame(st.frame_jpeg_b64, videoAprendizaje, videoFallbackAprendizaje, st.camera_error);
       renderFrame(st.frame_jpeg_b64, videoReto, videoFallbackReto, st.camera_error);

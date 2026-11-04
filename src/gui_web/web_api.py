@@ -4,6 +4,9 @@
 import base64
 from typing import Any, Dict, List, Optional
 
+# Zoom de la interfaz para cada opcion de "Tamano del texto".
+UI_ZOOM_FACTORS = {"small": 0.9, "medium": 1.0, "large": 1.2}
+
 
 class WebAPI:
     def __init__(self, controller: Any) -> None:
@@ -72,6 +75,20 @@ class WebAPI:
             reading_font_size,
         )
 
+    def set_ui_zoom(self, size: str) -> Dict[str, Any]:
+        """Aplica el tamano de texto como zoom real de WebView2 (igual que Ctrl +/-),
+        asi el diseno se reacomoda en vez de desbordarse."""
+        factor = UI_ZOOM_FACTORS.get(size, 1.0)
+        try:
+            import webview
+            from System import Func, Object  # pythonnet, disponible con el motor WebView2
+
+            control = webview.windows[0].native.webview
+            control.Invoke(Func[Object](lambda: setattr(control, "ZoomFactor", factor)))
+        except Exception:
+            return {"ok": False, "zoom": 1.0}
+        return {"ok": True, "zoom": factor}
+
     def set_learning_language(self, language: str) -> Dict[str, Any]:
         return self._c.web_set_learning_language(language)
 
@@ -80,6 +97,10 @@ class WebAPI:
 
     def get_language_pack(self, language: Optional[str] = None) -> Dict[str, Any]:
         return self._c.web_get_language_pack(language)
+
+    # ===== Camara =====
+    def set_camera(self, enabled: bool) -> Dict[str, Any]:
+        return self._c.web_set_camera(enabled)
 
     # ===== Voice =====
     def voice_start(self) -> Dict[str, Any]:
@@ -148,6 +169,9 @@ class WebAPI:
 
     def learning_performance(self, letter: str) -> Dict[str, Any]:
         return self._c.web_learning_performance(letter)
+
+    def learning_summary(self) -> Dict[str, Any]:
+        return self._c.web_learning_summary()
 
     def get_favorite_letters(self) -> Dict[str, Any]:
         return self._c.web_get_favorite_letters()

@@ -18,13 +18,110 @@
           </div>
         </div>
         <div class="top-actions">
-          <button class="btn ghost hidden" id="btnLogout" data-i18n="logout">Cerrar sesión</button>
+          <div class="landing-actions">
+            <button class="btn ghost" id="btnLandingLogin" type="button">Iniciar sesión</button>
+            <button class="btn primary" id="btnLandingRegister" type="button">Crear cuenta <span aria-hidden="true">↗</span></button>
+          </div>
+          <div class="user-nav">
+            <div class="lang-switch" role="radiogroup" aria-labelledby="langSwitchLabel">
+              <span class="lang-switch-label" id="langSwitchLabel" data-i18n="learningIn">Aprendiendo en</span>
+              <div class="lang-switch-options">
+                <label class="lang-switch-option" title="Español — LSC" data-i18n-title="langEs">
+                  <input type="radio" name="menuLearningLanguage" value="es" checked/>
+                  <span>ES</span>
+                </label>
+                <label class="lang-switch-option" title="Inglés — ASL" data-i18n-title="langEn">
+                  <input type="radio" name="menuLearningLanguage" value="en"/>
+                  <span>EN</span>
+                </label>
+                <label class="lang-switch-option" title="Portugués — Libras" data-i18n-title="langPt">
+                  <input type="radio" name="menuLearningLanguage" value="pt"/>
+                  <span>PT</span>
+                </label>
+              </div>
+            </div>
+            <div class="nav-pop">
+              <button class="icon-btn help" id="btnHelp" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="helpMenu" title="Ayuda" data-i18n-title="helpLabel" aria-label="Ayuda" data-i18n-aria="helpLabel"><span aria-hidden="true">?</span></button>
+              <div class="pop-menu hidden" id="helpMenu" role="menu" aria-labelledby="btnHelp">
+                <div class="pop-menu-title" data-i18n="helpLabel">Ayuda</div>
+                <button class="pop-item" id="btnOpenFaq" type="button" role="menuitem">
+                  <span><strong data-i18n="faqTitle">Preguntas frecuentes</strong><small data-i18n="faqDesc">Resuelve tus dudas sobre la app</small></span>
+                </button>
+                <button class="pop-item" id="btnOpenTutorial" type="button" role="menuitem">
+                  <span><strong data-i18n="tutorialLabel">Ver tutorial</strong><small data-i18n="tutorialDesc">Recorre la app paso a paso</small></span>
+                </button>
+              </div>
+            </div>
+            <button class="icon-btn" id="btnOpenSettings" type="button" title="Configuración" data-i18n-title="settingsLabel" aria-label="Configuración" data-i18n-aria="settingsLabel"><span aria-hidden="true">⚙</span></button>
+            <button class="avatar-btn" id="btnOpenProfile" type="button" title="Mi perfil" data-i18n-title="profileLabel" aria-label="Mi perfil" data-i18n-aria="profileLabel">
+              <span class="account-avatar" id="accountAvatar" aria-hidden="true">E</span>
+            </button>
+          </div>
         </div>
       </header>
 
       <main class="content">
+        <!-- PORTADA -->
+        <section class="landing" id="viewLanding" aria-labelledby="landingTitle">
+          <div class="landing-main">
+            <div class="landing-copy">
+              <div class="landing-eyebrow"><span class="landing-eyebrow-dot"></span> APRENDER TAMBIÉN ES CONECTAR</div>
+              <h1 id="landingTitle">Un mundo más cercano<br />empieza con <span>una seña.</span></h1>
+              <p class="landing-description">Descubre una nueva forma de comunicarte. Aprende lengua de señas a tu ritmo, practica con tu cámara y construye puentes que se sienten.</p>
+              <div class="landing-cta">
+                <button class="btn primary landing-primary" id="btnLandingStart" type="button">Comenzar a aprender <span aria-hidden="true">→</span></button>
+                <div class="landing-note"><span aria-hidden="true">✦</span> Un espacio para aprender, practicar y compartir</div>
+              </div>
+              <div class="landing-languages">
+                <span>EXPLORA</span>
+                <div class="landing-language"><b>ES</b> LSC</div>
+                <i></i>
+                <div class="landing-language"><b>EN</b> ASL</div>
+                <i></i>
+                <div class="landing-language"><b>PT</b> Libras</div>
+              </div>
+            </div>
+
+            <div class="landing-visual" aria-label="Practica el abecedario en lengua de señas">
+              <div class="landing-orbit landing-orbit-one"></div>
+              <div class="landing-orbit landing-orbit-two"></div>
+              <div class="landing-image-card">
+                <div class="landing-image-topline"><span>UNA SEÑA A LA VEZ</span><span class="landing-live-dot"></span></div>
+                <div class="landing-photo-wrap">
+                  <img src="./assets/letras/a.png" alt="Mano formando la letra A en lengua de señas" />
+                  <div class="landing-letter">A<span>de aprender</span></div>
+                </div>
+                <div class="landing-image-caption"><span class="landing-caption-icon">✳</span><span>Las manos también<br /><strong>cuentan historias.</strong></span><span class="landing-caption-arrow" aria-hidden="true">↗</span></div>
+              </div>
+              <div class="landing-float-card landing-float-top"><span class="landing-float-icon">✋</span><span><strong>Aprende</strong><small>con tus manos</small></span></div>
+              <div class="landing-float-card landing-float-bottom"><span class="landing-float-icon landing-float-sparkle">✦</span><span><strong>Conecta</strong><small>sin barreras</small></span></div>
+              <span class="landing-sparkle landing-sparkle-one" aria-hidden="true">✳</span>
+              <span class="landing-sparkle landing-sparkle-two" aria-hidden="true">✦</span>
+            </div>
+          </div>
+
+          <div class="landing-features" aria-label="Lo que puedes hacer">
+            <article class="landing-feature">
+              <span class="landing-feature-icon feature-mint">01</span>
+              <span><strong>Aprende a tu ritmo</strong><small>Practica el alfabeto paso a paso.</small></span>
+              <span class="landing-feature-arrow" aria-hidden="true">↗</span>
+            </article>
+            <article class="landing-feature">
+              <span class="landing-feature-icon feature-coral">02</span>
+              <span><strong>Practica en vivo</strong><small>Tu cámara te acompaña al aprender.</small></span>
+              <span class="landing-feature-arrow" aria-hidden="true">↗</span>
+            </article>
+            <article class="landing-feature">
+              <span class="landing-feature-icon feature-yellow">03</span>
+              <span><strong>Comunícate mejor</strong><small>Voz y señas, más cerca que nunca.</small></span>
+              <span class="landing-feature-arrow" aria-hidden="true">↗</span>
+            </article>
+          </div>
+          <div class="landing-footer"><span>Enseñando <span aria-hidden="true">✳</span></span><span>Aprender juntos cambia todo.</span></div>
+        </section>
+
         <!-- LOGIN -->
-        <section class="card auth" id="viewLogin">
+        <section class="card auth hidden" id="viewLogin">
           <h2 data-i18n="loginTitle">Iniciar sesión</h2>
           <p class="muted" data-i18n="loginSubtitle">Accede para comenzar la interacción.</p>
           <div class="field">
@@ -139,74 +236,124 @@
         </section>
 
         <!-- MENÚ PRINCIPAL -->
-        <section class="card menu hidden" id="viewMenu">
-          <div class="menu-top">
-            <div class="menu-greeting">
-              <span id="menuGreeting">¡Hola!</span>
-              <div class="streak-indicator" id="studyStreak" aria-live="polite">Racha: 0 días 🔥</div>
-            </div>
-            <div class="lang-switch" role="radiogroup" aria-labelledby="langSwitchLabel">
-              <span class="lang-switch-label" id="langSwitchLabel" data-i18n="learningIn">Aprendiendo en</span>
-              <div class="lang-switch-options">
-                <label class="lang-switch-option" title="Español — LSC" data-i18n-title="langEs">
-                  <input type="radio" name="menuLearningLanguage" value="es" checked/>
-                  <span>ES</span>
-                </label>
-                <label class="lang-switch-option" title="Inglés — ASL" data-i18n-title="langEn">
-                  <input type="radio" name="menuLearningLanguage" value="en"/>
-                  <span>EN</span>
-                </label>
-                <label class="lang-switch-option" title="Portugués — Libras" data-i18n-title="langPt">
-                  <input type="radio" name="menuLearningLanguage" value="pt"/>
-                  <span>PT</span>
-                </label>
+        <section class="dash hidden" id="viewMenu">
+          <header class="card dash-welcome">
+            <div class="dash-welcome-copy">
+              <div class="dash-greeting-row">
+                <span id="menuGreeting">¡Hola!</span>
+                <div class="streak-indicator" id="studyStreak" aria-live="polite">Racha: 0 días 🔥</div>
               </div>
-            </div>
-          </div>
-
-          <div class="menu-layout">
-            <div class="menu-hero">
               <h2 data-i18n="heroTitle">Tus manos también hablan</h2>
-              <p class="menu-hero-text" data-i18n="heroText1">El lenguaje de señas es una lengua completa, con su propia gramática y cultura. Aprenderlo te acerca a millones de personas discapacitadas y hace que la comunicación sea para todos.</p>
-              <p class="menu-hero-text" data-i18n="heroText2">Practica cada letra con la cámara, a tu ritmo, y convierte cada seña en un paso hacia una comunicación sin barreras.</p>
-              <figure class="menu-word" aria-label="La palabra HOLA deletreada en señas" data-i18n-aria="wordAria">
-                <div class="menu-word-letters">
-                  <span class="menu-word-tile"><img src="./assets/letras/h.png" alt="" /><b>H</b></span>
-                  <span class="menu-word-tile"><img src="./assets/letras/o.png" alt="" /><b>O</b></span>
-                  <span class="menu-word-tile"><img src="./assets/letras/l.png" alt="" /><b>L</b></span>
-                  <span class="menu-word-tile"><img src="./assets/letras/a.png" alt="" /><b>A</b></span>
-                </div>
-                <figcaption class="muted" id="menuLanguageCaption">Estás aprendiendo lenguaje de señas en español.</figcaption>
-              </figure>
+              <p data-i18n="heroText2">Practica cada letra con la cámara, a tu ritmo, y convierte cada seña en un paso hacia una comunicación sin barreras.</p>
             </div>
-
-            <nav class="menu-options" aria-label="Opciones del menú principal" data-i18n-aria="menuAria">
-              <div class="menu-group">
-                <h3 class="menu-group-title" data-i18n="groupLearn">Aprende</h3>
-                <div class="menu-group-grid">
-                  <button class="btn primary menu-option" id="btnOpenAprendizaje"><strong data-i18n="learning">Aprendizaje</strong><small data-i18n="learningDesc">Letra por letra</small></button>
-                  <button class="btn secondary menu-option" id="btnOpenRepaso"><strong data-i18n="review">Repaso</strong><small data-i18n="reviewDesc">Refuerza lo aprendido</small></button>
-                  <button class="btn secondary menu-option" id="btnOpenReto"><strong data-i18n="challenge">Reto</strong><small data-i18n="challengeDesc">Deletrea tu nombre</small></button>
-                </div>
+            <figure class="dash-word" aria-label="La palabra HOLA deletreada en señas" data-i18n-aria="wordAria">
+              <div class="dash-word-letters">
+                <span class="dash-word-tile"><img src="./assets/letras/h.png" alt="" /><b>H</b></span>
+                <span class="dash-word-tile"><img src="./assets/letras/o.png" alt="" /><b>O</b></span>
+                <span class="dash-word-tile"><img src="./assets/letras/l.png" alt="" /><b>L</b></span>
+                <span class="dash-word-tile"><img src="./assets/letras/a.png" alt="" /><b>A</b></span>
               </div>
+              <figcaption class="muted" id="menuLanguageCaption">Estás aprendiendo lenguaje de señas en español.</figcaption>
+            </figure>
+          </header>
 
-              <div class="menu-group">
-                <h3 class="menu-group-title" data-i18n="groupTest">Ponte a prueba</h3>
-                <div class="menu-group-grid two">
-                  <button class="btn secondary menu-option" id="btnOpenEvaluacion"><strong data-i18n="evaluation">Modo evaluación</strong><small data-i18n="evaluationDesc">Mide tu velocidad</small></button>
-                  <button class="btn secondary menu-option" id="btnOpenEvaluacionHistorial"><strong data-i18n="history">Historial</strong><small data-i18n="historyDesc">Revisa tu progreso</small></button>
-                </div>
+          <nav class="dash-sections" aria-label="Opciones del menú principal" data-i18n-aria="menuAria">
+            <section class="dash-section dash-learn">
+              <h3 class="dash-section-title" data-i18n="groupLearn">Aprende</h3>
+              <div class="dash-grid">
+                <button class="dash-card featured" id="btnOpenAprendizaje" type="button"><span class="dash-card-icon" aria-hidden="true">✋</span><strong data-i18n="learning">Aprendizaje</strong><small data-i18n="learningDesc">Letra por letra</small></button>
+                <button class="dash-card" id="btnOpenRepaso" type="button"><span class="dash-card-icon icon-mint" aria-hidden="true">↻</span><strong data-i18n="review">Repaso</strong><small data-i18n="reviewDesc">Refuerza lo aprendido</small></button>
+                <button class="dash-card" id="btnOpenReto" type="button"><span class="dash-card-icon icon-yellow" aria-hidden="true">★</span><strong data-i18n="challenge">Reto</strong><small data-i18n="challengeDesc">Deletrea tu nombre</small></button>
               </div>
+            </section>
 
-              <button class="btn secondary menu-main-action" id="btnOpenInteraction">
-                <strong data-i18n="interaction">Iniciar interacción</strong>
-                <small data-i18n="interactionDesc">Conversa con voz y señas en tiempo real</small>
-              </button>
+            <section class="dash-section dash-test">
+              <h3 class="dash-section-title" data-i18n="groupTest">Ponte a prueba</h3>
+              <div class="dash-grid">
+                <button class="dash-card" id="btnOpenEvaluacion" type="button"><span class="dash-card-icon icon-coral" aria-hidden="true">⏱</span><strong data-i18n="evaluation">Modo evaluación</strong><small data-i18n="evaluationDesc">Mide tu velocidad</small></button>
+                <button class="dash-card" id="btnOpenEvaluacionHistorial" type="button"><span class="dash-card-icon icon-blue" aria-hidden="true">↗</span><strong data-i18n="history">Historial</strong><small data-i18n="historyDesc">Revisa tu progreso</small></button>
+              </div>
+            </section>
 
-              <div class="menu-footer">
-                <button class="btn ghost" id="btnOpenTutorial" data-i18n="tutorialReplay">❓ Ver tutorial</button>
-                <button class="btn ghost" id="btnOpenSettings" data-i18n="settings">⚙ Configuración</button>              </div>
-            </nav>
+            <section class="dash-section dash-talk">
+              <h3 class="dash-section-title" data-i18n="groupTalk">Conversa</h3>
+              <div class="dash-grid">
+                <button class="dash-card" id="btnOpenInteraction" type="button"><span class="dash-card-icon icon-mint" aria-hidden="true">💬</span><strong data-i18n="interaction">Iniciar interacción</strong><small data-i18n="interactionDesc">Conversa con voz y señas en tiempo real</small></button>
+              </div>
+            </section>
+          </nav>
+        </section>
+
+        <!-- PERFIL Y PROGRESO -->
+        <section class="view-wrap hidden" id="viewProfile">
+          <div class="view-bar">
+            <button class="btn ghost back-btn" id="btnBackProfile" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="profileTitle">Mi perfil de aprendizaje</div>
+            <button class="btn ghost logout-btn" id="btnLogout" type="button" data-i18n="logout">Cerrar sesión</button>
+          </div>
+          <div class="profile-content">
+            <section class="card profile-identity">
+              <div class="profile-avatar" id="profileAvatar" aria-hidden="true">E</div>
+              <div class="profile-identity-copy">
+                <span class="profile-eyebrow" data-i18n="profile">MI PERFIL</span>
+                <h2 id="profileUsername">—</h2>
+                <p class="muted" data-i18n="profileSubtitle">Tu camino de aprendizaje, a tu manera.</p>
+              </div>
+              <div class="profile-language-badge"><span aria-hidden="true">✦</span><span id="profileLanguage">LSC</span></div>
+            </section>
+
+            <section class="card profile-progress-card">
+              <div class="profile-section-heading">
+                <div><span class="profile-eyebrow" data-i18n="profileProgressEyebrow">PASO A PASO</span><h2 data-i18n="profileProgressTitle">Tu progreso</h2></div>
+                <button class="btn ghost profile-link" id="btnProfileLearning" data-i18n="profilePractice">Seguir aprendiendo →</button>
+              </div>
+              <div class="profile-stats">
+                <article class="profile-stat profile-stat-mint"><span class="profile-stat-icon" aria-hidden="true">✳</span><strong id="profileLettersPracticed">—</strong><span data-i18n="profileLettersPracticedLabel">Letras practicadas</span></article>
+                <article class="profile-stat profile-stat-coral"><span class="profile-stat-icon" aria-hidden="true">✓</span><strong id="profileCorrectAnswers">—</strong><span data-i18n="profileCorrectLabel">Señas correctas</span></article>
+                <article class="profile-stat profile-stat-blue"><span class="profile-stat-icon" aria-hidden="true">↗</span><strong id="profileTotalAttempts">—</strong><span data-i18n="profileAttemptsLabel">Intentos registrados</span></article>
+                <article class="profile-stat profile-stat-yellow"><span class="profile-stat-icon" aria-hidden="true">🔥</span><strong id="profileBestStreak">—</strong><span data-i18n="profileBestStreakLabel">Mejor racha</span></article>
+              </div>
+              <div class="profile-alphabet-progress">
+                <div class="profile-progress-copy"><strong data-i18n="profileAlphabetProgress">Avance en el alfabeto</strong><span id="profileProgressCount">—</span></div>
+                <div class="profile-progress-track" role="progressbar" id="profileProgressBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria="profileAlphabetProgress"><span id="profileProgressFill"></span></div>
+              </div>
+              <p class="profile-error hidden" id="profileError" role="status"></p>
+            </section>
+
+            <div class="profile-detail-grid">
+              <section class="card profile-detail-card">
+                <div class="profile-section-heading"><div><span class="profile-eyebrow" data-i18n="profileCollectionEyebrow">TU COLECCIÓN</span><h2 data-i18n="profileFavoritesTitle">Letras para repasar</h2></div><span class="profile-count" id="profileFavoriteCount">0</span></div>
+                <div class="profile-favorites" id="profileFavorites"></div>
+                <p class="profile-empty muted hidden" id="profileFavoritesEmpty" data-i18n="profileNoFavorites">Todavía no guardaste letras. Marca una con ⭐ mientras practicas.</p>
+                <button class="btn secondary profile-secondary-action" id="btnProfileReview" data-i18n="profileReview">Ir a Repaso →</button>
+              </section>
+              <section class="card profile-detail-card">
+                <div class="profile-section-heading"><div><span class="profile-eyebrow" data-i18n="profileHistoryEyebrow">TUS RETOS</span><h2 data-i18n="profileRecentEvaluations">Evaluaciones recientes</h2></div><button class="btn ghost profile-link" id="btnProfileHistory" data-i18n="profileViewHistory">Ver historial →</button></div>
+                <div class="profile-evaluations" id="profileEvaluations"></div>
+                <p class="profile-empty muted hidden" id="profileEvaluationsEmpty" data-i18n="profileNoEvaluations">Completa una evaluación y aparecerá aquí.</p>
+              </section>
+            </div>
+            <div class="profile-footer-actions"><span data-i18n="profileSettingsHint">Personaliza tu experiencia cuando quieras.</span><button class="btn ghost" id="btnProfileSettings" data-i18n="settings">⚙ Configuración</button></div>
+          </div>
+        </section>
+
+        <!-- PREGUNTAS FRECUENTES -->
+        <section class="view-wrap hidden" id="viewFaq">
+          <div class="view-bar">
+            <button class="btn ghost back-btn" id="btnBackFaq" data-i18n="backToMenu">← Volver al menú</button>
+            <div class="view-title" data-i18n="faqTitle">Preguntas frecuentes</div>
+          </div>
+          <div class="card faq">
+            <div class="faq-head">
+              <span class="profile-eyebrow" data-i18n="faqEyebrow">AYUDA</span>
+              <h2 data-i18n="faqHeading">¿En qué te podemos ayudar?</h2>
+              <p class="muted" data-i18n="faqIntro">Toca una pregunta para ver la respuesta.</p>
+            </div>
+            <div class="faq-list" id="faqList"></div>
+            <div class="faq-foot">
+              <span data-i18n="faqMoreHelp">¿Prefieres verlo en la app? Repite el recorrido guiado.</span>
+              <button class="btn secondary" id="btnFaqTutorial" type="button" data-i18n="tutorialLabel">Ver tutorial</button>
+            </div>
           </div>
         </section>
 

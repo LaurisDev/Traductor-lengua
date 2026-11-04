@@ -79,6 +79,9 @@ class MainController:
         self._read_fail_count = 0
         self._MAX_READ_FAILS_BEFORE_MESSAGE = 45
         self._camera_error: Optional[str] = None
+        # El usuario puede apagar la camara desde la interfaz; mientras este
+        # apagada nada la vuelve a encender sola.
+        self._web_camera_enabled = True
 
         # Threading para que la GUI no se congele
         self._translation_thread: Optional[threading.Thread] = None
@@ -320,6 +323,7 @@ class MainController:
         self._web_night_mode = self._db.get_night_mode(user.username)
         self._web_tutorial_pending = not self._db.get_tutorial_completed(user.username)
         self._apply_learning_language(self._db.get_learning_language(user.username))
+        self._web_camera_enabled = True
         self._ensure_translation_running()
         return True, "OK"
 
@@ -734,6 +738,21 @@ class MainController:
             "study_streak": self._study_streak,
         }
 
+    def web_learning_summary(self) -> dict:
+        """Devuelve el progreso general del usuario en el idioma activo."""
+        if self._current_user is None:
+            return {"ok": False, "msg": self._t("must_login")}
+        language = self._web_learning_language
+        summary = self._db.get_learning_summary(self._current_user.username, language)
+        summary.update(
+            {
+                "ok": True,
+                "language": language,
+                "alphabet_size": len(get_profile(language).learning_alphabet),
+            }
+        )
+        return summary
+
     def web_get_favorite_letters(self) -> dict:
         if self._current_user is None:
             return {"ok": False, "msg": self._t("must_login"), "letters": []}
@@ -791,6 +810,7 @@ class MainController:
             "voice_error": self._translate_stored(self._voice_error),
             "voice_recording": self._voice_recording,
             "camera_error": self._translate_stored(self._camera_error),
+            "camera_enabled": self._web_camera_enabled if self._current_user else False,
             "challenge_mode": self._challenge_mode,
             "challenge_word": self._challenge_word,
             "challenge_skipped": list(self._challenge_skipped),
@@ -1142,9 +1162,27 @@ class MainController:
         self._post_to_ui(finish)
 
     def _ensure_translation_running(self) -> None:
-        if self._translation_running:
+        if self._translation_running or not self._web_camera_enabled:
             return
         self._start_translation_loop()
+
+    def web_set_camera(self, enabled: bool) -> dict:
+        """Enciende o apaga la camara (al apagarla se libera el dispositivo)."""
+        if self._current_user is None:
+            return {"ok": False, "msg": self._t("must_login"), "camera_enabled": False}
+        self._web_camera_enabled = bool(enabled)
+        if self._web_camera_enabled:
+            self._ensure_translation_running()
+        else:
+            self._stop_translation_loop()
+            self._release_translation_resources()
+            self._web_frame_b64 = None
+            self._web_letter = None
+            self._web_landmarks = None
+            self._web_features = None
+            self._lm_smooth = None
+            self._camera_error = None
+        return {"ok": True, "camera_enabled": self._web_camera_enabled}
 
     def on_translation_back(self) -> None:
         self._stop_translation_loop()

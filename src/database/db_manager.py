@@ -399,6 +399,37 @@ class DatabaseManager:
             "incorrect": incorrect,
         }
 
+    def get_learning_summary(self, username: str, language: Optional[str] = None) -> dict:
+        """Resume el progreso guardado en un solo idioma."""
+        username_clean = (username or "").strip()
+        if not username_clean:
+            return {"attempts": 0, "correct": 0, "incorrect": 0, "practiced_letters": 0}
+
+        field = self._language_field("learning_performance", language)
+        users = self._users_collection()
+        doc = users.find_one({"username": username_clean}, {field: 1}) or {}
+        letter_stats = doc.get(field, {})
+        attempts = 0
+        correct = 0
+        incorrect = 0
+        practiced_letters = 0
+        for stats in letter_stats.values():
+            letter_attempts = min(
+                int(stats.get("attempts", int(stats.get("correct", 0)) + int(stats.get("incorrect", 0)))),
+                MAX_ATTEMPTS,
+            )
+            attempts += letter_attempts
+            correct += int(stats.get("correct", 0))
+            incorrect += int(stats.get("incorrect", 0))
+            practiced_letters += letter_attempts > 0
+
+        return {
+            "attempts": attempts,
+            "correct": correct,
+            "incorrect": incorrect,
+            "practiced_letters": practiced_letters,
+        }
+
     def add_favorite_letter(self, username: str, letter: str, language: Optional[str] = None) -> list:
         """Guarda una letra favorita del idioma indicado en la cuenta del usuario."""
         return self._update_favorite_letters(username, letter, add=True, language=language)

@@ -1165,9 +1165,15 @@ function drawHandOverlay(wrap){
   const vw = video.videoWidth;
   const vh = video.videoHeight;
   if(!latestHandPoints || !vw || !vh || video.style.display !== "block") return;
-  const scale = Math.max(w / vw, h / vh);
-  const offsetX = (w - vw * scale) / 2;
-  const offsetY = (h - vh * scale) / 2;
+  // Se usa la caja real del <video> (no la del contenedor): según el tamaño de la
+  // pantalla el video puede no llenar el recuadro y los puntos quedarían corridos.
+  const canvasRect = canvas.getBoundingClientRect();
+  const videoRect = video.getBoundingClientRect();
+  const boxW = videoRect.width || w;
+  const boxH = videoRect.height || h;
+  const scale = Math.max(boxW / vw, boxH / vh);
+  const offsetX = (videoRect.left - canvasRect.left) + (boxW - vw * scale) / 2;
+  const offsetY = (videoRect.top - canvasRect.top) + (boxH - vh * scale) / 2;
   const pts = latestHandPoints.map(([x, y]) => [offsetX + x * vw * scale, offsetY + y * vh * scale]);
   // Esqueleto de la mano: huesos de cada dedo y luego las articulaciones
   // (puntas de los dedos resaltadas).

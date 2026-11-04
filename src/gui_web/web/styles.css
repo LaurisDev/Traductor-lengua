@@ -1880,3 +1880,7 @@ body[data-view="profile"] .avatar-btn{box-shadow:0 0 0 3px rgba(var(--color-prin
   .settings-size-option select{padding:6px 10px}
   .settings-actions{margin-top:8px}
 }
+
+/* Versión web: video de la cámara del navegador y puntos de la mano encima */
+.video-wrap video.local-camera{width:100%; height:100%; object-fit:cover; display:none}
+.video-wrap .hand-overlay{position:absolute; inset:0; width:100%; height:100%; z-index:2; pointer-events:none}

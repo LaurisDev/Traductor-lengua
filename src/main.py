@@ -97,6 +97,8 @@ class MainController:
         self._web_finger_state= None
         self._web_confidence:float = 0.0
         self._web_landmarks= None
+        # Version web: puntos [x, y] normalizados de la mano para dibujarlos en el navegador.
+        self._web_hand_points: Optional[list] = None
         self._web_features = None
         self._web_last_frame_ts = 0.0
         # Estados y errores se guardan como claves de traduccion (src/languages/messages.py)
@@ -381,6 +383,7 @@ class MainController:
         self._web_frame_b64 = None
         self._web_letter = None                             # <-- LÍNEA NUEVA
         self._web_landmarks = None 
+        self._web_hand_points = None
         self._web_features = None
         self._web_last_frame_ts = 0.0
         self._voice_status = "voice_status_ready"
@@ -803,6 +806,7 @@ class MainController:
             "speech_locale": profile.speech_locale,
             "sign_language": profile.sign_language,
             "frame_jpeg_b64": self._web_frame_b64,
+            "hand_points": self._web_hand_points if WEB_DEPLOYMENT else None,
             "letter": self._web_letter,
             "sign_text": self._sign_buffer,
             "messages": list(self._web_messages),
@@ -1179,6 +1183,7 @@ class MainController:
             self._web_frame_b64 = None
             self._web_letter = None
             self._web_landmarks = None
+            self._web_hand_points = None
             self._web_features = None
             self._lm_smooth = None
             self._camera_error = None
@@ -1277,9 +1282,16 @@ class MainController:
                             prev["z"] = a * float(prev.get("z", 0.0)) + (1.0 - a) * float(cur.get("z", 0.0))
                     landmarks_draw = self._lm_smooth if a > 0 else landmarks
                     landmarks_classify = self._lm_smooth if smooth_classify else landmarks
-                    self._hand_detector.draw_landmarks(frame_out, landmarks_draw)
+                    if WEB_DEPLOYMENT:
+                        # El navegador muestra su propia camara y dibuja estos puntos encima.
+                        self._web_hand_points = [
+                            [round(float(lm["x"]), 4), round(float(lm["y"]), 4)] for lm in landmarks_draw
+                        ]
+                    else:
+                        self._hand_detector.draw_landmarks(frame_out, landmarks_draw)
                 else:
                     self._lm_smooth = None
+                    self._web_hand_points = None
 
                 letter, _conf = self._sign_classifier.letter_for_display(landmarks_classify)
 
@@ -1328,6 +1340,11 @@ class MainController:
             except Exception:
                 # Nunca dejar que un frame problematico mate el hilo de camara completo.
                 print(traceback.format_exc())
+                continue
+
+            # En la version web no se devuelve la imagen: viajaria de nuevo por internet
+            # solo para mostrar lo que el navegador ya ve en su propia camara.
+            if WEB_DEPLOYMENT:
                 continue
 
             # Enviar frame a la UI web

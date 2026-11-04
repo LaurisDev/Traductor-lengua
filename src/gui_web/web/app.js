@@ -1092,8 +1092,80 @@ document.querySelectorAll(".video-wrap").forEach((wrap) => {
 });
 updateCameraToggles();
 
+// ===== Versión web: video local + puntos de la mano =====
+// El navegador muestra su propia cámara (fluida, sin viajar por internet) y el
+// servidor solo devuelve la letra y los 21 puntos de la mano para dibujarlos encima.
+let latestHandPoints = null;
+if(window.__browserDeployment){
+  document.querySelectorAll(".video-wrap").forEach((wrap) => {
+    const video = document.createElement("video");
+    video.className = "local-camera";
+    video.muted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    const overlay = document.createElement("canvas");
+    overlay.className = "hand-overlay";
+    wrap.querySelector("img").after(video, overlay);
+  });
+}
+
+function attachLocalCamera(stream){
+  document.querySelectorAll(".local-camera").forEach((video) => {
+    if(video.srcObject !== stream) video.srcObject = stream;
+    if(stream) video.play().catch(() => {});
+  });
+}
+
+// Dibuja los puntos sobre el video, con el mismo recorte que object-fit: cover.
+function drawHandOverlay(wrap){
+  const video = wrap.querySelector(".local-camera");
+  const canvas = wrap.querySelector(".hand-overlay");
+  if(!video || !canvas) return;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  if(canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)){
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if(!latestHandPoints || !vw || !vh || video.style.display !== "block") return;
+  const scale = Math.max(w / vw, h / vh);
+  const offsetX = (w - vw * scale) / 2;
+  const offsetY = (h - vh * scale) / 2;
+  ctx.fillStyle = "#00ff00";
+  for(const [x, y] of latestHandPoints){
+    ctx.beginPath();
+    ctx.arc(offsetX + x * vw * scale, offsetY + y * vh * scale, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function renderFrame(frameB64, videoEl, fallbackEl, errorMsg){
   const statusEl = videoEl?.parentElement?.querySelector(".camera-status");
+  const localVideo = videoEl?.parentElement?.querySelector(".local-camera");
+  if(localVideo){
+    // Versión web: se muestra la cámara del navegador en vez de la imagen del servidor.
+    // No se espera a readyState: el navegador no decodifica un <video> oculto.
+    const live = cameraEnabled && !!browserCameraStream;
+    localVideo.style.display = live ? "block" : "none";
+    videoEl.style.display = "none";
+    if(live){
+      fallbackEl.style.display = "none";
+      if(statusEl){
+        statusEl.className = "camera-status camera-status-active";
+        statusEl.innerHTML = `<strong>${tr("cameraActive")}</strong><span>${tr("cameraActiveHint")}</span>`;
+      }
+      drawHandOverlay(videoEl.parentElement);
+      return;
+    }
+    drawHandOverlay(videoEl.parentElement);
+    frameB64 = null;
+  }
   if(!cameraEnabled){
     videoEl.style.display = "none";
     fallbackEl.style.display = "grid";
@@ -1451,6 +1523,8 @@ function stopBrowserCamera(){
   browserCameraRequested = false;
   browserCameraVideo = null;
   browserCameraCanvas = null;
+  latestHandPoints = null;
+  attachLocalCamera(null);
 }
 
 async function startBrowserCamera(){
@@ -1466,6 +1540,7 @@ async function startBrowserCamera(){
     browserCameraVideo.playsInline = true;
     browserCameraVideo.srcObject = browserCameraStream;
     await browserCameraVideo.play();
+    attachLocalCamera(browserCameraStream);
     browserCameraCanvas = document.createElement("canvas");
     browserCameraCanvas.width = 640;
     browserCameraCanvas.height = 480;
@@ -1568,6 +1643,7 @@ async function poll(){
         updateLearningFeedback(st.letter);
       }
 
+      latestHandPoints = Array.isArray(st.hand_points) ? st.hand_points : null;
       renderFrame(st.frame_jpeg_b64, videoInteraction, videoFallbackInteraction, st.camera_error);
       renderFrame(st.frame_jpeg_b64, videoAprendizaje, videoFallbackAprendizaje, st.camera_error);
       renderFrame(st.frame_jpeg_b64, videoReto, videoFallbackReto, st.camera_error);

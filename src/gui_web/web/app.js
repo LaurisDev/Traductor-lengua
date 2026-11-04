@@ -1524,6 +1524,7 @@ function stopBrowserCamera(){
   browserCameraVideo = null;
   browserCameraCanvas = null;
   latestHandPoints = null;
+  stopBrowserHandDetection();
   attachLocalCamera(null);
 }
 
@@ -1545,6 +1546,7 @@ async function startBrowserCamera(){
     browserCameraCanvas.width = 640;
     browserCameraCanvas.height = 480;
     sendBrowserCameraFrame();
+    startBrowserHandDetection();
   }catch(error){
     stopBrowserCamera();
     browserCameraRequested = true;
@@ -1573,40 +1575,138 @@ function sendBrowserCameraFrame(){
     return;
   }
   browserCameraSending = true;
-  const sentAt = performance.now();
-  let keepGoing = true;
-  let minGap = BROWSER_FRAME_MIN_GAP_MS;
+  if(browserHandLandmarker){
+    // La mano ya se detectó en el navegador: solo viajan los 21 puntos.
+    postBrowserCamera("/api/camera/landmarks", "application/json",
+      JSON.stringify({ landmarks: browserLandmarks }), BROWSER_LANDMARKS_MIN_GAP_MS, false);
+    return;
+  }
   const context = browserCameraCanvas.getContext("2d");
   context.drawImage(browserCameraVideo, 0, 0, browserCameraCanvas.width, browserCameraCanvas.height);
-  browserCameraCanvas.toBlob(async (blob) => {
-    try{
-      if(blob){
-        const response = await fetch("/api/camera/frame", {
-          method: "POST",
-          headers: { "Content-Type": "image/jpeg" },
-          body: blob,
-        });
-        if(!response.ok && response.status !== 409) throw new Error(`HTTP ${response.status}`);
-        // 409: la traducción no está activa en esta vista; se reintenta con calma.
-        if(response.status === 409) minGap = 300;
-        if(response.ok){
-          const data = await response.json();
-          if(browserCameraStream){
-            latestHandPoints = Array.isArray(data.hand_points) ? data.hand_points : null;
-            redrawHandOverlays();
-          }
-        }
-      }
-    }catch(error){
-      keepGoing = false;
-      fetch("/api/camera/error", { method: "POST" }).catch(() => {});
-    }finally{
+  browserCameraCanvas.toBlob((blob) => {
+    if(!blob){
       browserCameraSending = false;
-      if(keepGoing){
-        scheduleBrowserCameraFrame(Math.max(0, minGap - (performance.now() - sentAt)));
+      scheduleBrowserCameraFrame(BROWSER_FRAME_MIN_GAP_MS);
+      return;
+    }
+    postBrowserCamera("/api/camera/frame", "image/jpeg", blob, BROWSER_FRAME_MIN_GAP_MS, true);
+  }, "image/jpeg", 0.65);
+}
+
+async function postBrowserCamera(url, contentType, body, minGap, usePointsFromServer){
+  const sentAt = performance.now();
+  let keepGoing = true;
+  try{
+    const response = await fetch(url, { method: "POST", headers: { "Content-Type": contentType }, body });
+    if(!response.ok && response.status !== 409) throw new Error(`HTTP ${response.status}`);
+    // 409: la traducción no está activa en esta vista; se reintenta con calma.
+    if(response.status === 409) minGap = 300;
+    if(response.ok && usePointsFromServer){
+      const data = await response.json();
+      if(browserCameraStream && !browserHandLandmarker){
+        latestHandPoints = Array.isArray(data.hand_points) ? data.hand_points : null;
+        redrawHandOverlays();
       }
     }
-  }, "image/jpeg", 0.65);
+  }catch(error){
+    keepGoing = false;
+    fetch("/api/camera/error", { method: "POST" }).catch(() => {});
+  }finally{
+    browserCameraSending = false;
+    if(keepGoing){
+      scheduleBrowserCameraFrame(Math.max(0, minGap - (performance.now() - sentAt)));
+    }
+  }
+}
+
+// ===== Detección de la mano en el navegador =====
+// El servidor gratuito tiene muy poca CPU: buscar la mano en cada imagen allá es
+// lento. Se usa el mismo modelo de MediaPipe aquí, los puntos se dibujan al ritmo
+// de la cámara y al servidor solo se le pide reconocer la seña.
+const MP_VISION_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const BROWSER_LANDMARKS_MIN_GAP_MS = 66;
+let browserHandLandmarker = null;
+let browserHandLandmarkerLoading = null;
+let browserLandmarks = null;
+let browserDetectRaf = null;
+let browserDetectRest = null;
+let browserLastVideoTime = -1;
+
+async function createBrowserHandLandmarker(){
+  const vision = await import(`${MP_VISION_URL}/vision_bundle.mjs`);
+  const fileset = await vision.FilesetResolver.forVisionTasks(`${MP_VISION_URL}/wasm`);
+  const options = (delegate) => ({
+    baseOptions: { modelAssetPath: "/models/hand_landmarker.task", delegate },
+    runningMode: "VIDEO",
+    numHands: 1,
+    // Mismos umbrales que el servidor (src/config.py).
+    minHandDetectionConfidence: 0.7,
+    minHandPresenceConfidence: 0.5,
+    minTrackingConfidence: 0.5,
+  });
+  try{
+    return await vision.HandLandmarker.createFromOptions(fileset, options("GPU"));
+  }catch(error){
+    return await vision.HandLandmarker.createFromOptions(fileset, options("CPU"));
+  }
+}
+
+function startBrowserHandDetection(){
+  if(!browserHandLandmarkerLoading){
+    browserHandLandmarkerLoading = createBrowserHandLandmarker().catch((error) => {
+      // Sin detección local se sigue enviando la imagen al servidor.
+      console.warn("No se pudo cargar MediaPipe en el navegador.", error);
+      return null;
+    });
+  }
+  browserHandLandmarkerLoading.then((landmarker) => {
+    if(!landmarker || !browserCameraStream) return;
+    browserHandLandmarker = landmarker;
+    if(browserDetectRaf === null && browserDetectRest === null){
+      browserDetectRaf = requestAnimationFrame(detectBrowserHand);
+    }
+  });
+}
+
+function stopBrowserHandDetection(){
+  if(browserDetectRaf !== null) cancelAnimationFrame(browserDetectRaf);
+  clearTimeout(browserDetectRest);
+  browserDetectRaf = null;
+  browserDetectRest = null;
+  browserLandmarks = null;
+  browserLastVideoTime = -1;
+}
+
+function detectBrowserHand(){
+  browserDetectRaf = null;
+  if(!browserCameraStream || !browserCameraVideo || !browserHandLandmarker) return;
+  const video = browserCameraVideo;
+  let spent = 0;
+  if(video.readyState >= 2 && video.currentTime !== browserLastVideoTime){
+    browserLastVideoTime = video.currentTime;
+    const startedAt = performance.now();
+    try{
+      const result = browserHandLandmarker.detectForVideo(video, performance.now());
+      const hand = result?.landmarks?.[0];
+      browserLandmarks = hand ? hand.map((p) => [p.x, p.y, p.z]) : null;
+      latestHandPoints = hand ? hand.map((p) => [p.x, p.y]) : null;
+      redrawHandOverlays();
+    }catch(error){
+      console.warn("Falló la detección de la mano en el navegador.", error);
+    }
+    spent = performance.now() - startedAt;
+  }
+  // En equipos lentos se descansa lo mismo que tardó la detección (máx. 100 ms;
+  // la primera puede tardar segundos mientras se prepara la GPU), para que la
+  // página y el envío de los puntos no se traben.
+  if(spent > 20){
+    browserDetectRest = setTimeout(() => {
+      browserDetectRest = null;
+      if(browserCameraStream) browserDetectRaf = requestAnimationFrame(detectBrowserHand);
+    }, Math.min(spent, 100));
+  }else{
+    browserDetectRaf = requestAnimationFrame(detectBrowserHand);
+  }
 }
 
 function finishBrowserVoice(errorCode = ""){

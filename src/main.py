@@ -31,6 +31,9 @@ from src.sign_language import (
     spell_text,
 )
 from src.config import DEFAULT_LEARNING_LANGUAGE, USE_WEB_UI, WEB_DEPLOYMENT
+
+# Marca de un frame de imagen (sin puntos ya detectados por el navegador).
+_NO_BROWSER_LANDMARKS = object()
 from src.languages import (
     MODULE_CHALLENGE,
     MODULE_REVIEW,
@@ -1245,15 +1248,17 @@ class MainController:
         while self._translation_running and not self._stop_translation_event.is_set():
             if WEB_DEPLOYMENT:
                 try:
-                    frame_seq, frame = self._browser_frame_queue.get(timeout=0.25)
+                    frame_seq, frame, browser_landmarks = self._browser_frame_queue.get(timeout=0.25)
                 except queue.Empty:
                     continue
-                ret = frame is not None
+                # El navegador puede mandar la mano ya detectada (solo los puntos).
+                ret = frame is not None or browser_landmarks is not _NO_BROWSER_LANDMARKS
             else:
                 if not self._camera or not self._camera.is_opened():
                     break
                 ret, frame = self._camera.read()
-            if not ret or frame is None:
+                browser_landmarks = _NO_BROWSER_LANDMARKS
+            if not ret or (frame is None and browser_landmarks is _NO_BROWSER_LANDMARKS):
                 self._read_fail_count += 1
                 if self._read_fail_count >= self._MAX_READ_FAILS_BEFORE_MESSAGE:
                     self._put_latest((None, None, "no_frames"))
@@ -1263,7 +1268,10 @@ class MainController:
             self._read_fail_count = 0
             self._camera_error = None
             try:
-                landmarks, frame_out = self._hand_detector.process(frame)
+                if WEB_DEPLOYMENT and browser_landmarks is not _NO_BROWSER_LANDMARKS:
+                    landmarks, frame_out = browser_landmarks, None
+                else:
+                    landmarks, frame_out = self._hand_detector.process(frame)
             except RuntimeError:
                 break
             landmarks_classify = landmarks
@@ -1460,10 +1468,20 @@ class MainController:
         Devuelve su número (0 si la traducción no está activa)."""
         if not WEB_DEPLOYMENT or not self._translation_running:
             return 0
+        return self._enqueue_browser_item(frame, _NO_BROWSER_LANDMARKS)
+
+    def submit_browser_landmarks(self, landmarks) -> int:
+        """Entrega los 21 puntos de la mano detectados en el navegador (o None si
+        no hay mano). Así el servidor no tiene que buscar la mano en una imagen."""
+        if not WEB_DEPLOYMENT or not self._translation_running:
+            return 0
+        return self._enqueue_browser_item(None, landmarks)
+
+    def _enqueue_browser_item(self, frame, landmarks) -> int:
         with self._web_points_cond:
             self._browser_frame_seq += 1
             seq = self._browser_frame_seq
-        item = (seq, frame)
+        item = (seq, frame, landmarks)
         try:
             self._browser_frame_queue.put_nowait(item)
         except queue.Full:

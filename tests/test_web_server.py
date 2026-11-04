@@ -73,6 +73,43 @@ class WebServerTests(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.get_json()["error"], "database_unavailable")
 
+    def test_hand_model_is_served_for_the_browser(self):
+        response = self.client.get("/models/hand_landmarker.task")
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(response.data), 500_000)
+        response.close()
+
+    def test_camera_landmarks_are_validated_and_answered(self):
+        class FakeController:
+            def __init__(self):
+                self.received = []
+
+            def submit_browser_landmarks(self, landmarks):
+                self.received.append(landmarks)
+                return len(self.received)
+
+            def wait_browser_hand_points(self, seq):
+                return {"ok": True, "fresh": True, "hand_points": [[0.5, 0.5]], "letter": "A"}
+
+        controller = FakeController()
+        hand = [[0.1 * (i % 10), 0.05 * i, -0.01] for i in range(21)]
+        with patch.object(web_server, "_controller", return_value=controller):
+            ok = self.client.post("/api/camera/landmarks", json={"landmarks": hand})
+            no_hand = self.client.post("/api/camera/landmarks", json={"landmarks": None})
+            short = self.client.post("/api/camera/landmarks", json={"landmarks": hand[:5]})
+            bad = self.client.post("/api/camera/landmarks", json={"landmarks": [["x", 0, 0]] * 21})
+            not_finite = self.client.post("/api/camera/landmarks", data='{"landmarks": [[NaN, 0, 0]]}',
+                                          content_type="application/json")
+
+        self.assertEqual(ok.status_code, 200)
+        self.assertEqual(ok.get_json()["letter"], "A")
+        self.assertEqual(no_hand.status_code, 200)
+        self.assertEqual(controller.received[0][3], {"x": hand[3][0], "y": hand[3][1], "z": hand[3][2]})
+        self.assertIsNone(controller.received[1])
+        self.assertEqual(len(controller.received), 2)
+        for response in (short, bad, not_finite):
+            self.assertEqual(response.status_code, 400)
+
     def test_idle_sessions_are_released(self):
         class FakeController:
             def __init__(self):

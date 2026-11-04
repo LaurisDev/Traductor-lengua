@@ -5,6 +5,7 @@ Cloudflare) publica el enlace HTTPS. La camara y la voz de cada participante
 se usan desde su navegador y los frames se procesan aqui.
 """
 
+import math
 import os
 
 # Activa el modo web antes de importar la configuracion del proyecto.
@@ -79,6 +80,15 @@ def index():
     return send_from_directory(WEB_ROOT, "index.html")
 
 
+MODELS_DIR = Path(__file__).resolve().parent / "models"
+
+
+@app.get("/models/hand_landmarker.task")
+def hand_model():
+    # El navegador detecta la mano con este mismo modelo de MediaPipe.
+    return send_from_directory(MODELS_DIR, "hand_landmarker.task", max_age=7 * 24 * 3600)
+
+
 @app.get("/<path:filename>")
 def static_files(filename: str):
     candidate = (WEB_ROOT / filename).resolve()
@@ -124,6 +134,39 @@ def camera_frame():
     if not seq:
         return jsonify({"error": "La sesión de traducción no está activa."}), 409
     # Los puntos de la mano vuelven en esta misma respuesta (sin esperar al sondeo).
+    return jsonify(controller.wait_browser_hand_points(seq))
+
+
+def _parse_landmarks(raw):
+    """21 puntos [x, y, z] normalizados, o None si no hay mano. Lanza ValueError."""
+    if raw is None:
+        return None
+    if not isinstance(raw, list) or len(raw) != 21:
+        raise ValueError
+    points = []
+    for point in raw:
+        if not isinstance(point, list) or len(point) != 3:
+            raise ValueError
+        x, y, z = (float(v) for v in point)
+        if not all(math.isfinite(v) and -10.0 <= v <= 10.0 for v in (x, y, z)):
+            raise ValueError
+        points.append({"x": x, "y": y, "z": z})
+    return points
+
+
+@app.post("/api/camera/landmarks")
+def camera_landmarks():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or "landmarks" not in data:
+        return jsonify({"error": "Se esperaba {\"landmarks\": [...]}."}), 400
+    try:
+        landmarks = _parse_landmarks(data["landmarks"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "Los puntos de la mano no son válidos."}), 400
+    controller = _controller()
+    seq = controller.submit_browser_landmarks(landmarks)
+    if not seq:
+        return jsonify({"error": "La sesión de traducción no está activa."}), 409
     return jsonify(controller.wait_browser_hand_points(seq))
 
 
